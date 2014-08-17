@@ -2,7 +2,7 @@
 %define debug_package %{nil}
 
 Name: plasma-workspace
-Version: 5.0.0
+Version: 5.0.1
 Release: 1
 Source0: http://ftp5.gwdg.de/pub/linux/kde/unstable/frameworks/%{version}/%{name}-%{version}.tar.xz
 Source100: %{name}.rpmlintrc
@@ -70,7 +70,6 @@ The KDE Plasma workspace
 %libpackage kworkspace 5
 
 %libpackage plasma-geolocation-interface 5
-%{_libdir}/libplasma-geolocation-interface.so.4.98.0
 
 %libpackage taskmanager 5
 
@@ -125,9 +124,10 @@ DESTDIR="%{buildroot}" ninja -C build install %{?_smp_mflags}
 %find_lang ksmserver
 %find_lang kuiserver5
 %find_lang libkworkspace
+%find_lang libkxmlrpcclient5
 %find_lang libtaskmanager
 %find_lang phonon_kde
-for i in org.kde.image org.kde.plasma.analogclock org.kde.plasma.battery org.kde.plasma.calendar org.kde.plasma.digitalclock org.kde.plasma.devicenotifier org.kde.plasma.lock_logout org.kde.plasma.mediacontroller org.kde.plasma.notifications org.kde.plasma.panelspacer org.kde.plasma.systemtray quicklaunch system-monitor webbrowser; do
+for i in org.kde.color org.kde.image org.kde.plasma.analogclock org.kde.plasma.battery org.kde.plasma.calendar org.kde.plasma.digitalclock org.kde.plasma.devicenotifier org.kde.plasma.lock_logout org.kde.plasma.mediacontroller org.kde.plasma.notifications org.kde.plasma.panelspacer org.kde.plasma.systemtray quicklaunch system-monitor webbrowser; do
 	%find_lang plasma_applet_$i
 done
 for i in contextmenu switchwindow; do
@@ -178,7 +178,6 @@ cat *.lang >plasma.lang
 %{_libdir}/plugins/phonon_platform
 %dir %{_libdir}/plugins/plasma
 %{_libdir}/plugins/plasma/dataengine
-%{_libdir}/plugins/plasma/geolocationprovider
 %{_libdir}/plugins/plasma/packagestructure
 %{_libdir}/plugins/plasma_containmentactions_applauncher.so
 %{_libdir}/plugins/plasma_containmentactions_contextmenu.so
@@ -187,6 +186,7 @@ cat *.lang >plasma.lang
 %{_libdir}/plugins/plasma_containmentactions_switchactivity.so
 %{_libdir}/plugins/plasma_containmentactions_switchdesktop.so
 %{_libdir}/plugins/plasma_containmentactions_switchwindow.so
+%{_libdir}/plugins/plasma-geolocation-ip.so
 %{_libdir}/plugins/screenlocker_kcm.so
 %dir %{_libdir}/qml/org/kde/plasma/private
 %{_libdir}/qml/org/kde/plasma/private/digitalclock
