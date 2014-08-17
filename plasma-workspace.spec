@@ -28,6 +28,7 @@ BuildRequires: cmake(KF5TextEditor)
 BuildRequires: cmake(KF5DBusAddons)
 BuildRequires: cmake(KF5Declarative)
 BuildRequires: cmake(KF5XmlGui)
+BuildRequires: cmake(KF5FileMetaData)
 BuildRequires: cmake(Gettext)
 BuildRequires: cmake(ECM)
 BuildRequires: cmake(KF5KIO)
@@ -59,6 +60,7 @@ BuildRequires: cmake(KF5SysGuard)
 BuildRequires: cmake(KF5Screen)
 BuildRequires: cmake(KF5Baloo)
 BuildRequires: pkgconfig(libqalculate)
+BuildRequires: pkgconfig(sm)
 BuildRequires: ninja
 
 %description
