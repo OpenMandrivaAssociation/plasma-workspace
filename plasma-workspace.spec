@@ -82,7 +82,7 @@ The KDE Plasma workspace
 Summary: Development files for the KDE Plasma workspace
 Group: Development/KDE and Qt
 Requires: %{mklibname KF5XmlRpcClientPrivate 5} = %{EVRD}
-Requires: %{mklibname kworkspace 5} = %{EVRD}
+Requires: %{mklibname kworkspace5 5} = %{EVRD}
 Requires: %{mklibname plasma-geolocation-interface 5} = %{EVRD}
 Requires: %{mklibname taskmanager 5} = %{EVRD}
 Requires: %{mklibname weather_ion 7} = %{EVRD}
