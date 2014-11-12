@@ -4,7 +4,7 @@
 
 Name: plasma-workspace
 Version: 5.1.0.1
-Release: 1
+Release: 2
 Source0: http://ftp5.gwdg.de/pub/linux/kde/stable/frameworks/%{plasmaver}/%{name}-%{version}.tar.xz
 Source100: %{name}.rpmlintrc
 Summary: The KDE Plasma workspace
@@ -91,6 +91,9 @@ Provides: %{mklibname -d kworkspace} = %{EVRD}
 Provides: %{mklibname -d plasma-geolocation-interface} = %{EVRD}
 Provides: %{mklibname -d taskmanager} = %{EVRD}
 Provides: %{mklibname -d weather_ion} = %{EVRD}
+# Autodetected devel(libprocesscore) is also provided by KDE 4.x -- let's
+# make sure we pick the right thing
+Requires: cmake(KF5SysGuard)
 
 %description -n %{devname}
 Development files for the KDE Plasma workspace
