@@ -1,11 +1,12 @@
 %define devname %mklibname plasma-workspace -d
 %define debug_package %{nil}
 %define plasmaver %(echo %{version} |cut -d. -f1-3)
+%define stable %([ "`echo %{version} |cut -d. -f3`" -ge 80 ] && echo -n un; echo -n stable)
 
 Name: plasma-workspace
-Version: 5.1.0.1
-Release: 2
-Source0: http://ftp5.gwdg.de/pub/linux/kde/stable/frameworks/%{plasmaver}/%{name}-%{version}.tar.xz
+Version: 5.1.1
+Release: 1
+Source0: http://ftp5.gwdg.de/pub/linux/kde/%{stable}/plasma/%{plasmaver}/%{name}-%{version}.tar.xz
 Source100: %{name}.rpmlintrc
 Summary: The KDE Plasma workspace
 URL: http://kde.org/
@@ -197,6 +198,7 @@ cat *.lang >plasma.lang
 %{_libdir}/plugins/plasma_containmentactions_switchactivity.so
 %{_libdir}/plugins/plasma_containmentactions_switchdesktop.so
 %{_libdir}/plugins/plasma_containmentactions_switchwindow.so
+%{_libdir}/plugins/plasma-geolocation-gps.so
 %{_libdir}/plugins/plasma-geolocation-ip.so
 %{_libdir}/plugins/screenlocker_kcm.so
 %dir %{_libdir}/qml/org/kde/plasma/private
