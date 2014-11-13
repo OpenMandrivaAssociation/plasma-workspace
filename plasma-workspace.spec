@@ -8,6 +8,7 @@ Version: 5.1.1
 Release: 1
 Source0: http://ftp5.gwdg.de/pub/linux/kde/%{stable}/plasma/%{plasmaver}/%{name}-%{version}.tar.xz
 Source100: %{name}.rpmlintrc
+Patch0: plasma-workspace-5.1.1-paths.patch
 Summary: The KDE Plasma workspace
 URL: http://kde.org/
 License: GPL
@@ -109,6 +110,7 @@ KDE Breeze theme for the SDDM display manager
 
 %prep
 %setup -qn %{name}-%{plasmaver}
+%apply_patches
 %cmake -G Ninja
 
 %build
