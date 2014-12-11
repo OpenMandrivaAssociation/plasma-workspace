@@ -64,6 +64,7 @@ BuildRequires: cmake(KF5Screen)
 BuildRequires: cmake(KF5Baloo)
 BuildRequires: pkgconfig(libqalculate)
 BuildRequires: pkgconfig(sm)
+BuildRequires: pkgconfig(libgps)
 BuildRequires: ninja
 
 %description
@@ -111,7 +112,8 @@ KDE Breeze theme for the SDDM display manager
 %prep
 %setup -qn %{name}-%{plasmaver}
 %apply_patches
-%cmake -G Ninja
+%cmake -G Ninja \
+	-DKDE_INSTALL_USE_QT_SYS_PATHS:BOOL=ON
 
 %build
 ninja -C build
@@ -184,34 +186,34 @@ cat *.lang >plasma.lang
 %{_libdir}/libexec/kcheckpass
 %{_libdir}/libexec/kscreenlocker_greet
 %{_libdir}/libexec/ksyncdbusenv
-%{_libdir}/plugins/kcm_krunner_kill.so
-%{_libdir}/plugins/kcm_splashscreen.so
-%{_libdir}/plugins/kded_*.so
-%{_libdir}/plugins/kio_*.so
-%{_libdir}/plugins/krunner_*.so
-%{_libdir}/plugins/phonon_platform
-%dir %{_libdir}/plugins/plasma
-%{_libdir}/plugins/plasma/dataengine
-%{_libdir}/plugins/plasma/packagestructure
-%{_libdir}/plugins/plasma_containmentactions_applauncher.so
-%{_libdir}/plugins/plasma_containmentactions_contextmenu.so
-%{_libdir}/plugins/plasma_containmentactions_minimalcontextmenu.so
-%{_libdir}/plugins/plasma_containmentactions_paste.so
-%{_libdir}/plugins/plasma_containmentactions_switchactivity.so
-%{_libdir}/plugins/plasma_containmentactions_switchdesktop.so
-%{_libdir}/plugins/plasma_containmentactions_switchwindow.so
-%{_libdir}/plugins/plasma-geolocation-gps.so
-%{_libdir}/plugins/plasma-geolocation-ip.so
-%{_libdir}/plugins/screenlocker_kcm.so
-%dir %{_libdir}/qml/org/kde/plasma/private
-%{_libdir}/qml/org/kde/plasma/private/battery
-%{_libdir}/qml/org/kde/plasma/private/digitalclock
-%{_libdir}/qml/org/kde/plasma/private/icon
-%{_libdir}/qml/org/kde/plasma/private/notifications
-%{_libdir}/qml/org/kde/plasma/private/shell
-%{_libdir}/qml/org/kde/plasma/wallpapers
-%{_libdir}/qml/org/kde/plasma/workspace
-%{_libdir}/qml/org/kde/private/systemtray
+%{_libdir}/qt5/plugins/kcm_krunner_kill.so
+%{_libdir}/qt5/plugins/kcm_splashscreen.so
+%{_libdir}/qt5/plugins/kded_*.so
+%{_libdir}/qt5/plugins/kio_*.so
+%{_libdir}/qt5/plugins/krunner_*.so
+%{_libdir}/qt5/plugins/phonon_platform
+%dir %{_libdir}/qt5/plugins/plasma
+%{_libdir}/qt5/plugins/plasma/dataengine
+%{_libdir}/qt5/plugins/plasma/packagestructure
+%{_libdir}/qt5/plugins/plasma_containmentactions_applauncher.so
+%{_libdir}/qt5/plugins/plasma_containmentactions_contextmenu.so
+%{_libdir}/qt5/plugins/plasma_containmentactions_minimalcontextmenu.so
+%{_libdir}/qt5/plugins/plasma_containmentactions_paste.so
+%{_libdir}/qt5/plugins/plasma_containmentactions_switchactivity.so
+%{_libdir}/qt5/plugins/plasma_containmentactions_switchdesktop.so
+%{_libdir}/qt5/plugins/plasma_containmentactions_switchwindow.so
+%{_libdir}/qt5/plugins/plasma-geolocation-gps.so
+%{_libdir}/qt5/plugins/plasma-geolocation-ip.so
+%{_libdir}/qt5/plugins/screenlocker_kcm.so
+%dir %{_libdir}/qt5/qml/org/kde/plasma/private
+%{_libdir}/qt5/qml/org/kde/plasma/private/battery
+%{_libdir}/qt5/qml/org/kde/plasma/private/digitalclock
+%{_libdir}/qt5/qml/org/kde/plasma/private/icon
+%{_libdir}/qt5/qml/org/kde/plasma/private/notifications
+%{_libdir}/qt5/qml/org/kde/plasma/private/shell
+%{_libdir}/qt5/qml/org/kde/plasma/wallpapers
+%{_libdir}/qt5/qml/org/kde/plasma/workspace
+%{_libdir}/qt5/qml/org/kde/private/systemtray
 %{_datadir}/applications/org.kde.klipper.desktop
 %{_datadir}/applications/plasma-windowed.desktop
 %{_datadir}/config.kcfg/*.kcfg
@@ -263,13 +265,15 @@ cat *.lang >plasma.lang
 %{_datadir}/plasma/wallpapers/org.kde.slideshow
 %{_datadir}/xsessions/plasma.desktop
 %doc %{_docdir}/HTML/en/klipper
+%{_libdir}/libkdeinit5_*.so
 
 %files -n sddm-theme-breeze
 %{_datadir}/sddm/themes/breeze
 
 %files -n %{devname}
 %{_includedir}/*
-%{_libdir}/*.so
+%{_libdir}/lib*.so
+%exclude %{_libdir}/libkdeinit5_*.so
 %{_libdir}/cmake/KRunnerAppDBusInterface
 %{_libdir}/cmake/KSMServerDBusInterface
 %{_libdir}/cmake/LibKWorkspace
