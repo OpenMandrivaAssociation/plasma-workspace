@@ -5,7 +5,7 @@
 
 Name: plasma-workspace
 Version: 5.1.1
-Release: 2
+Release: 3
 Source0: http://ftp5.gwdg.de/pub/linux/kde/%{stable}/plasma/%{plasmaver}/%{name}-%{version}.tar.xz
 Source100: %{name}.rpmlintrc
 Patch0: plasma-workspace-5.1.1-paths.patch
@@ -66,6 +66,8 @@ BuildRequires: pkgconfig(libqalculate)
 BuildRequires: pkgconfig(sm)
 BuildRequires: pkgconfig(libgps)
 BuildRequires: ninja
+# qtpaths is used by startkde
+Requires: qt5-tools >= 5.4.0
 
 %description
 The KDE Plasma workspace
