@@ -5,7 +5,7 @@
 
 Name: plasma-workspace
 Version: 5.1.2
-Release: 1
+Release: 2
 Source0: http://ftp5.gwdg.de/pub/linux/kde/%{stable}/plasma/%{plasmaver}/%{name}-%{version}.tar.xz
 Source100: %{name}.rpmlintrc
 Patch0: plasma-workspace-5.1.1-paths.patch
@@ -62,10 +62,12 @@ BuildRequires: cmake(KF5WebKit)
 BuildRequires: cmake(KF5SysGuard)
 BuildRequires: cmake(KF5Screen)
 BuildRequires: cmake(KF5Baloo)
+BuildRequires: cmake(KF5Prison)
 BuildRequires: pkgconfig(libqalculate)
 BuildRequires: pkgconfig(sm)
 BuildRequires: pkgconfig(libgps)
 BuildRequires: ninja
+BuildRequires: pam-devel
 # qtpaths is used by startkde
 Requires: qt5-tools >= 5.4.0
 
