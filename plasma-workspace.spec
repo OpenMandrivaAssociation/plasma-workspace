@@ -5,7 +5,7 @@
 
 Name: plasma-workspace
 Version: 5.1.2
-Release: 3
+Release: 4
 Source0: http://ftp5.gwdg.de/pub/linux/kde/%{stable}/plasma/%{plasmaver}/%{name}-%{version}.tar.xz
 Source100: %{name}.rpmlintrc
 Patch0: plasma-workspace-5.1.1-paths.patch
@@ -69,6 +69,9 @@ BuildRequires: ninja
 BuildRequires: pam-devel
 # qtpaths is used by startkde
 Requires: qt5-qttools >= 5.4.0
+Requires: qt5-qttools-qtdbus >= 5.4.0
+# needed if anything will fail on startkde
+#Requires: xmessage
 
 %description
 The KDE Plasma workspace
