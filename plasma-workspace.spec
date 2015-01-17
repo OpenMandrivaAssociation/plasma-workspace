@@ -5,7 +5,7 @@
 
 Name: plasma-workspace
 Version: 5.1.2
-Release: 2
+Release: 4
 Source0: http://ftp5.gwdg.de/pub/linux/kde/%{stable}/plasma/%{plasmaver}/%{name}-%{version}.tar.xz
 Source100: %{name}.rpmlintrc
 Patch0: plasma-workspace-5.1.1-paths.patch
@@ -21,6 +21,7 @@ BuildRequires: cmake(KF5DocTools)
 BuildRequires: cmake(KF5Activities)
 BuildRequires: cmake(Qt5Qml)
 BuildRequires: cmake(Qt5Quick)
+BuildRequires: cmake(Qt5QuickWidgets)
 BuildRequires: cmake(Qt5DBus)
 BuildRequires: cmake(Qt5Script)
 BuildRequires: cmake(KF5CoreAddons)
@@ -36,7 +37,6 @@ BuildRequires: cmake(Gettext)
 BuildRequires: cmake(ECM)
 BuildRequires: cmake(KF5KIO)
 BuildRequires: cmake(Qt5Test)
-BuildRequires: cmake(Qt5)
 BuildRequires: cmake(ECM)
 BuildRequires: cmake(KWinDBusInterface)
 BuildRequires: cmake(KF5Activities)
@@ -50,7 +50,6 @@ BuildRequires: cmake(KF5PlasmaQuick)
 BuildRequires: cmake(KF5Config)
 BuildRequires: cmake(Prison)
 BuildRequires: cmake(Phonon4Qt5)
-BuildRequires: cmake(Qt5)
 BuildRequires: cmake(KF5Runner)
 BuildRequires: cmake(KF5JsEmbed)
 BuildRequires: cmake(KF5NotifyConfig)
@@ -70,7 +69,10 @@ BuildRequires: pkgconfig(libgps)
 BuildRequires: ninja
 BuildRequires: pam-devel
 # qtpaths is used by startkde
-Requires: qt5-tools >= 5.4.0
+Requires: qt5-qttools >= 5.4.0
+Requires: qt5-qttools-qtdbus >= 5.4.0
+# needed if anything will fail on startkde
+#Requires: xmessage
 
 %description
 The KDE Plasma workspace
