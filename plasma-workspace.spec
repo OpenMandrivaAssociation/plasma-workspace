@@ -9,6 +9,7 @@ Release: 1
 Source0: http://ftp5.gwdg.de/pub/linux/kde/%{stable}/plasma/%{plasmaver}/%{name}-%{version}.tar.xz
 Source100: %{name}.rpmlintrc
 Patch0: plasma-workspace-5.1.1-paths.patch
+Patch1: plasma-workspace-5.1.1-handle-prison-rename.patch
 Summary: The KDE Plasma workspace
 URL: http://kde.org/
 License: GPL
@@ -34,6 +35,7 @@ BuildRequires: cmake(KF5Declarative)
 BuildRequires: cmake(KF5XmlGui)
 BuildRequires: cmake(KF5FileMetaData)
 BuildRequires: cmake(KF5KDELibs4Support)
+BuildRequires: cmake(KF5Wayland)
 BuildRequires: cmake(Gettext)
 BuildRequires: cmake(ECM)
 BuildRequires: cmake(KF5KIO)
