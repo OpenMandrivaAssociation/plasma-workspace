@@ -4,8 +4,8 @@
 %define stable %([ "`echo %{version} |cut -d. -f3`" -ge 80 ] && echo -n un; echo -n stable)
 
 Name: plasma-workspace
-Version: 5.1.2
-Release: 4
+Version: 5.1.95
+Release: 1
 Source0: http://ftp5.gwdg.de/pub/linux/kde/%{stable}/plasma/%{plasmaver}/%{name}-%{version}.tar.xz
 Source100: %{name}.rpmlintrc
 Patch0: plasma-workspace-5.1.1-paths.patch
@@ -131,8 +131,7 @@ DESTDIR="%{buildroot}" ninja -C build install %{?_smp_mflags}
 %find_lang drkonqi
 %find_lang freespacenotifier
 %find_lang kcminit
-%find_lang kcm_splashscreen
-%find_lang kglobalaccel
+%find_lang kglobalaccel5
 %find_lang kio_applications
 %find_lang kio_remote
 %find_lang klipper
@@ -145,7 +144,7 @@ DESTDIR="%{buildroot}" ninja -C build install %{?_smp_mflags}
 %find_lang libkxmlrpcclient5
 %find_lang libtaskmanager
 %find_lang phonon_kde
-for i in org.kde.color org.kde.image org.kde.plasma.analogclock org.kde.plasma.battery org.kde.plasma.calendar org.kde.plasma.clipboard org.kde.plasma.digitalclock org.kde.plasma.devicenotifier org.kde.plasma.lock_logout org.kde.plasma.mediacontroller org.kde.plasma.notifications org.kde.plasma.panelspacer org.kde.plasma.systemtray quicklaunch system-monitor webbrowser; do
+for i in org.kde.color org.kde.image org.kde.plasma.analogclock org.kde.plasma.battery org.kde.plasma.calendar org.kde.plasma.clipboard org.kde.plasma.digitalclock org.kde.plasma.devicenotifier org.kde.plasma.lock_logout org.kde.plasma.mediacontroller org.kde.plasma.notifications org.kde.plasma.panelspacer org.kde.plasma.systemtray quicklaunch system-monitor; do
 	%find_lang plasma_applet_$i
 done
 for i in contextmenu switchwindow; do
@@ -173,6 +172,7 @@ cat *.lang >plasma.lang
 %{_sysconfdir}/xdg/autostart/plasmashell.desktop
 %{_sysconfdir}/xdg/plasmoids.knsrc
 %{_sysconfdir}/xdg/wallpaper.knsrc
+%{_sysconfdir}/xdg/taskmanagerrulesrc
 %{_bindir}/kcheckrunning
 %{_bindir}/kcminit
 %{_bindir}/kcminit_startup
@@ -193,7 +193,6 @@ cat *.lang >plasma.lang
 %{_libdir}/libexec/kscreenlocker_greet
 %{_libdir}/libexec/ksyncdbusenv
 %{_libdir}/qt5/plugins/kcm_krunner_kill.so
-%{_libdir}/qt5/plugins/kcm_splashscreen.so
 %{_libdir}/qt5/plugins/kded_*.so
 %{_libdir}/qt5/plugins/kio_*.so
 %{_libdir}/qt5/plugins/krunner_*.so
@@ -236,7 +235,6 @@ cat *.lang >plasma.lang
 %{_datadir}/solid/actions/test-predicate-openinwindow.desktop
 %{_datadir}/plasma/look-and-feel
 %dir %{_datadir}/plasma/kcms
-%{_datadir}/plasma/kcms/kcm_splashscreen
 %{_datadir}/plasma/kcms/screenlocker_kcm
 %dir %{_datadir}/plasma/plasmoids
 %{_datadir}/plasma/plasmoids/org.kde.plasma.activitybar
