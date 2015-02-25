@@ -4,7 +4,7 @@
 %define stable %([ "`echo %{version} |cut -d. -f3`" -ge 80 ] && echo -n un; echo -n stable)
 
 Name: plasma-workspace
-Version: 5.2.0
+Version: 5.2.1
 Release: 1
 Source0: http://ftp5.gwdg.de/pub/linux/kde/%{stable}/plasma/%{plasmaver}/%{name}-%{version}.tar.xz
 Source100: %{name}.rpmlintrc
@@ -180,7 +180,6 @@ cat *.lang >plasma.lang
 %{_bindir}/kcminit
 %{_bindir}/kcminit_startup
 %{_bindir}/kdostartupconfig5
-%{_bindir}/kglobalaccel5
 %{_bindir}/klipper
 %{_bindir}/krunner
 %{_bindir}/ksmserver
