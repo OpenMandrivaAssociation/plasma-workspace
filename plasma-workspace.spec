@@ -290,7 +290,7 @@ cat *.lang >plasma.lang
 %{_datadir}/plasma/wallpapers/org.kde.image
 %{_datadir}/plasma/wallpapers/org.kde.slideshow
 %{_datadir}/xsessions/plasma.desktop
-%doc %{_docdir}/HTML/en/klipper
+%doc %{_docdir}/HTML/*/klipper
 %{_libdir}/libkdeinit5_*.so
 
 %files -n sddm-theme-breeze
