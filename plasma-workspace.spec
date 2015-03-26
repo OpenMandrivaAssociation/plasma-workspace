@@ -7,6 +7,7 @@ Name: plasma-workspace
 Version: 5.2.2
 Release: 1
 Source0: http://ftp5.gwdg.de/pub/linux/kde/%{stable}/plasma/%{plasmaver}/%{name}-%{version}.tar.xz
+Source1: kde.pam
 Source100: %{name}.rpmlintrc
 Patch0: plasma-workspace-5.1.1-paths.patch
 Patch1: plasma-workspace-5.1.1-handle-prison-rename.patch
@@ -93,7 +94,7 @@ Requires: qt5-qttools-qtdbus >= 5.4.0
 #Requires: xmessage
 
 %description
-The KDE Plasma workspace
+The KDE Plasma workspace.
 
 %libpackage KF5XmlRpcClientPrivate 5
 %{_libdir}/libKF5XmlRpcClientPrivate.so.4.70.0
@@ -124,7 +125,7 @@ Provides: %{mklibname -d weather_ion} = %{EVRD}
 Requires: cmake(KF5SysGuard)
 
 %description -n %{devname}
-Development files for the KDE Plasma workspace
+Development files for the KDE Plasma workspace.
 
 %package -n sddm-theme-breeze
 Summary: KDE Breeze theme for the SDDM display manager
@@ -132,7 +133,7 @@ Group: Graphical desktop/KDE
 Requires: sddm
 
 %description -n sddm-theme-breeze
-KDE Breeze theme for the SDDM display manager
+KDE Breeze theme for the SDDM display manager.
 
 %prep
 %setup -qn %{name}-%{plasmaver}
@@ -145,6 +146,8 @@ ninja -C build
 
 %install
 DESTDIR="%{buildroot}" ninja -C build install %{?_smp_mflags}
+
+install -Dpm 644 %{SOURCE1} %{buildroot}%{_sysconfdir}/pam.d/kde
 
 %find_lang soliduiserver
 %find_lang drkonqi
@@ -192,6 +195,7 @@ cat *.lang >plasma.lang
 %{_sysconfdir}/xdg/plasmoids.knsrc
 %{_sysconfdir}/xdg/wallpaper.knsrc
 %{_sysconfdir}/xdg/taskmanagerrulesrc
+%{_sysconfdir}/pam.d/kde
 %{_bindir}/kcheckrunning
 %{_bindir}/kcminit
 %{_bindir}/kcminit_startup
