@@ -10,7 +10,6 @@ Source0: http://download.kde.org//%{stable}/plasma/%{plasmaver}/%{name}-%{versio
 Source1: kde.pam
 Source100: %{name}.rpmlintrc
 Patch0: plasma-workspace-5.1.1-paths.patch
-Patch1: plasma-workspace-5.1.1-handle-prison-rename.patch
 Summary: The KDE Plasma workspace
 URL: http://kde.org/
 License: GPL
