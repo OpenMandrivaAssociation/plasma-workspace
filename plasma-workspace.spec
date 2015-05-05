@@ -6,7 +6,7 @@
 Name: plasma-workspace
 Version: 5.3.0
 Release: 1
-Source0: http://ftp5.gwdg.de/pub/linux/kde/%{stable}/plasma/%{plasmaver}/%{name}-%{version}.tar.xz
+Source0: http://download.kde.org//%{stable}/plasma/%{plasmaver}/%{name}-%{version}.tar.xz
 Source1: kde.pam
 Source100: %{name}.rpmlintrc
 Patch0: plasma-workspace-5.1.1-paths.patch
@@ -15,9 +15,6 @@ Summary: The KDE Plasma workspace
 URL: http://kde.org/
 License: GPL
 Group: System/Libraries
-BuildRequires: cmake
-BuildRequires: qmake5
-BuildRequires: extra-cmake-modules5
 BuildRequires: cmake(KF5DocTools)
 BuildRequires: cmake(KF5Activities)
 BuildRequires: cmake(KF5CoreAddons)
@@ -85,13 +82,25 @@ BuildRequires: pkgconfig(zlib)
 BuildRequires: pkgconfig(libqalculate)
 BuildRequires: pkgconfig(sm)
 BuildRequires: pkgconfig(libgps)
-BuildRequires: ninja
 BuildRequires: pam-devel
+# External KF5 and Plasma 5 required packages
+Requires: kactivities
+Requires: kde-cli-tools
+Requires: kded
+Requires: kimageformats
+Requires: kinit
+Requires: kwallet5
+Requires: plasma-framework
+Requires: baloo5
 # qtpaths is used by startkde
 Requires: qt5-qttools >= 5.4.0
 Requires: qt5-qttools-qtdbus >= 5.4.0
 # needed if anything will fail on startkde
 #Requires: xmessage
+Conflicts: kdebase4-workspace
+Conflicts: kdebase-workspace
+# Because of pam file
+Conflicts: kdm
 
 %description
 The KDE Plasma workspace.
@@ -138,14 +147,13 @@ KDE Breeze theme for the SDDM display manager.
 %prep
 %setup -qn %{name}-%{plasmaver}
 %apply_patches
-%cmake -G Ninja \
-	-DKDE_INSTALL_USE_QT_SYS_PATHS:BOOL=ON
+%cmake_kde5 -DKDE_DEFAULT_HOME=.kde4
 
 %build
-ninja -C build
+%ninja -C build
 
 %install
-DESTDIR="%{buildroot}" ninja -C build install %{?_smp_mflags}
+%ninja_install -C build
 
 install -Dpm 644 %{SOURCE1} %{buildroot}%{_sysconfdir}/pam.d/kde
 
