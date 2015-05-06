@@ -169,7 +169,7 @@ install -Dpm 644 %{SOURCE1} %{buildroot}%{_sysconfdir}/pam.d/kde
 %find_lang libkworkspace
 %find_lang libtaskmanager
 %find_lang phonon_kde
-for i in org.kde.color org.kde.image org.kde.plasma.analogclock org.kde.plasma.battery org.kde.plasma.calendar org.kde.plasma.clipboard org.kde.plasma.digitalclock org.kde.plasma.devicenotifier org.kde.plasma.lock_logout org.kde.plasma.mediacontroller org.kde.plasma.notifications org.kde.plasma.panelspacer org.kde.plasma.systemtray quicklaunch system-monitor; do
+for i in org.kde.color org.kde.image org.kde.plasma.analogclock org.kde.plasma.battery org.kde.plasma.calendar org.kde.plasma.clipboard org.kde.plasma.digitalclock org.kde.plasma.devicenotifier org.kde.plasma.lock_logout org.kde.plasma.mediacontroller org.kde.plasma.notifications org.kde.plasma.panelspacer org.kde.plasma.systemtray org.kde.plasma.systemmonitor.cpu org.kde.plasma.systemmonitor.diskactivity org.kde.plasma.systemmonitor.diskusage org.kde.plasma.systemmonitor.memory org.kde.plasma.systemmonitor.net quicklaunch system-monitor; do
 	%find_lang plasma_applet_$i
 done
 for i in contextmenu switchwindow; do
@@ -221,13 +221,14 @@ cat *.lang >plasma.lang
 %{_libdir}/qt5/plugins/kded_*.so
 %{_libdir}/qt5/plugins/kio_*.so
 %{_libdir}/qt5/plugins/krunner_*.so
+%{_libdir}/qt5/plugins/plasma_applet_notifications.so
+%{_libdir}/qt5/plugins/kpackage/packagestructure/*.so
 %{_libdir}/qt5/plugins/phonon_platform
 %dir %{_libdir}/qt5/plugins/plasma
 %{_libdir}/qt5/plugins/plasma/dataengine
 %{_libdir}/qt5/plugins/plasma/packagestructure
 %{_libdir}/qt5/plugins/plasma_containmentactions_applauncher.so
 %{_libdir}/qt5/plugins/plasma_containmentactions_contextmenu.so
-%{_libdir}/qt5/plugins/plasma_containmentactions_minimalcontextmenu.so
 %{_libdir}/qt5/plugins/plasma_containmentactions_paste.so
 %{_libdir}/qt5/plugins/plasma_containmentactions_switchactivity.so
 %{_libdir}/qt5/plugins/plasma_containmentactions_switchdesktop.so
@@ -295,7 +296,9 @@ cat *.lang >plasma.lang
 %{_datadir}/xsessions/plasma.desktop
 %doc %{_docdir}/HTML/*/klipper
 %{_libdir}/libkdeinit5_*.so
-
+%{_datadir}/kconf_update/*.upd
+%{_datadir}/kconf_update/*.pl
+    
 %files -n sddm-theme-breeze
 %{_datadir}/sddm/themes/breeze
 
