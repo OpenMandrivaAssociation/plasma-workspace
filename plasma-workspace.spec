@@ -106,9 +106,6 @@ Conflicts: kdm
 %description
 The KDE Plasma workspace.
 
-%libpackage KF5XmlRpcClientPrivate 5
-%{_libdir}/libKF5XmlRpcClientPrivate.so.4.70.0
-
 %libpackage kworkspace5 5
 
 %libpackage plasma-geolocation-interface 5
@@ -120,12 +117,10 @@ The KDE Plasma workspace.
 %package -n %{devname}
 Summary: Development files for the KDE Plasma workspace
 Group: Development/KDE and Qt
-Requires: %{mklibname KF5XmlRpcClientPrivate 5} = %{EVRD}
 Requires: %{mklibname kworkspace5 5} = %{EVRD}
 Requires: %{mklibname plasma-geolocation-interface 5} = %{EVRD}
 Requires: %{mklibname taskmanager 5} = %{EVRD}
 Requires: %{mklibname weather_ion 7} = %{EVRD}
-Provides: %{mklibname -d KF5XmlRpcClientPrivate} = %{EVRD}
 Provides: %{mklibname -d kworkspace} = %{EVRD}
 Provides: %{mklibname -d plasma-geolocation-interface} = %{EVRD}
 Provides: %{mklibname -d taskmanager} = %{EVRD}
@@ -172,7 +167,6 @@ install -Dpm 644 %{SOURCE1} %{buildroot}%{_sysconfdir}/pam.d/kde
 %find_lang ksmserver
 %find_lang kuiserver5
 %find_lang libkworkspace
-%find_lang libkxmlrpcclient5
 %find_lang libtaskmanager
 %find_lang phonon_kde
 for i in org.kde.color org.kde.image org.kde.plasma.analogclock org.kde.plasma.battery org.kde.plasma.calendar org.kde.plasma.clipboard org.kde.plasma.digitalclock org.kde.plasma.devicenotifier org.kde.plasma.lock_logout org.kde.plasma.mediacontroller org.kde.plasma.notifications org.kde.plasma.panelspacer org.kde.plasma.systemtray quicklaunch system-monitor; do
