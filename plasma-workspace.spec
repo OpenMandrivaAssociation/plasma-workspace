@@ -276,6 +276,11 @@ cat *.lang >plasma.lang
 %{_datadir}/plasma/plasmoids/org.kde.plasma.notifications
 %{_datadir}/plasma/plasmoids/org.kde.plasma.panelspacer
 %{_datadir}/plasma/plasmoids/org.kde.plasma.systemtray
+%{_datadir}/plasma/plasmoids/org.kde.plasma.systemmonitor.cpu
+%{_datadir}/plasma/plasmoids/org.kde.plasma.systemmonitor.diskactivity
+%{_datadir}/plasma/plasmoids/org.kde.plasma.systemmonitor.diskusage
+%{_datadir}/plasma/plasmoids/org.kde.plasma.systemmonitor.memory
+%{_datadir}/plasma/plasmoids/org.kde.plasma.systemmonitor.net
 %{_datadir}/plasma/services/*.operations
 %dir %{_datadir}/plasma/shareprovider
 %{_datadir}/plasma/shareprovider/im9
@@ -298,7 +303,7 @@ cat *.lang >plasma.lang
 %{_libdir}/libkdeinit5_*.so
 %{_datadir}/kconf_update/*.upd
 %{_datadir}/kconf_update/*.pl
-    
+
 %files -n sddm-theme-breeze
 %{_datadir}/sddm/themes/breeze
 
