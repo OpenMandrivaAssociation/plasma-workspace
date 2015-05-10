@@ -5,7 +5,7 @@
 
 Name: plasma-workspace
 Version: 5.3.0
-Release: 1
+Release: 2
 Source0: http://download.kde.org//%{stable}/plasma/%{plasmaver}/%{name}-%{version}.tar.xz
 Source1: kde.pam
 Source100: %{name}.rpmlintrc
@@ -84,6 +84,7 @@ BuildRequires: pkgconfig(libqalculate)
 BuildRequires: pkgconfig(sm)
 BuildRequires: pkgconfig(libgps)
 BuildRequires: pam-devel
+Requires: qt5-qtquickcontrols >= 5.5.0
 # External KF5 and Plasma 5 required packages
 Requires: kactivities
 Requires: kde-cli-tools
@@ -94,8 +95,8 @@ Requires: kwallet5
 Requires: plasma-framework
 Requires: baloo5
 # qtpaths is used by startkde
-Requires: qt5-qttools >= 5.4.0
-Requires: qt5-qttools-qtdbus >= 5.4.0
+Requires: qt5-qttools >= 5.5.0
+Requires: qt5-qttools-qtdbus >= 5.5.0
 # needed if anything will fail on startkde
 #Requires: xmessage
 Conflicts: kdebase4-workspace
