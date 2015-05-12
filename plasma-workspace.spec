@@ -83,6 +83,7 @@ BuildRequires: pkgconfig(zlib)
 BuildRequires: pkgconfig(libqalculate)
 BuildRequires: pkgconfig(sm)
 BuildRequires: pkgconfig(libgps)
+BuildRequires: pkgconfig(xcursor)
 BuildRequires: pam-devel
 Requires: qt5-qtquickcontrols >= 5.5.0
 # External KF5 and Plasma 5 required packages
