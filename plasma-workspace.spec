@@ -32,7 +32,6 @@ BuildRequires: cmake(KF5XmlRpcClient)
 BuildRequires: cmake(Gettext)
 BuildRequires: cmake(ECM)
 BuildRequires: cmake(KF5KIO)
-BuildRequires: cmake(ECM)
 BuildRequires: cmake(KWinDBusInterface)
 BuildRequires: cmake(KF5Activities)
 BuildRequires: cmake(KF5Declarative)
@@ -177,7 +176,7 @@ done
 for i in contextmenu switchwindow; do
 	%find_lang plasma_containmentactions_$i
 done
-for i in applicationjobs keystate mpris2 network notifications powermanagement rss share soliddevice time weather; do
+for i in applicationjobs devicenotifications keystate mpris2 network notifications powermanagement rss share soliddevice time weather; do
 	%find_lang plasma_engine_$i
 done
 %find_lang plasma_lookandfeel_org.kde.lookandfeel
