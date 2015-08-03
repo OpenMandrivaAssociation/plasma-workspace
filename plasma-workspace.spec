@@ -5,7 +5,7 @@
 
 Name: plasma-workspace
 Version: 5.3.2
-Release: 2
+Release: 3
 Source0: http://download.kde.org//%{stable}/plasma/%{plasmaver}/%{name}-%{version}.tar.xz
 Source1: kde.pam
 Source100: %{name}.rpmlintrc
@@ -97,8 +97,9 @@ Requires: baloo5
 # qtpaths is used by startkde
 Requires: qt5-qttools >= 5.5.0
 Requires: qt5-qttools-qtdbus >= 5.5.0
+Requires: qt5-qtgraphicaleffects >= 5.5.0
 # needed if anything will fail on startkde
-#Requires: xmessage
+Requires: xmessage
 Conflicts: kdebase4-workspace
 Conflicts: kdebase-workspace
 # Because of pam file
