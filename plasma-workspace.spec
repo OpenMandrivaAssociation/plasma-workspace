@@ -148,7 +148,7 @@ KDE Breeze theme for the SDDM display manager.
 %cmake_kde5 -DKDE_DEFAULT_HOME=.kde4
 
 %build
-%ninja -C build
+%ninja -j1 -C build
 
 %install
 %ninja_install -C build
