@@ -98,8 +98,9 @@ Requires: baloo5
 # qtpaths is used by startkde
 Requires: qt5-qttools >= 5.5.0
 Requires: qt5-qttools-qtdbus >= 5.5.0
+Requires: qt5-qtgraphicaleffects >= 5.5.0
 # needed if anything will fail on startkde
-#Requires: xmessage
+Requires: xmessage
 Conflicts: kdebase4-workspace
 Conflicts: kdebase-workspace
 # Because of pam file
