@@ -1,0 +1,11 @@
+--- plasma-workspace-5.3.2/shell/CMakeLists.txt.omv~	2015-08-06 20:19:38.606242227 +0200
++++ plasma-workspace-5.3.2/shell/CMakeLists.txt	2015-08-06 20:20:06.209320272 +0200
+@@ -22,6 +22,8 @@ configure_file(config-ktexteditor.h.cmak
+ 
+ configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config-plasma.h.cmake ${CMAKE_CURRENT_BINARY_DIR}/config-plasma.h)
+ 
++add_definitions(-fno-lto)
++
+ set(scripting_SRC
+     scripting/appinterface.cpp
+     scripting/applet.cpp
