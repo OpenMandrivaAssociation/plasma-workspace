@@ -1,0 +1,57 @@
+diff -Naur plasma-workspace-5.3.2/startkde/startkde.cmake plasma-workspace-5.3.2.tpg/startkde/startkde.cmake
+--- plasma-workspace-5.3.2/startkde/startkde.cmake	2015-06-25 10:56:35.000000000 +0000
++++ plasma-workspace-5.3.2.tpg/startkde/startkde.cmake	2015-08-14 21:45:30.011305164 +0000
+@@ -3,6 +3,15 @@
+ #  DEFAULT KDE STARTUP SCRIPT ( @PROJECT_VERSION@ )
+ #
+ 
++if [ arch != "i586" ]; then
++    LIBDIR=lib64
++else
++    LIBDIR=lib
++fi
++
++export PATH=/usr/$LIBDIR/qt5/bin:$PATH
++export QML2_IMPORT_PATH=/usr/$LIBDIR/qml:/usr/$LIBDIR/qt5/qml:$QML2_IMPORT_PATH
++
+ if test "x$1" = x--failsafe; then
+     KDE_FAILSAFE=1 # General failsafe flag
+     KWIN_COMPOSE=N # Disable KWin's compositing
+@@ -64,6 +73,14 @@
+ 
+ mkdir -p $configDir
+ 
++kdehome=$HOME/@KDE_DEFAULT_HOME@
++test -n "$KDEHOME" && kdehome=`echo "$KDEHOME"|sed "s,^~/,$HOME/,"`
++
++# see kstartupconfig source for usage
++mkdir -m 700 -p $kdehome
++mkdir -m 700 -p $kdehome/share
++mkdir -m 700 -p $kdehome/share/config
++
+ #This is basically setting defaults so we can use them with kstartupconfig5
+ cat >$configDir/startupconfigkeys <<EOF
+ kcminputrc Mouse cursorTheme 'breeze_cursors'
+@@ -90,22 +107,6 @@
+     . $exportformatssettings
+ }
+ 
+-# Write a default kdeglobals file to set up the font
+-kdeglobalsfile=$configDir/kdeglobals
+-test -f $kdeglobalsfile || {
+-cat >$kdeglobalsfile <<EOF
+-[General]
+-XftAntialias=true
+-XftHintStyle=hintmedium
+-XftSubPixel=none
+-fixed=Oxygen Mono,9,-1,5,50,0,0,0,0,0
+-font=Oxygen-Sans,10,-1,5,50,0,0,0,0,0
+-menuFont=Oxygen-Sans,10,-1,5,50,0,0,0,0,0
+-smallestReadableFont=Oxygen-Sans,8,-1,5,50,0,0,0,0,0
+-toolBarFont=Oxygen-Sans,9,-1,5,50,0,0,0,0,0
+-EOF
+-}
+-
+ # Make sure the Oxygen font is installed
+ # This is necessary for setups where CMAKE_INSTALL_PREFIX
+ # is not in /usr. fontconfig looks in /usr, ~/.fonts and
