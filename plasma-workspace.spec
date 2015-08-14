@@ -5,7 +5,7 @@
 
 Name: plasma-workspace
 Version: 5.3.2
-Release: 4
+Release: 5
 Source0: http://download.kde.org//%{stable}/plasma/%{plasmaver}/%{name}-%{version}.tar.xz
 Source1: kde.pam
 Source100: %{name}.rpmlintrc
@@ -217,7 +217,7 @@ cat *.lang >plasma.lang
 %{_bindir}/startkde
 %{_bindir}/systemmonitor
 %{_libdir}/libexec/drkonqi
-%{_libdir}/libexec/kcheckpass
+%attr(6755,root,root) %{_libdir}/libexec/kcheckpass
 %{_libdir}/libexec/kscreenlocker_greet
 %{_libdir}/libexec/ksyncdbusenv
 %{_libdir}/qt5/plugins/kcm_krunner_kill.so
