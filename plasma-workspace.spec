@@ -11,6 +11,9 @@ Source1: kde.pam
 Source100: %{name}.rpmlintrc
 Patch0: plasma-workspace-5.3.2-startkde.patch
 Patch1: plasma-workspace-5.3.2-no-lto-in-plasmashell.patch
+# From upstream, support Baloo 5.13.0
+Patch2: plasma-workspace-5.3.2-baloo1.patch
+Patch3: plasma-workspace-5.3.2-baloo2.patch
 Summary: The KDE Plasma workspace
 URL: http://kde.org/
 License: GPL
