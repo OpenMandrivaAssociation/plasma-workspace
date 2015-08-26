@@ -253,7 +253,6 @@ cat *.lang >plasma.lang
 %{_datadir}/applications/org.kde.klipper.desktop
 %{_datadir}/applications/plasma-windowed.desktop
 %{_datadir}/config.kcfg/*.kcfg
-%{_datadir}/dbus-1/interfaces/*.xml
 %{_datadir}/dbus-1/services/*.service
 %{_datadir}/desktop-directories
 %{_datadir}/kio_desktop/DesktopLinks/*.desktop
@@ -325,3 +324,4 @@ cat *.lang >plasma.lang
 %{_libdir}/cmake/LibKWorkspace
 %{_libdir}/cmake/LibTaskManager
 %{_libdir}/cmake/ScreenSaverDBusInterface
+%{_datadir}/dbus-1/interfaces/*.xml
