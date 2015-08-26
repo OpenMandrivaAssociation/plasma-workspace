@@ -256,6 +256,8 @@ cat *.lang >plasma.lang
 %{_datadir}/dbus-1/services/*.service
 %{_datadir}/desktop-directories
 %{_datadir}/kio_desktop/DesktopLinks/*.desktop
+%{_datadir}/kio_desktop/directory.desktop
+%{_datadir}/kio_desktop/directory.trash
 %{_datadir}/drkonqi
 %{_datadir}/knotifications5/*.notifyrc
 %{_datadir}/kservices5/*
