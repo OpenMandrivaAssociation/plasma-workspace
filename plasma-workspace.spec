@@ -105,6 +105,7 @@ Conflicts: kdebase4-workspace
 Conflicts: kdebase-workspace
 # Because of pam file
 Conflicts: kdm
+Conflicts: kio-extras < 15.08.0
 
 %description
 The KDE Plasma workspace.
