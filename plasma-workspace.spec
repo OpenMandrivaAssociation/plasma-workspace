@@ -215,6 +215,8 @@ cat *.lang >plasma.lang
 %{_bindir}/plasmawindowed
 %{_bindir}/startkde
 %{_bindir}/systemmonitor
+%{_bindir}/startplasmacompositor
+%{_libdir}/libexec/startplasma
 %{_libdir}/libexec/drkonqi
 %attr(6755,root,root) %{_libdir}/libexec/kcheckpass
 %{_libdir}/libexec/kscreenlocker_greet
@@ -226,6 +228,7 @@ cat *.lang >plasma.lang
 %{_libdir}/qt5/plugins/plasma_applet_notifications.so
 %{_libdir}/qt5/plugins/kpackage/packagestructure/*.so
 %{_libdir}/qt5/plugins/phonon_platform
+%{_libdir}/qt5/plugins/kf5/kio/desktop.so
 %dir %{_libdir}/qt5/plugins/plasma
 %{_libdir}/qt5/plugins/plasma/dataengine
 %{_libdir}/qt5/plugins/plasma/packagestructure
@@ -239,7 +242,6 @@ cat *.lang >plasma.lang
 %{_libdir}/qt5/plugins/plasma-geolocation-ip.so
 %{_libdir}/qt5/plugins/screenlocker_kcm.so
 %dir %{_libdir}/qt5/qml/org/kde/plasma/private
-%{_libdir}/qt5/qml/org/kde/plasma/private/battery
 %{_libdir}/qt5/qml/org/kde/plasma/private/digitalclock
 %{_libdir}/qt5/qml/org/kde/plasma/private/icon
 %{_libdir}/qt5/qml/org/kde/plasma/private/notifications
@@ -253,6 +255,7 @@ cat *.lang >plasma.lang
 %{_datadir}/dbus-1/interfaces/*.xml
 %{_datadir}/dbus-1/services/*.service
 %{_datadir}/desktop-directories
+%{_datadir}/kio_desktop/DesktopLinks/*.desktop
 %{_datadir}/drkonqi
 %{_datadir}/knotifications5/*.notifyrc
 %{_datadir}/kservices5/*
@@ -302,6 +305,7 @@ cat *.lang >plasma.lang
 %{_datadir}/plasma/wallpapers/org.kde.slideshow
 %{_datadir}/xsessions/plasma.desktop
 %doc %{_docdir}/HTML/*/klipper
+%doc %{_docdir}/HTML/*/kcontrol/screenlocker
 %{_libdir}/libkdeinit5_*.so
 %{_datadir}/kconf_update/*.upd
 %{_datadir}/kconf_update/*.pl
