@@ -160,7 +160,6 @@ install -Dpm 644 %{SOURCE1} %{buildroot}%{_sysconfdir}/pam.d/kde
 %find_lang drkonqi
 %find_lang freespacenotifier
 %find_lang kcminit
-%find_lang kglobalaccel5
 %find_lang kio_applications
 %find_lang kio_remote
 %find_lang klipper
