@@ -160,8 +160,8 @@ KDE Breeze theme for the SDDM display manager.
 install -Dpm 644 %{SOURCE1} %{buildroot}%{_sysconfdir}/pam.d/kde
 
 # breeze backgrounds
-rm -rf %{buildroot}%{_datadir}/plasma/look-and-feel/org.kde.breeze.desktop/contents/artwork/background.png
-ln -sf %{_datadir}/mdk/backgrounds/OpenMandriva-16x9.png %{buildroot}%{_datadir}/plasma/look-and-feel/org.kde.breeze.desktop/contents/artwork/background.png
+rm -rf %{buildroot}%{_datadir}/plasma/look-and-feel/org.kde.breeze.desktop/contents/components/artwork/background.png
+ln -sf %{_datadir}/mdk/backgrounds/OpenMandriva-16x9.png %{buildroot}%{_datadir}/plasma/look-and-feel/org.kde.breeze.desktop/contents/components/artwork/background.png
 
 # sddm breeze theme background
 rm -rf %{buildroot}%{_datadir}/sddm/themes/breeze/components/artwork/background.png
