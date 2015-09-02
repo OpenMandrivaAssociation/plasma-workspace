@@ -5,7 +5,7 @@
 
 Name: plasma-workspace
 Version: 5.4.0
-Release: 2
+Release: 3
 Source0: http://download.kde.org//%{stable}/plasma/%{plasmaver}/%{name}-%{version}.tar.xz
 Source1: kde.pam
 Source100: %{name}.rpmlintrc
@@ -101,6 +101,8 @@ Requires: qt5-qttools-qtdbus >= 5.5.0
 Requires: qt5-qtgraphicaleffects >= 5.5.0
 # needed if anything will fail on startkde
 Requires: xmessage
+# needed for backgrounds
+Requires: distro-theme-OpenMandriva
 Conflicts: kdebase4-workspace
 Conflicts: kdebase-workspace
 # Because of pam file
@@ -156,6 +158,14 @@ KDE Breeze theme for the SDDM display manager.
 %ninja_install -C build
 
 install -Dpm 644 %{SOURCE1} %{buildroot}%{_sysconfdir}/pam.d/kde
+
+# breeze backgrounds
+rm -rf %{buildroot}%{_datadir}/plasma/look-and-feel/org.kde.breeze.desktop/contents/artwork/background.png
+ln -sf %{_datadir}/mdk/backgrounds/OpenMandriva-16x9.png %{buildroot}%{_datadir}/plasma/look-and-feel/org.kde.breeze.desktop/contents/artwork/background.png
+
+# sddm breeze theme background
+rm -rf %{buildroot}%{_datadir}/sddm/themes/breeze/components/artwork/background.png
+ln -sf %{_datadir}/sddm/themes/omv-background.png %{buildroot}%{_datadir}/sddm/themes/breeze/components/artwork/background.png
 
 %find_lang soliduiserver
 %find_lang drkonqi
