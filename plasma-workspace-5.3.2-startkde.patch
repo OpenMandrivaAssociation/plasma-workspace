@@ -1,6 +1,6 @@
 diff -Naur plasma-workspace-5.4.0/startkde/startkde.cmake plasma-workspace-5.4.0.tpg/startkde/startkde.cmake
 --- plasma-workspace-5.4.0/startkde/startkde.cmake	2015-08-22 10:45:41.000000000 +0000
-+++ plasma-workspace-5.4.0.tpg/startkde/startkde.cmake	2015-08-26 16:06:11.622790258 +0000
++++ plasma-workspace-5.4.0.tpg/startkde/startkde.cmake	2015-09-03 23:37:02.093367041 +0000
 @@ -3,6 +3,15 @@
  #  DEFAULT KDE STARTUP SCRIPT ( @PROJECT_VERSION@ )
  #
@@ -17,7 +17,7 @@ diff -Naur plasma-workspace-5.4.0/startkde/startkde.cmake plasma-workspace-5.4.0
  if test "x$1" = x--failsafe; then
      KDE_FAILSAFE=1 # General failsafe flag
      KWIN_COMPOSE=N # Disable KWin's compositing
-@@ -63,6 +72,13 @@
+@@ -63,16 +72,18 @@
  fi
  
  mkdir -p $configDir
@@ -30,8 +30,21 @@ diff -Naur plasma-workspace-5.4.0/startkde/startkde.cmake plasma-workspace-5.4.0
 +mkdir -m 700 -p $kdehome/share/config
  
  #This is basically setting defaults so we can use them with kstartupconfig5
- cat >$configDir/startupconfigkeys <<EOF
-@@ -90,17 +106,6 @@
+-cat >$configDir/startupconfigkeys <<EOF
+-kcminputrc Mouse cursorTheme 'breeze_cursors'
+-kcminputrc Mouse cursorSize ''
+-ksplashrc KSplash Theme Breeze
+-ksplashrc KSplash Engine KSplashQML
+-kdeglobals KScreen ScaleFactor 1
+-kcmfonts General forceFontDPI 0
+-EOF
++for files in kcmdisplayrc kcmfonts kcminputrc kdeglobals kscreenlockerrc ksplashrc kwinrc plasmarc startupconfig startupconfigfiles startupconfigkeys; do
++    cp -f /etc/xdg/$files $configDir/$files ;
++done
+ 
+ # preload the user's locale on first start
+ plasmalocalerc=$configDir/plasma-localerc
+@@ -90,17 +101,6 @@
      . $exportformatssettings
  }
  
