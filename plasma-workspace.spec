@@ -5,7 +5,7 @@
 
 Name: plasma-workspace
 Version: 5.4.0
-Release: 4
+Release: 5
 Source0: http://download.kde.org//%{stable}/plasma/%{plasmaver}/%{name}-%{version}.tar.xz
 Source1: kde.pam
 Source100: %{name}.rpmlintrc
@@ -161,7 +161,7 @@ install -Dpm 644 %{SOURCE1} %{buildroot}%{_sysconfdir}/pam.d/kde
 
 # breeze backgrounds
 rm -rf %{buildroot}%{_datadir}/plasma/look-and-feel/org.kde.breeze.desktop/contents/components/artwork/background.png
-ln -sf %{_datadir}/mdk/backgrounds/OpenMandriva-16x9.png %{buildroot}%{_datadir}/plasma/look-and-feel/org.kde.breeze.desktop/contents/components/artwork/background.png
+ln -sf %{_datadir}/mdk/backgrounds/default.png %{buildroot}%{_datadir}/plasma/look-and-feel/org.kde.breeze.desktop/contents/components/artwork/background.png
 
 # sddm breeze theme background
 rm -rf %{buildroot}%{_datadir}/sddm/themes/breeze/components/artwork/background.png
