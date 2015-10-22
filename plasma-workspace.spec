@@ -5,7 +5,7 @@
 
 Name: plasma-workspace
 Version: 5.4.2
-Release: 1
+Release: 2
 Source0: http://download.kde.org//%{stable}/plasma/%{plasmaver}/%{name}-%{version}.tar.xz
 Source1: kde.pam
 Source100: %{name}.rpmlintrc
@@ -56,7 +56,7 @@ BuildRequires: cmake(KF5Prison)
 BuildRequires: pkgconfig(dbusmenu-qt5)
 BuildRequires: pkgconfig(kscreen2)
 BuildRequires: pkgconfig(libqalculate)
-BuildRequires: pkgconfig(libgps)
+BuildRequires: pkgconfig(libgps) >= 3.15
 BuildRequires: pkgconfig(phonon4qt5)
 BuildRequires: pkgconfig(Qt5Concurrent)
 BuildRequires: pkgconfig(Qt5Core)
