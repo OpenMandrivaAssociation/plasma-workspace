@@ -206,6 +206,7 @@ cat *.lang >plasma.lang
 %{_sysconfdir}/xdg/autostart/krunner.desktop
 %{_sysconfdir}/xdg/autostart/org.kde.klipper.desktop
 %{_sysconfdir}/xdg/autostart/plasmashell.desktop
+%{_sysconfdir}/xdg/autostart/xembedsniproxy.desktop
 %{_sysconfdir}/xdg/plasmoids.knsrc
 %{_sysconfdir}/xdg/wallpaper.knsrc
 %{_sysconfdir}/xdg/taskmanagerrulesrc
@@ -225,14 +226,15 @@ cat *.lang >plasma.lang
 %{_bindir}/startkde
 %{_bindir}/systemmonitor
 %{_bindir}/startplasmacompositor
+%{_bindir}/xembedsniproxy
 %{_libdir}/libexec/startplasma
 %{_libdir}/libexec/drkonqi
 %{_libdir}/libexec/ksyncdbusenv
 %{_libdir}/qt5/plugins/kcm_krunner_kill.so
-%{_libdir}/qt5/plugins/kded_*.so
 %{_libdir}/qt5/plugins/kio_*.so
 %{_libdir}/qt5/plugins/krunner_*.so
 %{_libdir}/qt5/plugins/plasma_applet_notifications.so
+%{_libdir}/qt5/plugins/kf5/kded/*.so
 %{_libdir}/qt5/plugins/kpackage/packagestructure/*.so
 %{_libdir}/qt5/plugins/phonon_platform
 %{_libdir}/qt5/plugins/kf5/kio/desktop.so
@@ -252,6 +254,7 @@ cat *.lang >plasma.lang
 %{_libdir}/qt5/qml/org/kde/plasma/private/icon
 %{_libdir}/qt5/qml/org/kde/plasma/private/notifications
 %{_libdir}/qt5/qml/org/kde/plasma/private/shell
+%{_libdir}/qt5/qml/org/kde/plasma/private/sessions
 %{_libdir}/qt5/qml/org/kde/plasma/wallpapers
 %{_libdir}/qt5/qml/org/kde/plasma/workspace
 %{_libdir}/qt5/qml/org/kde/private/systemtray
@@ -272,7 +275,6 @@ cat *.lang >plasma.lang
 %{_datadir}/kstyle
 %{_datadir}/solid/actions/test-predicate-openinwindow.desktop
 %{_datadir}/plasma/look-and-feel
-%dir %{_datadir}/plasma/kcms
 %dir %{_datadir}/plasma/plasmoids
 %{_datadir}/plasma/plasmoids/org.kde.plasma.activitybar
 %{_datadir}/plasma/plasmoids/org.kde.plasma.analogclock
@@ -310,10 +312,10 @@ cat *.lang >plasma.lang
 %{_datadir}/plasma/wallpapers/org.kde.image
 %{_datadir}/plasma/wallpapers/org.kde.slideshow
 %{_datadir}/xsessions/plasma.desktop
+%{_datadir}/wayland-sessions/plasmawayland.desktop
 %doc %{_docdir}/HTML/*/klipper
+%doc %{_docdir}/HTML/*/kcontrol/screenlocker
 %{_libdir}/libkdeinit5_*.so
-%{_datadir}/kconf_update/*.upd
-%{_datadir}/kconf_update/*.pl
 
 %files -n sddm-theme-breeze
 %{_datadir}/sddm/themes/breeze
@@ -326,5 +328,4 @@ cat *.lang >plasma.lang
 %{_libdir}/cmake/KSMServerDBusInterface
 %{_libdir}/cmake/LibKWorkspace
 %{_libdir}/cmake/LibTaskManager
-%{_libdir}/cmake/ScreenSaverDBusInterface
 %{_datadir}/dbus-1/interfaces/*.xml
