@@ -197,7 +197,6 @@ done
 %find_lang plasma_package_plasmashell
 %find_lang plasmashell
 %find_lang plasmashellprivateplugin
-%find_lang screenlocker_kcm
 %find_lang soliduiserver
 %find_lang systemmonitor
 
@@ -248,7 +247,6 @@ cat *.lang >plasma.lang
 %{_libdir}/qt5/plugins/plasma_containmentactions_switchwindow.so
 %{_libdir}/qt5/plugins/plasma-geolocation-gps.so
 %{_libdir}/qt5/plugins/plasma-geolocation-ip.so
-%{_libdir}/qt5/plugins/screenlocker_kcm.so
 %dir %{_libdir}/qt5/qml/org/kde/plasma/private
 %{_libdir}/qt5/qml/org/kde/plasma/private/digitalclock
 %{_libdir}/qt5/qml/org/kde/plasma/private/icon
@@ -275,7 +273,6 @@ cat *.lang >plasma.lang
 %{_datadir}/solid/actions/test-predicate-openinwindow.desktop
 %{_datadir}/plasma/look-and-feel
 %dir %{_datadir}/plasma/kcms
-%{_datadir}/plasma/kcms/screenlocker_kcm
 %dir %{_datadir}/plasma/plasmoids
 %{_datadir}/plasma/plasmoids/org.kde.plasma.activitybar
 %{_datadir}/plasma/plasmoids/org.kde.plasma.analogclock
@@ -314,7 +311,6 @@ cat *.lang >plasma.lang
 %{_datadir}/plasma/wallpapers/org.kde.slideshow
 %{_datadir}/xsessions/plasma.desktop
 %doc %{_docdir}/HTML/*/klipper
-%doc %{_docdir}/HTML/*/kcontrol/screenlocker
 %{_libdir}/libkdeinit5_*.so
 %{_datadir}/kconf_update/*.upd
 %{_datadir}/kconf_update/*.pl
