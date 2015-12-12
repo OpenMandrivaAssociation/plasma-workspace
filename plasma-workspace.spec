@@ -176,8 +176,6 @@ ln -sf %{_datadir}/sddm/themes/omv-background.png %{buildroot}%{_datadir}/sddm/t
 %find_lang kio_remote
 %find_lang klipper
 %find_lang krunner
-%find_lang kscreenlocker
-%find_lang kscreenlocker_greet
 %find_lang ksmserver
 %find_lang kuiserver5
 %find_lang libkworkspace
@@ -230,8 +228,6 @@ cat *.lang >plasma.lang
 %{_bindir}/startplasmacompositor
 %{_libdir}/libexec/startplasma
 %{_libdir}/libexec/drkonqi
-%attr(6755,root,root) %{_libdir}/libexec/kcheckpass
-%{_libdir}/libexec/kscreenlocker_greet
 %{_libdir}/libexec/ksyncdbusenv
 %{_libdir}/qt5/plugins/kcm_krunner_kill.so
 %{_libdir}/qt5/plugins/kded_*.so
