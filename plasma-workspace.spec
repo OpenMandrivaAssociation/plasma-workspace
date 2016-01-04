@@ -5,7 +5,7 @@
 
 Name: plasma-workspace
 Version: 5.5.2
-Release: 2
+Release: 3
 Source0: http://download.kde.org//%{stable}/plasma/%{plasmaver}/%{name}-%{version}.tar.xz
 Source1: kde.pam
 Source100: %{name}.rpmlintrc
@@ -109,6 +109,8 @@ Conflicts: kdebase-workspace
 # Because of pam file
 Conflicts: kdm
 Conflicts: kio-extras < 15.08.0
+Obsoletes: kde-base-artwork < 15.08.3-3
+Provides: kde-base-artwork = 15.08.3-3
 
 %description
 The KDE Plasma workspace.
