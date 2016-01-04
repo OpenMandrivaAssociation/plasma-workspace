@@ -111,6 +111,10 @@ Conflicts: kdm
 Conflicts: kio-extras < 15.08.0
 Obsoletes: kde-base-artwork < 15.08.3-3
 Provides: kde-base-artwork = 15.08.3-3
+Obsoletes: superkaramba < 15.08.3-3
+Provides: superkaramba = 15.08.3-3
+Obsoletes: %{mklibname superkaramba 4} < 15.08.3-3
+Provides: %{mklibname superkaramba 4} = 15.08.3-3
 
 %description
 The KDE Plasma workspace.
