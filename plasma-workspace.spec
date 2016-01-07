@@ -5,12 +5,13 @@
 
 Name: plasma-workspace
 Version: 5.5.2
-Release: 3
+Release: 4
 Source0: http://download.kde.org//%{stable}/plasma/%{plasmaver}/%{name}-%{version}.tar.xz
 Source1: kde.pam
 Source100: %{name}.rpmlintrc
 Patch0: plasma-workspace-5.3.2-startkde.patch
 Patch1: plasma-workspace-5.3.2-no-lto-in-plasmashell.patch
+Patch2: plasma-workspace-5.5.2-use-openmandriva-icon-in-ksplash.patch
 Summary: The KDE Plasma workspace
 URL: http://kde.org/
 License: GPL
@@ -102,7 +103,7 @@ Requires: qt5-qttools-qtdbus >= 5.5.0
 Requires: qt5-qtgraphicaleffects >= 5.5.0
 # needed if anything will fail on startkde
 Requires: xmessage
-# needed for backgrounds
+# needed for backgrounds and patch 2
 Requires: distro-theme-OpenMandriva
 Conflicts: kdebase4-workspace
 Conflicts: kdebase-workspace
