@@ -5,13 +5,14 @@
 
 Name: plasma-workspace
 Version: 5.5.3
-Release: 1
+Release: 2
 Source0: http://download.kde.org//%{stable}/plasma/%{plasmaver}/%{name}-%{version}.tar.xz
 Source1: kde.pam
 Source100: %{name}.rpmlintrc
 Patch0: plasma-workspace-5.3.2-startkde.patch
 Patch1: plasma-workspace-5.3.2-no-lto-in-plasmashell.patch
 Patch2: plasma-workspace-5.5.2-use-openmandriva-icon-in-ksplash.patch
+Patch3: plasma-workspace-5.5.3-startplasmacompositor.patch
 Summary: The KDE Plasma workspace
 URL: http://kde.org/
 License: GPL
