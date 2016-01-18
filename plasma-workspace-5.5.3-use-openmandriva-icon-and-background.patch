@@ -1,0 +1,59 @@
+diff -Naur plasma-workspace-5.5.3/ksplash/ksplashqml/themes/Classic/main.qml plasma-workspace-5.5.3.tpg/ksplash/ksplashqml/themes/Classic/main.qml
+--- plasma-workspace-5.5.3/ksplash/ksplashqml/themes/Classic/main.qml	2016-01-06 12:17:36.000000000 +0000
++++ plasma-workspace-5.5.3.tpg/ksplash/ksplashqml/themes/Classic/main.qml	2016-01-18 19:17:06.348057918 +0000
+@@ -52,7 +52,7 @@
+     Image {
+         id: background
+         anchors.fill: parent
+-        source: "images/background.png"
++        source: "/usr/share/mdk/backgrounds/OpenMandriva-splash.png"
+     }
+ 
+     Image {
+diff -Naur plasma-workspace-5.5.3/lookandfeel/contents/lockscreen/LockScreen.qml plasma-workspace-5.5.3.tpg/lookandfeel/contents/lockscreen/LockScreen.qml
+--- plasma-workspace-5.5.3/lookandfeel/contents/lockscreen/LockScreen.qml	2016-01-06 12:17:36.000000000 +0000
++++ plasma-workspace-5.5.3.tpg/lookandfeel/contents/lockscreen/LockScreen.qml	2016-01-18 19:15:54.611077374 +0000
+@@ -32,13 +32,13 @@
+     property int interfaceVersion: org_kde_plasma_screenlocker_greeter_interfaceVersion ? org_kde_plasma_screenlocker_greeter_interfaceVersion : 0
+     signal clearPassword()
+ 
+-    source: backgroundPath || "../components/artwork/background.png"
++    source: backgroundPath || "/usr/share/mdk/backgrounds/OpenMandriva-splash.png"
+     fillMode: Image.PreserveAspectCrop
+     asynchronous: true
+ 
+     onStatusChanged: {
+         if (status == Image.Error) {
+-            source = "../components/artwork/background.png";
++            source = "/usr/share/mdk/backgrounds/OpenMandriva-splash.png";
+         }
+     }
+ 
+diff -Naur plasma-workspace-5.5.3/lookandfeel/contents/loginmanager/theme.conf plasma-workspace-5.5.3.tpg/lookandfeel/contents/loginmanager/theme.conf
+--- plasma-workspace-5.5.3/lookandfeel/contents/loginmanager/theme.conf	2016-01-06 12:17:36.000000000 +0000
++++ plasma-workspace-5.5.3.tpg/lookandfeel/contents/loginmanager/theme.conf	2016-01-18 18:57:45.797088409 +0000
+@@ -1,2 +1,2 @@
+ [General]
+-background=components/artwork/background.png
++background=/usr/share/mdk/backgrounds/OpenMandriva-splash.png
+diff -Naur plasma-workspace-5.5.3/lookandfeel/contents/splash/Splash.qml plasma-workspace-5.5.3.tpg/lookandfeel/contents/splash/Splash.qml
+--- plasma-workspace-5.5.3/lookandfeel/contents/splash/Splash.qml	2016-01-06 12:17:36.000000000 +0000
++++ plasma-workspace-5.5.3.tpg/lookandfeel/contents/splash/Splash.qml	2016-01-18 18:59:32.482015475 +0000
+@@ -21,7 +21,7 @@
+ 
+ Image {
+     id: root
+-    source: "../components/artwork/background.png"
++    source: "/usr/share/mdk/backgrounds/OpenMandriva-splash.png"
+     fillMode: Image.PreserveAspectCrop
+ 
+     property int stage
+@@ -38,7 +38,7 @@
+         y: root.height
+         color: "#4C000000"
+         Image {
+-            source: "images/kde.svgz"
++            source: "/usr/share/icons/openmandriva.svg"
+             anchors.centerIn: parent
+             sourceSize.height: 128
+             sourceSize.width: 128

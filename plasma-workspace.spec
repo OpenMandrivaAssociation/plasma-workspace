@@ -11,7 +11,7 @@ Source1: kde.pam
 Source100: %{name}.rpmlintrc
 Patch0: plasma-workspace-5.3.2-startkde.patch
 Patch1: plasma-workspace-5.3.2-no-lto-in-plasmashell.patch
-Patch2: plasma-workspace-5.5.2-use-openmandriva-icon-in-ksplash.patch
+Patch2: plasma-workspace-5.5.3-use-openmandriva-icon-and-background.patch
 Patch3: plasma-workspace-5.5.3-startplasmacompositor.patch
 Summary: The KDE Plasma workspace
 URL: http://kde.org/
@@ -174,7 +174,7 @@ ln -sf %{_datadir}/mdk/backgrounds/default.png %{buildroot}%{_datadir}/plasma/lo
 
 # sddm breeze theme background
 rm -rf %{buildroot}%{_datadir}/sddm/themes/breeze/components/artwork/background.png
-ln -sf %{_datadir}/sddm/themes/omv-background.png %{buildroot}%{_datadir}/sddm/themes/breeze/components/artwork/background.png
+ln -sf %{_datadir}/mdk/backgrounds/OpenMandriva-splash.png %{buildroot}%{_datadir}/sddm/themes/breeze/components/artwork/background.png
 
 %find_lang soliduiserver
 %find_lang drkonqi
