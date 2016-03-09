@@ -18,7 +18,7 @@ Patch100: 0036-SNI-DataEngine-ProtocolVersion-is-an-int.patch
 Patch101: 0099-Use-ConfigureNotify-instead-of-xcb_configure_window-.patch
 Patch102: 0100-Add-transparency-support-for-tray-icon.patch
 Patch103: 0101-Check-whether-there-is-any-BadWindow-error-before-mo.patch
-Patch103: 0127-Avoid-blocking-DBus-calls-in-SNI-startup.patch
+Patch104: 0127-Avoid-blocking-DBus-calls-in-SNI-startup.patch
 Summary: The KDE Plasma workspace
 URL: http://kde.org/
 License: GPL
