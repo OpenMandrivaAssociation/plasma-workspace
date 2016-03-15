@@ -5,7 +5,7 @@
 
 Name: plasma-workspace
 Version: 5.5.5.2
-Release: 1
+Release: 2
 Source0: http://download.kde.org//%{stable}/plasma/%{plasmaver}/%{name}-%{version}.tar.xz
 Source1: kde.pam
 Source100: %{name}.rpmlintrc
@@ -19,6 +19,7 @@ Patch101: 0099-Use-ConfigureNotify-instead-of-xcb_configure_window-.patch
 Patch102: 0100-Add-transparency-support-for-tray-icon.patch
 Patch103: 0101-Check-whether-there-is-any-BadWindow-error-before-mo.patch
 Patch104: 0127-Avoid-blocking-DBus-calls-in-SNI-startup.patch
+Patch105: plasma-workspace-5.5.5-systray.patch
 Summary: The KDE Plasma workspace
 URL: http://kde.org/
 License: GPL
@@ -97,7 +98,8 @@ BuildRequires: pkgconfig(xcursor)
 BuildRequires: pam-devel
 Requires: qt5-qtquickcontrols >= 5.5.0
 # External KF5 and Plasma 5 required packages
-Requires: kactivities
+Requires: kactivities-workspace
+Requires: kactivitymanagerd
 Requires: kde-cli-tools
 Requires: kded
 Requires: kimageformats

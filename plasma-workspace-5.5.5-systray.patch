@@ -1,0 +1,11 @@
+diff -urN plasma-workspace-5.5.5/applets/systemtray/plugin/tasksproxymodel.cpp plasma-workspace-5.5.5-patched/applets/systemtray/plugin/tasksproxymodel.cpp
+--- plasma-workspace-5.5.5/applets/systemtray/plugin/tasksproxymodel.cpp	2016-03-01 19:37:29.000000000 +0300
++++ plasma-workspace-5.5.5-patched/applets/systemtray/plugin/tasksproxymodel.cpp	2016-03-02 02:32:51.193082626 +0300
+@@ -28,6 +28,7 @@
+ {
+     connect(this, &QSortFilterProxyModel::rowsInserted, this, &TasksProxyModel::countChanged);
+     connect(this, &QSortFilterProxyModel::rowsRemoved, this, &TasksProxyModel::countChanged);
++    connect(this, &QSortFilterProxyModel::modelReset, this, &TasksProxyModel::countChanged);
+ }
+ 
+ Host *TasksProxyModel::host() const
