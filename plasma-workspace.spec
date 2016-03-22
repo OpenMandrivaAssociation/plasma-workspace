@@ -97,7 +97,6 @@ BuildRequires: pkgconfig(xcursor)
 BuildRequires: pam-devel
 Requires: qt5-qtquickcontrols >= 5.5.0
 # External KF5 and Plasma 5 required packages
-Requires: kactivities-workspace
 Requires: kactivitymanagerd
 Requires: kde-cli-tools
 Requires: kded
@@ -127,6 +126,7 @@ Obsoletes: superkaramba < 15.08.3-3
 Provides: superkaramba = 15.08.3-3
 Obsoletes: %{mklibname superkaramba 4} < 15.08.3-3
 Provides: %{mklibname superkaramba 4} = 15.08.3-3
+Conflicts: kactivities-workspace < 5.5.0-2
 
 %description
 The KDE Plasma workspace.
