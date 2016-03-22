@@ -22,7 +22,7 @@ Patch104: 0127-Avoid-blocking-DBus-calls-in-SNI-startup.patch
 Summary: The KDE Plasma workspace
 URL: http://kde.org/
 License: GPL
-Group: System/Libraries
+Group: Graphical desktop/KDE
 BuildRequires: cmake(KF5DocTools)
 BuildRequires: cmake(KF5Activities)
 BuildRequires: cmake(KF5CoreAddons)
