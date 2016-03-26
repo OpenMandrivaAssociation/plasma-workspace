@@ -1,6 +1,6 @@
-diff -Naur plasma-workspace-5.5.3/ksplash/ksplashqml/themes/Classic/main.qml plasma-workspace-5.5.3.tpg/ksplash/ksplashqml/themes/Classic/main.qml
---- plasma-workspace-5.5.3/ksplash/ksplashqml/themes/Classic/main.qml	2016-01-06 12:17:36.000000000 +0000
-+++ plasma-workspace-5.5.3.tpg/ksplash/ksplashqml/themes/Classic/main.qml	2016-01-18 19:17:06.348057918 +0000
+diff -Naur plasma-workspace-5.6.0/ksplash/ksplashqml/themes/Classic/main.qml plasma-workspace-5.6.0.tpg/ksplash/ksplashqml/themes/Classic/main.qml
+--- plasma-workspace-5.6.0/ksplash/ksplashqml/themes/Classic/main.qml	2016-03-17 11:03:23.000000000 +0000
++++ plasma-workspace-5.6.0.tpg/ksplash/ksplashqml/themes/Classic/main.qml	2016-03-26 03:01:40.367971583 +0000
 @@ -52,7 +52,7 @@
      Image {
          id: background
@@ -10,9 +10,9 @@ diff -Naur plasma-workspace-5.5.3/ksplash/ksplashqml/themes/Classic/main.qml pla
      }
  
      Image {
-diff -Naur plasma-workspace-5.5.3/lookandfeel/contents/lockscreen/LockScreen.qml plasma-workspace-5.5.3.tpg/lookandfeel/contents/lockscreen/LockScreen.qml
---- plasma-workspace-5.5.3/lookandfeel/contents/lockscreen/LockScreen.qml	2016-01-06 12:17:36.000000000 +0000
-+++ plasma-workspace-5.5.3.tpg/lookandfeel/contents/lockscreen/LockScreen.qml	2016-01-18 19:15:54.611077374 +0000
+diff -Naur plasma-workspace-5.6.0/lookandfeel/contents/lockscreen/LockScreen.qml plasma-workspace-5.6.0.tpg/lookandfeel/contents/lockscreen/LockScreen.qml
+--- plasma-workspace-5.6.0/lookandfeel/contents/lockscreen/LockScreen.qml	2016-03-17 11:03:23.000000000 +0000
++++ plasma-workspace-5.6.0.tpg/lookandfeel/contents/lockscreen/LockScreen.qml	2016-03-26 03:02:32.134333642 +0000
 @@ -32,13 +32,13 @@
      property int interfaceVersion: org_kde_plasma_screenlocker_greeter_interfaceVersion ? org_kde_plasma_screenlocker_greeter_interfaceVersion : 0
      signal clearPassword()
@@ -20,7 +20,7 @@ diff -Naur plasma-workspace-5.5.3/lookandfeel/contents/lockscreen/LockScreen.qml
 -    source: backgroundPath || "../components/artwork/background.png"
 +    source: backgroundPath || "/usr/share/mdk/backgrounds/OpenMandriva-splash.png"
      fillMode: Image.PreserveAspectCrop
-     asynchronous: true
+     asynchronous: false
  
      onStatusChanged: {
          if (status == Image.Error) {
@@ -29,16 +29,16 @@ diff -Naur plasma-workspace-5.5.3/lookandfeel/contents/lockscreen/LockScreen.qml
          }
      }
  
-diff -Naur plasma-workspace-5.5.3/lookandfeel/contents/loginmanager/theme.conf plasma-workspace-5.5.3.tpg/lookandfeel/contents/loginmanager/theme.conf
---- plasma-workspace-5.5.3/lookandfeel/contents/loginmanager/theme.conf	2016-01-06 12:17:36.000000000 +0000
-+++ plasma-workspace-5.5.3.tpg/lookandfeel/contents/loginmanager/theme.conf	2016-01-18 18:57:45.797088409 +0000
+diff -Naur plasma-workspace-5.6.0/lookandfeel/contents/loginmanager/theme.conf plasma-workspace-5.6.0.tpg/lookandfeel/contents/loginmanager/theme.conf
+--- plasma-workspace-5.6.0/lookandfeel/contents/loginmanager/theme.conf	2016-03-17 11:03:23.000000000 +0000
++++ plasma-workspace-5.6.0.tpg/lookandfeel/contents/loginmanager/theme.conf	2016-03-26 03:03:08.372287258 +0000
 @@ -1,2 +1,2 @@
  [General]
 -background=components/artwork/background.png
 +background=/usr/share/mdk/backgrounds/OpenMandriva-splash.png
-diff -Naur plasma-workspace-5.5.3/lookandfeel/contents/splash/Splash.qml plasma-workspace-5.5.3.tpg/lookandfeel/contents/splash/Splash.qml
---- plasma-workspace-5.5.3/lookandfeel/contents/splash/Splash.qml	2016-01-06 12:17:36.000000000 +0000
-+++ plasma-workspace-5.5.3.tpg/lookandfeel/contents/splash/Splash.qml	2016-01-18 18:59:32.482015475 +0000
+diff -Naur plasma-workspace-5.6.0/lookandfeel/contents/splash/Splash.qml plasma-workspace-5.6.0.tpg/lookandfeel/contents/splash/Splash.qml
+--- plasma-workspace-5.6.0/lookandfeel/contents/splash/Splash.qml	2016-03-17 11:03:23.000000000 +0000
++++ plasma-workspace-5.6.0.tpg/lookandfeel/contents/splash/Splash.qml	2016-03-26 03:04:02.923723007 +0000
 @@ -21,7 +21,7 @@
  
  Image {
@@ -48,12 +48,12 @@ diff -Naur plasma-workspace-5.5.3/lookandfeel/contents/splash/Splash.qml plasma-
      fillMode: Image.PreserveAspectCrop
  
      property int stage
-@@ -38,7 +38,7 @@
-         y: root.height
-         color: "#4C000000"
-         Image {
--            source: "images/kde.svgz"
-+            source: "/usr/share/icons/openmandriva.svg"
-             anchors.centerIn: parent
-             sourceSize.height: 128
-             sourceSize.width: 128
+@@ -49,7 +49,7 @@
+             x: parent.width
+             Image {
+                 anchors.horizontalCenter: parent.horizontalCenter
+-                source: "images/kde.svgz"
++                source: "/usr/share/icons/openmandriva.svg"
+                 sourceSize.height: units.gridUnit * 8
+                 sourceSize.width: sourceSize.height
+             }
