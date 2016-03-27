@@ -95,7 +95,7 @@ BuildRequires: pkgconfig(xcursor)
 BuildRequires: pam-devel
 Requires: qt5-qtquickcontrols >= 5.5.0
 # External KF5 and Plasma 5 required packages
-Requires: kactivitymanagerd
+Requires: kactivitymanagerd >= 5.6.0
 Requires: kde-cli-tools
 Requires: kded
 Requires: kimageformats
