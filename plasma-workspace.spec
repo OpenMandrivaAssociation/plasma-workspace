@@ -5,7 +5,7 @@
 
 Name: plasma-workspace
 Version: 5.6.0
-Release: 1
+Release: 2
 Source0: http://download.kde.org//%{stable}/plasma/%{plasmaver}/%{name}-%{version}.tar.xz
 Source1: kde.pam
 Source100: %{name}.rpmlintrc
@@ -124,7 +124,8 @@ Obsoletes: superkaramba < 15.08.3-3
 Provides: superkaramba = 15.08.3-3
 Obsoletes: %{mklibname superkaramba 4} < 15.08.3-3
 Provides: %{mklibname superkaramba 4} = 15.08.3-3
-Conflicts: kactivities-workspace < 5.5.0-2
+Obsoletes: kactivities-workspace < 5.5.0-3
+Provides: kactivities-workspace = 5.5.0-3
 
 %description
 The KDE Plasma workspace.
