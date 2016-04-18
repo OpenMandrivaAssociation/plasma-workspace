@@ -26,6 +26,7 @@ BuildRequires: cmake(KF5Activities)
 BuildRequires: cmake(KF5CoreAddons)
 BuildRequires: cmake(KF5Crash)
 BuildRequires: cmake(KF5Solid)
+BuildRequires: cmake(KF5Parts)
 BuildRequires: cmake(KF5Activities)
 BuildRequires: cmake(KF5TextEditor)
 BuildRequires: cmake(KF5DBusAddons)
@@ -45,7 +46,7 @@ BuildRequires: cmake(KF5Declarative)
 BuildRequires: cmake(KF5Plasma)
 BuildRequires: cmake(KF5PlasmaQuick)
 BuildRequires: cmake(KF5Config)
-BuildRequires: cmake(Prison)
+BuildRequires: cmake(KF5Prison)
 BuildRequires: cmake(Phonon4Qt5)
 BuildRequires: cmake(KF5Runner)
 BuildRequires: cmake(KF5JsEmbed)
@@ -93,6 +94,7 @@ BuildRequires: pkgconfig(sm)
 BuildRequires: pkgconfig(libgps)
 BuildRequires: pkgconfig(xcursor)
 BuildRequires: pam-devel
+BuildRequires: iso-codes
 Requires: qt5-qtquickcontrols >= 5.5.0
 # External KF5 and Plasma 5 required packages
 Requires: kactivitymanagerd >= 5.6.0
