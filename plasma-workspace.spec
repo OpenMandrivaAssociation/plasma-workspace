@@ -5,7 +5,7 @@
 
 Name: plasma-workspace
 Version: 5.6.3
-Release: 1
+Release: 2
 Source0: http://download.kde.org//%{stable}/plasma/%{plasmaver}/%{name}-%{version}.tar.xz
 Source1: kde.pam
 Source100: %{name}.rpmlintrc
@@ -118,7 +118,7 @@ Requires: distro-theme-OpenMandriva
 Conflicts: kdebase4-workspace
 Conflicts: kdebase-workspace
 # Because of pam file
-Conflicts: kdm
+Conflicts: kdm < 2:4.11.22-1.1
 Conflicts: kio-extras < 15.08.0
 Obsoletes: kde-base-artwork < 15.08.3-3
 Provides: kde-base-artwork = 15.08.3-3
