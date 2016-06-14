@@ -4,7 +4,7 @@
 %define stable %([ "`echo %{version} |cut -d. -f3`" -ge 80 ] && echo -n un; echo -n stable)
 
 Name: plasma-workspace
-Version: 5.6.4
+Version: 5.6.5
 Release: 1
 Source0: http://download.kde.org//%{stable}/plasma/%{plasmaver}/%{name}-%{version}.tar.xz
 Source1: kde.pam
@@ -254,12 +254,13 @@ cat *.lang >plasma.lang
 %{_libdir}/qt5/plugins/kcm_krunner_kill.so
 %{_libdir}/qt5/plugins/kio_*.so
 %{_libdir}/qt5/plugins/krunner_*.so
-%{_libdir}/qt5/plugins/plasma_applet_notifications.so
 %{_libdir}/qt5/plugins/kf5/kded/*.so
 %{_libdir}/qt5/plugins/kpackage/packagestructure/*.so
 %{_libdir}/qt5/plugins/phonon_platform
 %{_libdir}/qt5/plugins/kf5/kio/desktop.so
 %dir %{_libdir}/qt5/plugins/plasma
+%dir %{_libdir}/qt5/plugins/plasma/applets
+%{_libdir}/qt5/plugins/plasma/applets/plasma_applet_notifications.so
 %{_libdir}/qt5/plugins/plasma/dataengine
 %{_libdir}/qt5/plugins/plasma/packagestructure
 %{_libdir}/qt5/plugins/plasma_containmentactions_applauncher.so
