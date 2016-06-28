@@ -5,7 +5,7 @@
 
 Name: plasma-workspace
 Version: 5.6.5
-Release: 1
+Release: 2
 Source0: http://download.kde.org//%{stable}/plasma/%{plasmaver}/%{name}-%{version}.tar.xz
 Source1: kde.pam
 Source100: %{name}.rpmlintrc
@@ -171,7 +171,7 @@ KDE Breeze theme for the SDDM display manager.
 %apply_patches
 sed -i -e 's,@LIBDIR@,%{_lib},g' startkde/startkde.cmake
 
-%cmake_kde5 -DKDE_DEFAULT_HOME=.kde4
+%cmake_kde5 -DKDE4_COMMON_PAM_SERVICE=kde -DKDE_DEFAULT_HOME=.kde4 
 
 %build
 %ninja -C build
