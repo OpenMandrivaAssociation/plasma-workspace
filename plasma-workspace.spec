@@ -20,6 +20,7 @@ Patch3: plasma-workspace-5.5.3-startplasmacompositor.patch
 Summary: The KDE Plasma workspace
 URL: http://kde.org/
 License: GPL
+Obsoletes: simplesystray < %{EVRD}
 Group: Graphical desktop/KDE
 BuildRequires: cmake(KF5DocTools)
 BuildRequires: cmake(KF5Activities)
