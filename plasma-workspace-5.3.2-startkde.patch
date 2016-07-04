@@ -1,6 +1,5 @@
-diff -Naur plasma-workspace-5.4.0/startkde/startkde.cmake plasma-workspace-5.4.0.tpg/startkde/startkde.cmake
---- plasma-workspace-5.4.0/startkde/startkde.cmake	2015-08-22 10:45:41.000000000 +0000
-+++ plasma-workspace-5.4.0.tpg/startkde/startkde.cmake	2015-09-05 18:55:34.311901787 +0000
+--- plasma-workspace-5.7.0/startkde/startkde.cmake.0000~	2016-06-30 18:33:30.000000000 +0200
++++ plasma-workspace-5.7.0/startkde/startkde.cmake	2016-07-04 13:51:46.369601658 +0200
 @@ -3,6 +3,11 @@
  #  DEFAULT KDE STARTUP SCRIPT ( @PROJECT_VERSION@ )
  #
@@ -13,22 +12,22 @@ diff -Naur plasma-workspace-5.4.0/startkde/startkde.cmake plasma-workspace-5.4.0
  if test "x$1" = x--failsafe; then
      KDE_FAILSAFE=1 # General failsafe flag
      KWIN_COMPOSE=N # Disable KWin's compositing
-@@ -63,16 +72,13 @@
+@@ -64,16 +69,12 @@ else
  fi
  
  mkdir -p $configDir
-+kdehome=$HOME/@KDE_DEFAULT_HOME@
-+test -n "$KDEHOME" && kdehome=`echo "$KDEHOME"|sed "s,^~/,$HOME/,"`
- 
+-
 -#This is basically setting defaults so we can use them with kstartupconfig5
 -cat >$configDir/startupconfigkeys <<EOF
 -kcminputrc Mouse cursorTheme 'breeze_cursors'
 -kcminputrc Mouse cursorSize ''
 -ksplashrc KSplash Theme Breeze
 -ksplashrc KSplash Engine KSplashQML
--kdeglobals KScreen ScaleFactor 1
+-kdeglobals KScreen ScreenScaleFactors ''
 -kcmfonts General forceFontDPI 0
 -EOF
++kdehome=$HOME/@KDE_DEFAULT_HOME@
++test -n "$KDEHOME" && kdehome=`echo "$KDEHOME"|sed "s,^~/,$HOME/,"`
 +# see kstartupconfig source for usage
 +mkdir -m 700 -p $kdehome
 +mkdir -m 700 -p $kdehome/share
@@ -36,7 +35,7 @@ diff -Naur plasma-workspace-5.4.0/startkde/startkde.cmake plasma-workspace-5.4.0
  
  # preload the user's locale on first start
  plasmalocalerc=$configDir/plasma-localerc
-@@ -90,17 +96,6 @@
+@@ -91,17 +92,6 @@ test -f $exportformatssettings && {
      . $exportformatssettings
  }
  

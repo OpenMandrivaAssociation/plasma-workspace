@@ -4,8 +4,8 @@
 %define stable %([ "`echo %{version} |cut -d. -f3`" -ge 80 ] && echo -n un; echo -n stable)
 
 Name: plasma-workspace
-Version: 5.6.5
-Release: 2
+Version: 5.7.0
+Release: 1
 Source0: http://download.kde.org//%{stable}/plasma/%{plasmaver}/%{name}-%{version}.tar.xz
 Source1: kde.pam
 Source100: %{name}.rpmlintrc
@@ -189,39 +189,42 @@ ln -sf %{_datadir}/mdk/backgrounds/default.png %{buildroot}%{_datadir}/plasma/lo
 rm -rf %{buildroot}%{_datadir}/sddm/themes/breeze/components/artwork/background.png
 ln -sf %{_datadir}/mdk/backgrounds/OpenMandriva-splash.png %{buildroot}%{_datadir}/sddm/themes/breeze/components/artwork/background.png
 
-%find_lang soliduiserver
-%find_lang drkonqi
-%find_lang freespacenotifier
-%find_lang kcminit
-%find_lang kio_applications
-%find_lang kio_remote
-%find_lang klipper
-%find_lang krunner
-%find_lang ksmserver
-%find_lang kuiserver5
-%find_lang libkworkspace
-%find_lang libtaskmanager
-%find_lang phonon_kde
+%find_lang soliduiserver || touch soliduiserver.lang
+%find_lang drkonqi || touch drkonqi.lang
+%find_lang freespacenotifier || touch freespacenotifier.lang
+%find_lang kcminit || touch kcminit.lang
+%find_lang kio_applications || touch kio_applications.lang
+%find_lang kio_remote || touch kio_remote.lang
+%find_lang klipper || touch klipper.lang
+%find_lang krunner || touch krunner.lang
+%find_lang ksmserver || touch ksmserver.lang
+%find_lang kuiserver5 || touch kuiserver5.lang
+%find_lang libkworkspace || touch libkworkspace.lang
+%find_lang libtaskmanager || touch libtaskmanager.lang
+%find_lang phonon_kde || touch phonon_kde.lang
 for i in org.kde.color org.kde.image org.kde.plasma.analogclock org.kde.plasma.battery org.kde.plasma.calendar org.kde.plasma.clipboard org.kde.plasma.digitalclock org.kde.plasma.devicenotifier org.kde.plasma.lock_logout org.kde.plasma.mediacontroller org.kde.plasma.notifications org.kde.plasma.panelspacer org.kde.plasma.systemtray org.kde.plasma.systemmonitor.cpu org.kde.plasma.systemmonitor.diskactivity org.kde.plasma.systemmonitor.diskusage org.kde.plasma.systemmonitor.memory org.kde.plasma.systemmonitor.net; do
-	%find_lang plasma_applet_$i
+	%find_lang plasma_applet_$i || touch plasma_applet_$i.lang
 done
 for i in contextmenu switchwindow; do
-	%find_lang plasma_containmentactions_$i
+	%find_lang plasma_containmentactions_$i || touch plasma_containmentactions_$i.lang
 done
 for i in applicationjobs devicenotifications keystate mpris2 network notifications powermanagement rss share soliddevice time weather; do
-	%find_lang plasma_engine_$i
+	%find_lang plasma_engine_$i || touch plasma_engine_$i.lang
 done
-%find_lang plasma_lookandfeel_org.kde.lookandfeel
+%find_lang plasma_lookandfeel_org.kde.lookandfeel || touch plasma_lookandfeel_org.kde.lookandfeel.lang
 for i in activities baloosearchrunner bookmarksrunner calculatorrunner kill locations placesrunner powerdevil recentdocuments services sessions shell solid webshortcuts windowedwidgets windows; do
-	%find_lang plasma_runner_$i
+	%find_lang plasma_runner_$i || touch plasma_runner_$i.lang
 done
-%find_lang plasma_package_plasmashell
-%find_lang plasmashell
-%find_lang plasmashellprivateplugin
-%find_lang soliduiserver
-%find_lang systemmonitor
+%find_lang plasma_package_plasmashell || touch plasma_package_plasmashell.lang
+%find_lang plasmashell || touch plasmashell.lang
+%find_lang plasmashellprivateplugin || touch plasmashellprivateplugin.lang
+%find_lang soliduiserver || touch soliduiserver.lang
+%find_lang systemmonitor || touch systemmonitor.lang
 
 cat *.lang >plasma.lang
+
+%libpackage legacytaskmanager 5
+%libpackage taskmanager 6
 
 %files -f plasma.lang
 %{_sysconfdir}/xdg/autostart/krunner.desktop
@@ -231,6 +234,7 @@ cat *.lang >plasma.lang
 %{_sysconfdir}/xdg/plasmoids.knsrc
 %{_sysconfdir}/xdg/wallpaper.knsrc
 %{_sysconfdir}/xdg/taskmanagerrulesrc
+%{_sysconfdir}/xdg/legacytaskmanagerrulesrc
 %{_sysconfdir}/pam.d/kde
 %{_bindir}/kcheckrunning
 %{_bindir}/kcminit
@@ -257,6 +261,9 @@ cat *.lang >plasma.lang
 %{_libdir}/qt5/plugins/kf5/kded/*.so
 %{_libdir}/qt5/plugins/kpackage/packagestructure/*.so
 %{_libdir}/qt5/plugins/phonon_platform
+%{_libdir}/qt5/plugins/plasma/applets/org.kde.plasma.private.systemtray.so
+%{_libdir}/qt5/plugins/plasma/applets/org.kde.plasma.systemtray.so
+%{_libdir}/qt5/plugins/plasma/applets/plasma_applet_calendar.so
 %{_libdir}/qt5/plugins/kf5/kio/desktop.so
 %dir %{_libdir}/qt5/plugins/plasma
 %dir %{_libdir}/qt5/plugins/plasma/applets
@@ -279,7 +286,6 @@ cat *.lang >plasma.lang
 %{_libdir}/qt5/qml/org/kde/plasma/private/sessions
 %{_libdir}/qt5/qml/org/kde/plasma/wallpapers
 %{_libdir}/qt5/qml/org/kde/plasma/workspace
-%{_libdir}/qt5/qml/org/kde/private/systemtray
 %{_datadir}/applications/org.kde.klipper.desktop
 %{_datadir}/applications/plasma-windowed.desktop
 %{_datadir}/config.kcfg/*.kcfg
@@ -338,6 +344,9 @@ cat *.lang >plasma.lang
 %doc %{_docdir}/HTML/*/klipper
 %doc %{_docdir}/HTML/*/kcontrol/screenlocker
 %{_libdir}/libkdeinit5_*.so
+%{_libdir}/qt5/qml/org/kde/taskmanager
+%{_datadir}/kdevappwizard/templates/ion-dataengine.tar.bz2
+%{_datadir}/plasma/plasmoids/org.kde.plasma.private.systemtray
 
 %files -n sddm-theme-breeze
 %{_datadir}/sddm/themes/breeze
@@ -350,4 +359,5 @@ cat *.lang >plasma.lang
 %{_libdir}/cmake/KSMServerDBusInterface
 %{_libdir}/cmake/LibKWorkspace
 %{_libdir}/cmake/LibTaskManager
+%{_libdir}/cmake/LibLegacyTaskManager
 %{_datadir}/dbus-1/interfaces/*.xml
