@@ -20,6 +20,7 @@ Patch3: plasma-workspace-5.5.3-startplasmacompositor.patch
 Summary: The KDE Plasma workspace
 URL: http://kde.org/
 License: GPL
+Obsoletes: simplesystray < %{EVRD}
 Group: Graphical desktop/KDE
 BuildRequires: cmake(KF5DocTools)
 BuildRequires: cmake(KF5Activities)
@@ -136,16 +137,19 @@ The KDE Plasma workspace.
 
 %libpackage plasma-geolocation-interface 5
 
-%libpackage taskmanager 5
-
 %libpackage weather_ion 7
+
+%libpackage legacytaskmanager 5
+
+%libpackage taskmanager 6
+%{_libdir}/libtaskmanager.so.5*
 
 %package -n %{devname}
 Summary: Development files for the KDE Plasma workspace
 Group: Development/KDE and Qt
 Requires: %{mklibname kworkspace5 5} = %{EVRD}
 Requires: %{mklibname plasma-geolocation-interface 5} = %{EVRD}
-Requires: %{mklibname taskmanager 5} = %{EVRD}
+Requires: %{mklibname taskmanager 6} = %{EVRD}
 Requires: %{mklibname weather_ion 7} = %{EVRD}
 Provides: %{mklibname -d kworkspace} = %{EVRD}
 Provides: %{mklibname -d plasma-geolocation-interface} = %{EVRD}
@@ -222,9 +226,6 @@ done
 %find_lang systemmonitor || touch systemmonitor.lang
 
 cat *.lang >plasma.lang
-
-%libpackage legacytaskmanager 5
-%libpackage taskmanager 6
 
 %files -f plasma.lang
 %{_sysconfdir}/xdg/autostart/krunner.desktop
