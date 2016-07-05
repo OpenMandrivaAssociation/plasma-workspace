@@ -198,6 +198,7 @@ ln -sf %{_datadir}/mdk/backgrounds/OpenMandriva-splash.png %{buildroot}%{_datadi
 %find_lang freespacenotifier || touch freespacenotifier.lang
 %find_lang kcminit || touch kcminit.lang
 %find_lang kio_applications || touch kio_applications.lang
+%find_lang kholidays_calendar_plugin || touch kholidays_calendar_plugin.lang
 %find_lang kio_remote || touch kio_remote.lang
 %find_lang klipper || touch klipper.lang
 %find_lang krunner || touch krunner.lang
@@ -206,7 +207,7 @@ ln -sf %{_datadir}/mdk/backgrounds/OpenMandriva-splash.png %{buildroot}%{_datadi
 %find_lang libkworkspace || touch libkworkspace.lang
 %find_lang libtaskmanager || touch libtaskmanager.lang
 %find_lang phonon_kde || touch phonon_kde.lang
-for i in org.kde.color org.kde.image org.kde.plasma.analogclock org.kde.plasma.battery org.kde.plasma.calendar org.kde.plasma.clipboard org.kde.plasma.digitalclock org.kde.plasma.devicenotifier org.kde.plasma.lock_logout org.kde.plasma.mediacontroller org.kde.plasma.notifications org.kde.plasma.panelspacer org.kde.plasma.systemtray org.kde.plasma.systemmonitor.cpu org.kde.plasma.systemmonitor.diskactivity org.kde.plasma.systemmonitor.diskusage org.kde.plasma.systemmonitor.memory org.kde.plasma.systemmonitor.net; do
+for i in org.kde.color org.kde.image org.kde.plasma.analogclock org.kde.plasma.battery org.kde.plasma.calendar org.kde.plasma.clipboard org.kde.plasma.digitalclock org.kde.plasma.devicenotifier org.kde.plasma.lock_logout org.kde.plasma.mediacontroller org.kde.plasma.notifications org.kde.plasma.panelspacer org.kde.plasma.private.systemtray org.kde.plasma.systemtray org.kde.plasma.systemmonitor.cpu org.kde.plasma.systemmonitor.diskactivity org.kde.plasma.systemmonitor.diskusage org.kde.plasma.systemmonitor.memory org.kde.plasma.systemmonitor.net; do
 	%find_lang plasma_applet_$i || touch plasma_applet_$i.lang
 done
 for i in contextmenu switchwindow; do
