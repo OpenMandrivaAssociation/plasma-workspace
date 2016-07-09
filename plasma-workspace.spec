@@ -5,7 +5,7 @@
 
 Name: plasma-workspace
 Version: 5.7.0
-Release: 1
+Release: 2
 Source0: http://download.kde.org//%{stable}/plasma/%{plasmaver}/%{name}-%{version}.tar.xz
 Source1: kde.pam
 Source100: %{name}.rpmlintrc
@@ -149,10 +149,12 @@ Summary: Development files for the KDE Plasma workspace
 Group: Development/KDE and Qt
 Requires: %{mklibname kworkspace5 5} = %{EVRD}
 Requires: %{mklibname plasma-geolocation-interface 5} = %{EVRD}
+Requires: %{mklibname legacytaskmanager 5} = %{EVRD}
 Requires: %{mklibname taskmanager 6} = %{EVRD}
 Requires: %{mklibname weather_ion 7} = %{EVRD}
 Provides: %{mklibname -d kworkspace} = %{EVRD}
 Provides: %{mklibname -d plasma-geolocation-interface} = %{EVRD}
+Provides: %{mklibname -d legacytaskmanager} = %{EVRD}
 Provides: %{mklibname -d taskmanager} = %{EVRD}
 Provides: %{mklibname -d weather_ion} = %{EVRD}
 # Autodetected devel(libprocesscore) is also provided by KDE 4.x -- let's
