@@ -281,6 +281,7 @@ cat *.lang >plasma.lang
 %{_libdir}/qt5/plugins/plasma_containmentactions_switchwindow.so
 %{_libdir}/qt5/plugins/plasma-geolocation-gps.so
 %{_libdir}/qt5/plugins/plasma-geolocation-ip.so
+%{_libdir}/qt5/plugins/plasmacalendarplugins
 %dir %{_libdir}/qt5/qml/org/kde/plasma/private
 %{_libdir}/qt5/qml/org/kde/plasma/private/digitalclock
 %{_libdir}/qt5/qml/org/kde/plasma/private/icon
@@ -289,6 +290,7 @@ cat *.lang >plasma.lang
 %{_libdir}/qt5/qml/org/kde/plasma/private/sessions
 %{_libdir}/qt5/qml/org/kde/plasma/wallpapers
 %{_libdir}/qt5/qml/org/kde/plasma/workspace
+%{_libdir}/qt5/qml/org/kde/holidayeventshelperplugin
 %{_datadir}/metainfo/*.xml
 %{_datadir}/applications/org.kde.klipper.desktop
 %{_datadir}/applications/plasma-windowed.desktop
