@@ -62,6 +62,7 @@ BuildRequires: cmake(KF5Screen)
 BuildRequires: cmake(KF5Baloo)
 BuildRequires: cmake(KF5Prison)
 BuildRequires: cmake(KScreenLocker)
+BuildRequires: cmake(KF5Holidays)
 BuildRequires: pkgconfig(dbusmenu-qt5)
 BuildRequires: pkgconfig(kscreen2)
 BuildRequires: pkgconfig(libqalculate)
@@ -129,6 +130,8 @@ Obsoletes: %{mklibname superkaramba 4} < 15.08.3-3
 Provides: %{mklibname superkaramba 4} = 15.08.3-3
 Obsoletes: kactivities-workspace < 5.5.0-3
 Provides: kactivities-workspace = 5.5.0-3
+Obsoletes: %{mklibname legacytaskmanager 5} < 5.8.2
+Provides: %{mklibname legacytaskmanager 5} = 5.8.2
 
 %description
 The KDE Plasma workspace.
@@ -139,8 +142,6 @@ The KDE Plasma workspace.
 
 %libpackage weather_ion 7
 
-%libpackage legacytaskmanager 5
-
 %libpackage taskmanager 6
 %{_libdir}/libtaskmanager.so.5*
 
@@ -149,12 +150,10 @@ Summary: Development files for the KDE Plasma workspace
 Group: Development/KDE and Qt
 Requires: %{mklibname kworkspace5 5} = %{EVRD}
 Requires: %{mklibname plasma-geolocation-interface 5} = %{EVRD}
-Requires: %{mklibname legacytaskmanager 5} = %{EVRD}
 Requires: %{mklibname taskmanager 6} = %{EVRD}
 Requires: %{mklibname weather_ion 7} = %{EVRD}
 Provides: %{mklibname -d kworkspace} = %{EVRD}
 Provides: %{mklibname -d plasma-geolocation-interface} = %{EVRD}
-Provides: %{mklibname -d legacytaskmanager} = %{EVRD}
 Provides: %{mklibname -d taskmanager} = %{EVRD}
 Provides: %{mklibname -d weather_ion} = %{EVRD}
 # Autodetected devel(libprocesscore) is also provided by KDE 4.x -- let's
@@ -232,13 +231,12 @@ cat *.lang >plasma.lang
 
 %files -f plasma.lang
 %{_sysconfdir}/xdg/autostart/krunner.desktop
-%{_sysconfdir}/xdg/autostart/org.kde.klipper.desktop
+%{_sysconfdir}/xdg/autostart/klipper.desktop
 %{_sysconfdir}/xdg/autostart/plasmashell.desktop
 %{_sysconfdir}/xdg/autostart/xembedsniproxy.desktop
 %{_sysconfdir}/xdg/plasmoids.knsrc
 %{_sysconfdir}/xdg/wallpaper.knsrc
 %{_sysconfdir}/xdg/taskmanagerrulesrc
-%{_sysconfdir}/xdg/legacytaskmanagerrulesrc
 %{_sysconfdir}/pam.d/kde
 %{_bindir}/kcheckrunning
 %{_bindir}/kcminit
@@ -259,6 +257,7 @@ cat *.lang >plasma.lang
 %{_libdir}/libexec/startplasma
 %{_libdir}/libexec/drkonqi
 %{_libdir}/libexec/ksyncdbusenv
+%{_libdir}/libexec/ksmserver-logout-greeter
 %{_libdir}/qt5/plugins/kcm_krunner_kill.so
 %{_libdir}/qt5/plugins/kio_*.so
 %{_libdir}/qt5/plugins/krunner_*.so
@@ -290,6 +289,7 @@ cat *.lang >plasma.lang
 %{_libdir}/qt5/qml/org/kde/plasma/private/sessions
 %{_libdir}/qt5/qml/org/kde/plasma/wallpapers
 %{_libdir}/qt5/qml/org/kde/plasma/workspace
+%{_datadir}/metainfo/*.xml
 %{_datadir}/applications/org.kde.klipper.desktop
 %{_datadir}/applications/plasma-windowed.desktop
 %{_datadir}/config.kcfg/*.kcfg
@@ -363,5 +363,4 @@ cat *.lang >plasma.lang
 %{_libdir}/cmake/KSMServerDBusInterface
 %{_libdir}/cmake/LibKWorkspace
 %{_libdir}/cmake/LibTaskManager
-%{_libdir}/cmake/LibLegacyTaskManager
 %{_datadir}/dbus-1/interfaces/*.xml
