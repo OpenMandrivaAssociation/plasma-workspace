@@ -13,10 +13,6 @@ Patch0: plasma-workspace-5.3.2-startkde.patch
 Patch1: plasma-workspace-5.3.2-no-lto-in-plasmashell.patch
 Patch2: plasma-workspace-5.8.0-use-openmandriva-icon-and-background.patch
 Patch3: plasma-workspace-5.5.3-startplasmacompositor.patch
-# (tpg) patches from Fedora
-# are they still needed ???
-#Patch100: 0036-SNI-DataEngine-ProtocolVersion-is-an-int.patch
-#Patch101: 0099-Use-ConfigureNotify-instead-of-xcb_configure_window-.patch
 Summary: The KDE Plasma workspace
 URL: http://kde.org/
 License: GPL
@@ -174,6 +170,7 @@ KDE Breeze theme for the SDDM display manager.
 %prep
 %setup -qn %{name}-%{plasmaver}
 %apply_patches
+
 sed -i -e 's,@LIBDIR@,%{_lib},g' startkde/startkde.cmake
 
 %cmake_kde5 -DKDE4_COMMON_PAM_SERVICE=kde -DKDE_DEFAULT_HOME=.kde4
