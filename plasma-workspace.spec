@@ -5,7 +5,7 @@
 
 Name: plasma-workspace
 Version: 5.8.2
-Release: 1
+Release: 1.1
 Source0: http://download.kde.org//%{stable}/plasma/%{plasmaver}/%{name}-%{version}.tar.xz
 Source1: kde.pam
 Source100: %{name}.rpmlintrc
@@ -193,6 +193,7 @@ ln -sf %{_datadir}/mdk/backgrounds/default.png %{buildroot}%{_datadir}/plasma/lo
 # sddm breeze theme background
 rm -rf %{buildroot}%{_datadir}/sddm/themes/breeze/components/artwork/background.png
 ln -sf %{_datadir}/mdk/backgrounds/OpenMandriva-splash.png %{buildroot}%{_datadir}/sddm/themes/breeze/components/artwork/background.png
+sed -i -e "s#^background=.*#background=%{_datadir}/mdk/backgrounds/OpenMandriva-splash.png#" %{buildroot}%{_datadir}/sddm/themes/breeze/theme.conf
 
 %find_lang soliduiserver || touch soliduiserver.lang
 %find_lang drkonqi || touch drkonqi.lang
