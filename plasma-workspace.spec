@@ -170,7 +170,6 @@ KDE Breeze theme for the SDDM display manager.
 %prep
 %setup -qn %{name}-%{plasmaver}
 %apply_patches
-
 sed -i -e 's,@LIBDIR@,%{_lib},g' startkde/startkde.cmake
 
 %cmake_kde5 -DKDE4_COMMON_PAM_SERVICE=kde -DKDE_DEFAULT_HOME=.kde4

@@ -1,6 +1,6 @@
-diff -Naur plasma-workspace-5.6.0/startkde/startplasmacompositor.cmake plasma-workspace-5.6.0.tpg/startkde/startplasmacompositor.cmake
---- plasma-workspace-5.6.0/startkde/startplasmacompositor.cmake	2016-03-17 11:03:23.000000000 +0000
-+++ plasma-workspace-5.6.0.tpg/startkde/startplasmacompositor.cmake	2016-03-26 03:10:00.809147944 +0000
+diff -Naur plasma-workspace-5.8.2/startkde/startplasmacompositor.cmake plasma-workspace-5.8.2.tpg/startkde/startplasmacompositor.cmake
+--- plasma-workspace-5.8.2/startkde/startplasmacompositor.cmake	2016-10-18 11:47:17.000000000 +0000
++++ plasma-workspace-5.8.2.tpg/startkde/startplasmacompositor.cmake	2016-10-29 11:56:03.135315931 +0000
 @@ -3,6 +3,15 @@
  #  DEFAULT KDE STARTUP SCRIPT ( @PROJECT_VERSION@ )
  #
@@ -17,13 +17,11 @@ diff -Naur plasma-workspace-5.6.0/startkde/startplasmacompositor.cmake plasma-wo
  # in case we have been started with full pathname spec without being in PATH
  bindir=`echo "$0" | sed -n 's,^\(/.*\)/[^/][^/]*$,\1,p'`
  if [ -n "$bindir" ]; then
-@@ -24,16 +33,13 @@
+@@ -24,16 +33,12 @@
  fi
  
  mkdir -p $configDir
-+kdehome=$HOME/@KDE_DEFAULT_HOME@
-+test -n "$KDEHOME" && kdehome=`echo "$KDEHOME"|sed "s,^~/,$HOME/,"`
- 
+-
 -#This is basically setting defaults so we can use them with kstartupconfig5
 -cat >$configDir/startupconfigkeys <<EOF
 -kcminputrc Mouse cursorTheme 'breeze_cursors'
@@ -33,28 +31,31 @@ diff -Naur plasma-workspace-5.6.0/startkde/startplasmacompositor.cmake plasma-wo
 -kdeglobals KScreen ScaleFactor 1
 -kcmfonts General forceFontDPI 0
 -EOF
++kdehome=$HOME/@KDE_DEFAULT_HOME@
++test -n "$KDEHOME" && kdehome=`echo "$KDEHOME"|sed "s,^~/,$HOME/,"`
 +# see kstartupconfig source for usage
 +mkdir -m 700 -p $kdehome
 +mkdir -m 700 -p $kdehome/share
-+mkdir -m 700 -p $kdehome/share/config
++mkdir -m 700 -p $kdehome/share/confi
  
  # preload the user's locale on first start
  plasmalocalerc=$configDir/plasma-localerc
-@@ -51,17 +57,6 @@
-     . $exportformatssettings
- }
- 
--# Write a default kdeglobals file to set up the font
--kdeglobalsfile=$configDir/kdeglobals
--test -f $kdeglobalsfile || {
+@@ -54,12 +59,12 @@
+ # Write a default kdeglobals file to set up the font
+ kdeglobalsfile=$configDir/kdeglobals
+ test -f $kdeglobalsfile || {
 -cat >$kdeglobalsfile <<EOF
 -[General]
 -XftAntialias=true
 -XftHintStyle=hintmedium
 -XftSubPixel=none
 -EOF
--}
--
++cp -f /etc/xdg/kdeglobals $kdeglobalsfile
++}
++
++startupconfigkeysfile=$configDir/startupconfigkeys
++test -f $startupconfigkeysfile || {
++cp -f /etc/xdg/startupconfigkeys $configDir/startupconfigkeys
+ }
+ 
  # Make sure the Oxygen font is installed
- # This is necessary for setups where CMAKE_INSTALL_PREFIX
- # is not in /usr. fontconfig looks in /usr, ~/.fonts and

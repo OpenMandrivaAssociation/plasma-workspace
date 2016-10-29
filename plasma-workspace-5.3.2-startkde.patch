@@ -1,5 +1,6 @@
---- plasma-workspace-5.7.0/startkde/startkde.cmake.0000~	2016-06-30 18:33:30.000000000 +0200
-+++ plasma-workspace-5.7.0/startkde/startkde.cmake	2016-07-04 13:51:46.369601658 +0200
+diff -Naur plasma-workspace-5.8.2/startkde/startkde.cmake plasma-workspace-5.8.2.tpg/startkde/startkde.cmake
+--- plasma-workspace-5.8.2/startkde/startkde.cmake	2016-10-18 11:47:17.000000000 +0000
++++ plasma-workspace-5.8.2.tpg/startkde/startkde.cmake	2016-10-29 11:50:47.575632017 +0000
 @@ -3,6 +3,11 @@
  #  DEFAULT KDE STARTUP SCRIPT ( @PROJECT_VERSION@ )
  #
@@ -12,11 +13,10 @@
  if test "x$1" = x--failsafe; then
      KDE_FAILSAFE=1 # General failsafe flag
      KWIN_COMPOSE=N # Disable KWin's compositing
-@@ -64,16 +69,12 @@ else
- fi
+@@ -65,15 +70,12 @@
  
  mkdir -p $configDir
--
+ 
 -#This is basically setting defaults so we can use them with kstartupconfig5
 -cat >$configDir/startupconfigkeys <<EOF
 -kcminputrc Mouse cursorTheme 'breeze_cursors'
@@ -35,21 +35,22 @@
  
  # preload the user's locale on first start
  plasmalocalerc=$configDir/plasma-localerc
-@@ -91,17 +92,6 @@ test -f $exportformatssettings && {
-     . $exportformatssettings
- }
- 
--# Write a default kdeglobals file to set up the font
--kdeglobalsfile=$configDir/kdeglobals
--test -f $kdeglobalsfile || {
+@@ -94,12 +96,12 @@
+ # Write a default kdeglobals file to set up the font
+ kdeglobalsfile=$configDir/kdeglobals
+ test -f $kdeglobalsfile || {
 -cat >$kdeglobalsfile <<EOF
 -[General]
 -XftAntialias=true
 -XftHintStyle=hintmedium
 -XftSubPixel=none
 -EOF
--}
--
++cp -f /etc/xdg/kdeglobals $kdeglobalsfile
++}
++
++startupconfigkeysfile=$configDir/startupconfigkeys
++test -f $startupconfigkeysfile || {
++cp -f /etc/xdg/startupconfigkeys $configDir/startupconfigkeys
+ }
+ 
  # Make sure the Oxygen font is installed
- # This is necessary for setups where CMAKE_INSTALL_PREFIX
- # is not in /usr. fontconfig looks in /usr, ~/.fonts and
