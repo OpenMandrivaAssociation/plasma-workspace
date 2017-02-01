@@ -265,7 +265,6 @@ cat *.lang >plasma.lang
 %{_libdir}/qt5/plugins/kf5/kio/desktop.so
 %dir %{_libdir}/qt5/plugins/plasma
 %dir %{_libdir}/qt5/plugins/plasma/applets
-%{_libdir}/qt5/plugins/plasma/applets/plasma_applet_notifications.so
 %{_libdir}/qt5/plugins/plasma/dataengine
 %{_libdir}/qt5/plugins/plasma/packagestructure
 %{_libdir}/qt5/plugins/plasma_containmentactions_applauncher.so
@@ -279,7 +278,6 @@ cat *.lang >plasma.lang
 %{_libdir}/qt5/plugins/plasmacalendarplugins
 %dir %{_libdir}/qt5/qml/org/kde/plasma/private
 %{_libdir}/qt5/qml/org/kde/plasma/private/digitalclock
-%{_libdir}/qt5/qml/org/kde/plasma/private/icon
 %{_libdir}/qt5/qml/org/kde/plasma/private/notifications
 %{_libdir}/qt5/qml/org/kde/plasma/private/shell
 %{_libdir}/qt5/qml/org/kde/plasma/private/sessions
