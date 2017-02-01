@@ -204,7 +204,7 @@ sed -i -e "s#^background=.*#background=%{_datadir}/mdk/backgrounds/OpenMandriva-
 %find_lang libkworkspace || touch libkworkspace.lang
 %find_lang libtaskmanager || touch libtaskmanager.lang
 %find_lang phonon_kde || touch phonon_kde.lang
-for i in org.kde.color org.kde.image org.kde.plasma.analogclock org.kde.plasma.battery org.kde.plasma.calendar org.kde.plasma.clipboard org.kde.plasma.digitalclock org.kde.plasma.devicenotifier org.kde.plasma.lock_logout org.kde.plasma.mediacontroller org.kde.plasma.notifications org.kde.plasma.panelspacer org.kde.plasma.private.systemtray org.kde.plasma.systemtray org.kde.plasma.systemmonitor.cpu org.kde.plasma.systemmonitor.diskactivity org.kde.plasma.systemmonitor.diskusage org.kde.plasma.systemmonitor.memory org.kde.plasma.systemmonitor.net; do
+for i in org.kde.color org.kde.image org.kde.plasma.analogclock org.kde.plasma.battery org.kde.plasma.calendar org.kde.plasma.clipboard org.kde.plasma.digitalclock org.kde.plasma.devicenotifier org.kde.plasma.lock_logout org.kde.plasma.mediacontroller org.kde.plasma.notifications org.kde.plasma.panelspacer org.kde.plasma.private.systemtray org.kde.plasma.systemtray org.kde.plasma.systemmonitor.cpu org.kde.plasma.systemmonitor.diskactivity org.kde.plasma.systemmonitor.diskusage org.kde.plasma.systemmonitor.memory org.kde.plasma.systemmonitor.net org.kde.plasma.icon org.kde.plasma.appmenu; do
 	%find_lang plasma_applet_$i || touch plasma_applet_$i.lang
 done
 for i in contextmenu switchwindow; do
@@ -254,15 +254,14 @@ cat *.lang >plasma.lang
 %{_libdir}/libexec/drkonqi
 %{_libdir}/libexec/ksyncdbusenv
 %{_libdir}/libexec/ksmserver-logout-greeter
+%{_libdir}/libexec/ksmserver-switchuser-greeter
 %{_libdir}/qt5/plugins/kcm_krunner_kill.so
 %{_libdir}/qt5/plugins/kio_*.so
 %{_libdir}/qt5/plugins/krunner_*.so
 %{_libdir}/qt5/plugins/kf5/kded/*.so
 %{_libdir}/qt5/plugins/kpackage/packagestructure/*.so
 %{_libdir}/qt5/plugins/phonon_platform
-%{_libdir}/qt5/plugins/plasma/applets/org.kde.plasma.private.systemtray.so
-%{_libdir}/qt5/plugins/plasma/applets/org.kde.plasma.systemtray.so
-%{_libdir}/qt5/plugins/plasma/applets/plasma_applet_calendar.so
+%{_libdir}/qt5/plugins/plasma/applets/*.so
 %{_libdir}/qt5/plugins/kf5/kio/desktop.so
 %dir %{_libdir}/qt5/plugins/plasma
 %dir %{_libdir}/qt5/plugins/plasma/applets
@@ -287,6 +286,7 @@ cat *.lang >plasma.lang
 %{_libdir}/qt5/qml/org/kde/plasma/wallpapers
 %{_libdir}/qt5/qml/org/kde/plasma/workspace
 %{_libdir}/qt5/qml/org/kde/holidayeventshelperplugin
+%{_libdir}/qt5/qml/org/kde/plasma/private/appmenu
 %{_datadir}/metainfo/*.xml
 %{_datadir}/applications/org.kde.klipper.desktop
 %{_datadir}/applications/plasma-windowed.desktop
@@ -324,6 +324,8 @@ cat *.lang >plasma.lang
 %{_datadir}/plasma/plasmoids/org.kde.plasma.systemmonitor.diskusage
 %{_datadir}/plasma/plasmoids/org.kde.plasma.systemmonitor.memory
 %{_datadir}/plasma/plasmoids/org.kde.plasma.systemmonitor.net
+%{_datadir}/plasma/plasmoids/org.kde.plasma.private.systemtray
+%{_datadir}/plasma/plasmoids/org.kde.plasma.appmenu
 %{_datadir}/plasma/services/*.operations
 %dir %{_datadir}/plasma/shareprovider
 %{_datadir}/plasma/shareprovider/im9
@@ -348,7 +350,8 @@ cat *.lang >plasma.lang
 %{_libdir}/libkdeinit5_*.so
 %{_libdir}/qt5/qml/org/kde/taskmanager
 %{_datadir}/kdevappwizard/templates/ion-dataengine.tar.bz2
-%{_datadir}/plasma/plasmoids/org.kde.plasma.private.systemtray
+%{_libdir}/kconf_update_bin/krunnerplugins
+%{_datadir}/kconf_update/krunnerplugins.upd
 
 %files -n sddm-theme-breeze
 %{_datadir}/sddm/themes/breeze
