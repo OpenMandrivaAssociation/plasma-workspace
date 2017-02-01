@@ -1,0 +1,115 @@
+diff -Naur plasma-workspace-5.9.0/startkde/startkde.cmake plasma-workspace-5.9.0.tpg/startkde/startkde.cmake
+--- plasma-workspace-5.9.0/startkde/startkde.cmake	2017-01-26 12:28:32.000000000 +0000
++++ plasma-workspace-5.9.0.tpg/startkde/startkde.cmake	2017-02-01 20:29:58.929864499 +0000
+@@ -3,6 +3,11 @@
+ #  DEFAULT KDE STARTUP SCRIPT ( @PROJECT_VERSION@ )
+ #
+ 
++LIBDIR=@LIBDIR@
++
++export PATH=/usr/$LIBDIR/qt5/bin:$PATH
++export QML2_IMPORT_PATH=/usr/$LIBDIR/qml:/usr/$LIBDIR/qt5/qml:$QML2_IMPORT_PATH
++
+ # When the X server dies we get a HUP signal from xinit. We must ignore it
+ # because we still need to do some cleanup.
+ trap 'echo GOT SIGHUP' HUP
+@@ -42,15 +47,12 @@
+ 
+ mkdir -p $configDir
+ 
+-#This is basically setting defaults so we can use them with kstartupconfig5
+-cat >$configDir/startupconfigkeys <<EOF
+-kcminputrc Mouse cursorTheme 'breeze_cursors'
+-kcminputrc Mouse cursorSize ''
+-ksplashrc KSplash Theme Breeze
+-ksplashrc KSplash Engine KSplashQML
+-kdeglobals KScreen ScreenScaleFactors ''
+-kcmfonts General forceFontDPI 0
+-EOF
++kdehome=$HOME/@KDE_DEFAULT_HOME@
++test -n "$KDEHOME" && kdehome=`echo "$KDEHOME"|sed "s,^~/,$HOME/,"`
++# see kstartupconfig source for usage
++mkdir -m 700 -p $kdehome
++mkdir -m 700 -p $kdehome/share
++mkdir -m 700 -p $kdehome/share/config
+ 
+ # preload the user's locale on first start
+ plasmalocalerc=$configDir/plasma-localerc
+@@ -71,12 +73,12 @@
+ # Write a default kdeglobals file to set up the font
+ kdeglobalsfile=$configDir/kdeglobals
+ test -f $kdeglobalsfile || {
+-cat >$kdeglobalsfile <<EOF
+-[General]
+-XftAntialias=true
+-XftHintStyle=hintmedium
+-XftSubPixel=none
+-EOF
++cp -f /etc/xdg/kdeglobals $kdeglobalsfile
++}
++
++startupconfigkeysfile=$configDir/startupconfigkeys
++test -f $startupconfigkeysfile || {
++cp -f /etc/xdg/startupconfigkeys $configDir/startupconfigkeys
+ }
+ 
+ kstartupconfig5
+diff -Naur plasma-workspace-5.9.0/startkde/startplasmacompositor.cmake plasma-workspace-5.9.0.tpg/startkde/startplasmacompositor.cmake
+--- plasma-workspace-5.9.0/startkde/startplasmacompositor.cmake	2017-01-26 12:28:32.000000000 +0000
++++ plasma-workspace-5.9.0.tpg/startkde/startplasmacompositor.cmake	2017-02-01 20:32:28.526583002 +0000
+@@ -2,6 +2,14 @@
+ #
+ #  DEFAULT KDE STARTUP SCRIPT ( @PROJECT_VERSION@ )
+ #
++if [ arch != "i586" ]; then
++    LIBDIR=lib64
++else
++    LIBDIR=lib
++fi
++
++export PATH=/usr/$LIBDIR/qt5/bin:$PATH
++export QML2_IMPORT_PATH=/usr/$LIBDIR/qml:/usr/$LIBDIR/qt5/qml:$QML2_IMPORT_PATH
+ 
+ # in case we have been started with full pathname spec without being in PATH
+ bindir=`echo "$0" | sed -n 's,^\(/.*\)/[^/][^/]*$,\1,p'`
+@@ -25,15 +33,12 @@
+ 
+ mkdir -p $configDir
+ 
+-#This is basically setting defaults so we can use them with kstartupconfig5
+-cat >$configDir/startupconfigkeys <<EOF
+-kcminputrc Mouse cursorTheme 'breeze_cursors'
+-kcminputrc Mouse cursorSize ''
+-ksplashrc KSplash Theme Breeze
+-ksplashrc KSplash Engine KSplashQML
+-kdeglobals KScreen ScaleFactor 1
+-kcmfonts General forceFontDPI 0
+-EOF
++kdehome=$HOME/@KDE_DEFAULT_HOME@
++test -n "$KDEHOME" && kdehome=`echo "$KDEHOME"|sed "s,^~/,$HOME/,"`
++# see kstartupconfig source for usage
++mkdir -m 700 -p $kdehome
++mkdir -m 700 -p $kdehome/share
++mkdir -m 700 -p $kdehome/share/config
+ 
+ # preload the user's locale on first start
+ plasmalocalerc=$configDir/plasma-localerc
+@@ -54,12 +59,12 @@
+ # Write a default kdeglobals file to set up the font
+ kdeglobalsfile=$configDir/kdeglobals
+ test -f $kdeglobalsfile || {
+-cat >$kdeglobalsfile <<EOF
+-[General]
+-XftAntialias=true
+-XftHintStyle=hintmedium
+-XftSubPixel=none
+-EOF
++cp -f /etc/xdg/kdeglobals $kdeglobalsfile
++}
++
++startupconfigkeysfile=$configDir/startupconfigkeys
++test -f $startupconfigkeysfile || {
++cp -f /etc/xdg/startupconfigkeys $configDir/startupconfigkeys
+ }
+ 
+ # Make sure the Oxygen font is installed
