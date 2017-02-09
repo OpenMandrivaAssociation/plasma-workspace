@@ -189,6 +189,7 @@ ln -sf %{_datadir}/mdk/backgrounds/default.png %{buildroot}%{_datadir}/plasma/lo
 rm -rf %{buildroot}%{_datadir}/sddm/themes/breeze/components/artwork/background.png
 ln -sf %{_datadir}/mdk/backgrounds/OpenMandriva-splash.png %{buildroot}%{_datadir}/sddm/themes/breeze/components/artwork/background.png
 sed -i -e "s#^background=.*#background=%{_datadir}/mdk/backgrounds/OpenMandriva-splash.png#" %{buildroot}%{_datadir}/sddm/themes/breeze/theme.conf
+sed -i -e "s#^type=.*#type=image#" %{buildroot}%{_datadir}/sddm/themes/breeze/theme.conf
 
 %find_lang soliduiserver || touch soliduiserver.lang
 %find_lang drkonqi || touch drkonqi.lang
