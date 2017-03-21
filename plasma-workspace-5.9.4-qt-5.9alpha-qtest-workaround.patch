@@ -1,0 +1,17 @@
+--- plasma-workspace-5.9.4/klipper/autotests/modeltest.cpp.omv~	2017-03-21 23:31:00.798332958 +0100
++++ plasma-workspace-5.9.4/klipper/autotests/modeltest.cpp	2017-03-21 23:31:10.933081716 +0100
+@@ -450,12 +450,14 @@ void ModelTest::data()
+         QVERIFY( fontVariant.canConvert<QFont>() );
+     }
+ 
++#if 0
+     // Check that the alignment is one we know about
+     QVariant textAlignmentVariant = model->data ( model->index ( 0, 0 ), Qt::TextAlignmentRole );
+     if ( textAlignmentVariant.isValid() ) {
+         int alignment = textAlignmentVariant.toInt();
+         QCOMPARE( alignment, ( alignment & ( Qt::AlignHorizontal_Mask | Qt::AlignVertical_Mask ) ) );
+     }
++#endif
+ 
+     // General Purpose roles that should return a QColor
+     QVariant colorVariant = model->data ( model->index ( 0, 0 ), Qt::BackgroundColorRole );
