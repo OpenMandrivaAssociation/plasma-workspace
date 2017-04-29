@@ -4,7 +4,7 @@
 %define stable %([ "`echo %{version} |cut -d. -f3`" -ge 80 ] && echo -n un; echo -n stable)
 
 Name: plasma-workspace
-Version: 5.9.5
+Version: 5.9.5.1
 Release: 1
 Source0: http://download.kde.org//%{stable}/plasma/%{plasmaver}/%{name}-%{version}.tar.xz
 Source1: kde.pam
@@ -168,7 +168,7 @@ Requires: sddm
 KDE Breeze theme for the SDDM display manager.
 
 %prep
-%setup -qn %{name}-%{plasmaver}
+%setup -q
 %apply_patches
 sed -i -e 's,@LIBDIR@,%{_lib},g' startkde/startkde.cmake
 
