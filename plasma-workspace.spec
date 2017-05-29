@@ -4,7 +4,7 @@
 %define stable %([ "`echo %{version} |cut -d. -f3`" -ge 80 ] && echo -n un; echo -n stable)
 
 Name: plasma-workspace
-Version: 5.9.5.1
+Version: 5.10.0
 Release: 1
 Source0: http://download.kde.org//%{stable}/plasma/%{plasmaver}/%{name}-%{version}.tar.xz
 Source1: kde.pam
@@ -12,7 +12,6 @@ Source100: %{name}.rpmlintrc
 Patch0: plasma-workspace-5.9.0-startup-scripts.patch
 Patch1: plasma-workspace-5.3.2-no-lto-in-plasmashell.patch
 Patch2: plasma-workspace-5.8.0-use-openmandriva-icon-and-background.patch
-Patch3: plasma-workspace-5.9.4-qt-5.9alpha-qtest-workaround.patch
 Summary: The KDE Plasma workspace
 URL: http://kde.org/
 License: GPL
@@ -192,42 +191,9 @@ ln -sf %{_datadir}/mdk/backgrounds/OpenMandriva-splash.png %{buildroot}%{_datadi
 sed -i -e "s#^background=.*#background=%{_datadir}/mdk/backgrounds/OpenMandriva-splash.png#" %{buildroot}%{_datadir}/sddm/themes/breeze/theme.conf
 sed -i -e "s#^type=.*#type=image#" %{buildroot}%{_datadir}/sddm/themes/breeze/theme.conf
 
-%find_lang soliduiserver || touch soliduiserver.lang
-%find_lang drkonqi || touch drkonqi.lang
-%find_lang freespacenotifier || touch freespacenotifier.lang
-%find_lang kcminit || touch kcminit.lang
-%find_lang kio_applications || touch kio_applications.lang
-%find_lang kholidays_calendar_plugin || touch kholidays_calendar_plugin.lang
-%find_lang kio_remote || touch kio_remote.lang
-%find_lang klipper || touch klipper.lang
-%find_lang krunner || touch krunner.lang
-%find_lang ksmserver || touch ksmserver.lang
-%find_lang kuiserver5 || touch kuiserver5.lang
-%find_lang libkworkspace || touch libkworkspace.lang
-%find_lang libtaskmanager || touch libtaskmanager.lang
-%find_lang phonon_kde || touch phonon_kde.lang
-for i in org.kde.color org.kde.image org.kde.plasma.analogclock org.kde.plasma.battery org.kde.plasma.calendar org.kde.plasma.clipboard org.kde.plasma.digitalclock org.kde.plasma.devicenotifier org.kde.plasma.lock_logout org.kde.plasma.mediacontroller org.kde.plasma.notifications org.kde.plasma.panelspacer org.kde.plasma.private.systemtray org.kde.plasma.systemtray org.kde.plasma.systemmonitor.cpu org.kde.plasma.systemmonitor.diskactivity org.kde.plasma.systemmonitor.diskusage org.kde.plasma.systemmonitor.memory org.kde.plasma.systemmonitor.net org.kde.plasma.icon org.kde.plasma.appmenu; do
-	%find_lang plasma_applet_$i || touch plasma_applet_$i.lang
-done
-for i in contextmenu switchwindow; do
-	%find_lang plasma_containmentactions_$i || touch plasma_containmentactions_$i.lang
-done
-for i in applicationjobs devicenotifications keystate mpris2 network notifications powermanagement rss share soliddevice time weather; do
-	%find_lang plasma_engine_$i || touch plasma_engine_$i.lang
-done
-%find_lang plasma_lookandfeel_org.kde.lookandfeel || touch plasma_lookandfeel_org.kde.lookandfeel.lang
-for i in activities baloosearchrunner bookmarksrunner calculatorrunner kill locations placesrunner powerdevil recentdocuments services sessions shell solid webshortcuts windowedwidgets windows; do
-	%find_lang plasma_runner_$i || touch plasma_runner_$i.lang
-done
-%find_lang plasma_package_plasmashell || touch plasma_package_plasmashell.lang
-%find_lang plasmashell || touch plasmashell.lang
-%find_lang plasmashellprivateplugin || touch plasmashellprivateplugin.lang
-%find_lang soliduiserver || touch soliduiserver.lang
-%find_lang systemmonitor || touch systemmonitor.lang
+%find_lang %{name} --all-name --with-html
 
-cat *.lang >plasma.lang
-
-%files -f plasma.lang
+%files -f %{name}.lang
 %{_sysconfdir}/xdg/autostart/krunner.desktop
 %{_sysconfdir}/xdg/autostart/klipper.desktop
 %{_sysconfdir}/xdg/autostart/plasmashell.desktop
@@ -247,6 +213,7 @@ cat *.lang >plasma.lang
 %{_bindir}/kstartupconfig5
 %{_bindir}/kuiserver5
 %{_bindir}/plasmashell
+%{_bindir}/plasma_waitforname
 %{_bindir}/plasmawindowed
 %{_bindir}/startkde
 %{_bindir}/systemmonitor
@@ -257,6 +224,7 @@ cat *.lang >plasma.lang
 %{_libdir}/libexec/ksyncdbusenv
 %{_libdir}/libexec/ksmserver-logout-greeter
 %{_libdir}/libexec/ksmserver-switchuser-greeter
+%{_libdir}/qt5/plugins/appstreamrunner.so
 %{_libdir}/qt5/plugins/kcm_krunner_kill.so
 %{_libdir}/qt5/plugins/kio_*.so
 %{_libdir}/qt5/plugins/krunner_*.so
@@ -345,8 +313,6 @@ cat *.lang >plasma.lang
 %{_datadir}/plasma/wallpapers/org.kde.slideshow
 %{_datadir}/xsessions/plasma.desktop
 %{_datadir}/wayland-sessions/plasmawayland.desktop
-%doc %{_docdir}/HTML/*/klipper
-%doc %{_docdir}/HTML/*/kcontrol/screenlocker
 %{_libdir}/libkdeinit5_*.so
 %{_libdir}/qt5/qml/org/kde/taskmanager
 %{_datadir}/kdevappwizard/templates/ion-dataengine.tar.bz2
