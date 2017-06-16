@@ -90,6 +90,7 @@ BuildRequires: pkgconfig(libqalculate)
 BuildRequires: pkgconfig(sm)
 BuildRequires: pkgconfig(libgps)
 BuildRequires: pkgconfig(xcursor)
+BuildRequires: pkgconfig(xtst)
 BuildRequires: pam-devel
 BuildRequires: iso-codes
 Requires: qt5-qtquickcontrols >= 5.5.0
