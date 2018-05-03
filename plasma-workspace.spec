@@ -1,5 +1,5 @@
 %define devname %mklibname plasma-workspace -d
-%define debug_package %{nil}
+#% define debug_package %{nil}
 %define plasmaver %(echo %{version} |cut -d. -f1-3)
 %define stable %([ "`echo %{version} |cut -d. -f3`" -ge 80 ] && echo -n un; echo -n stable)
 
