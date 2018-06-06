@@ -4,7 +4,7 @@
 %define stable %([ "`echo %{version} |cut -d. -f3`" -ge 80 ] && echo -n un; echo -n stable)
 
 Name: plasma-workspace
-Version: 5.12.3
+Version: 5.12.90
 Release: 1
 Source0: http://download.kde.org//%{stable}/plasma/%{plasmaver}/%{name}-%{version}.tar.xz
 Source1: kde.pam
@@ -199,15 +199,19 @@ sed -i -e "s#^type=.*#type=image#" %{buildroot}%{_datadir}/sddm/themes/breeze/th
 %libpackage colorcorrect 5
 
 %files -f %{name}.lang
+%{_sysconfdir}/xdg/autostart/gmenudbusmenuproxy.desktop
 %{_sysconfdir}/xdg/autostart/krunner.desktop
 %{_sysconfdir}/xdg/autostart/klipper.desktop
 %{_sysconfdir}/xdg/autostart/org.kde.plasmashell.desktop
 %{_sysconfdir}/xdg/autostart/xembedsniproxy.desktop
 %{_sysconfdir}/xdg/plasmoids.knsrc
 %{_sysconfdir}/xdg/wallpaper.knsrc
+%{_sysconfdir}/xdg/klipper.categories
 %{_sysconfdir}/xdg/kuiserver.categories
+%{_sysconfdir}/xdg/plasma-workspace.categories
 %{_sysconfdir}/xdg/taskmanagerrulesrc
 %{_sysconfdir}/pam.d/kde
+%{_bindir}/gmenudbusmenuproxy
 %{_bindir}/kcheckrunning
 %{_bindir}/kcminit
 %{_bindir}/kcminit_startup
@@ -230,7 +234,6 @@ sed -i -e "s#^type=.*#type=image#" %{buildroot}%{_datadir}/sddm/themes/breeze/th
 %{_libdir}/libexec/ksyncdbusenv
 %{_libdir}/libexec/ksmserver-logout-greeter
 %{_libdir}/libexec/ksmserver-switchuser-greeter
-%{_libdir}/qt5/plugins/appstreamrunner.so
 %{_libdir}/qt5/plugins/kcm_krunner_kill.so
 %{_libdir}/qt5/plugins/kio_*.so
 %{_libdir}/qt5/plugins/krunner_*.so
@@ -270,7 +273,6 @@ sed -i -e "s#^type=.*#type=image#" %{buildroot}%{_datadir}/sddm/themes/breeze/th
 %{_datadir}/config.kcfg/*.kcfg
 %{_datadir}/dbus-1/services/*.service
 %{_datadir}/desktop-directories
-%{_datadir}/kio_desktop/DesktopLinks/*.desktop
 %{_datadir}/kio_desktop/directory.desktop
 %{_datadir}/kio_desktop/directory.trash
 %{_datadir}/knotifications5/*.notifyrc
