@@ -95,6 +95,8 @@ BuildRequires: pkgconfig(sm)
 BuildRequires: pkgconfig(libgps)
 BuildRequires: pkgconfig(xcursor)
 BuildRequires: pkgconfig(xtst)
+BuildRequires: pkgconfig(xcb-util)
+BuildRequires: pkgconfig(xcb-image)
 BuildRequires: pam-devel
 BuildRequires: iso-codes
 Requires: qt5-qtquickcontrols >= 5.5.0
