@@ -98,6 +98,7 @@ BuildRequires: pkgconfig(xtst)
 BuildRequires: pkgconfig(xcb-util)
 BuildRequires: pkgconfig(xcb-image)
 BuildRequires: pam-devel
+BuildRequires: gmp-devel
 BuildRequires: iso-codes
 Requires: qt5-qtquickcontrols >= 5.5.0
 # External KF5 and Plasma 5 required packages
