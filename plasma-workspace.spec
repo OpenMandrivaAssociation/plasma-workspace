@@ -5,7 +5,7 @@
 
 Name: plasma-workspace
 Version: 5.12.6
-Release: 1
+Release: 2
 Source0: http://download.kde.org//%{stable}/plasma/%{plasmaver}/%{name}-%{version}.tar.xz
 Source1: kde.pam
 Source100: %{name}.rpmlintrc
@@ -134,6 +134,8 @@ Provides: %{mklibname legacytaskmanager 5} = 5.8.2
 %description
 The KDE Plasma workspace.
 
+%libpackage colorcorrect 5
+
 %libpackage kworkspace5 5
 
 %libpackage plasma-geolocation-interface 5
@@ -150,6 +152,7 @@ Requires: %{mklibname kworkspace5 5} = %{EVRD}
 Requires: %{mklibname plasma-geolocation-interface 5} = %{EVRD}
 Requires: %{mklibname taskmanager 6} = %{EVRD}
 Requires: %{mklibname weather_ion 7} = %{EVRD}
+Requires: %{mklibname colorcorrect 5} = %{EVRD}
 Provides: %{mklibname -d kworkspace} = %{EVRD}
 Provides: %{mklibname -d plasma-geolocation-interface} = %{EVRD}
 Provides: %{mklibname -d taskmanager} = %{EVRD}
@@ -196,7 +199,6 @@ sed -i -e "s#^type=.*#type=image#" %{buildroot}%{_datadir}/sddm/themes/breeze/th
 
 %find_lang %{name} --all-name --with-html
 
-%libpackage colorcorrect 5
 
 %files -f %{name}.lang
 %{_sysconfdir}/xdg/autostart/krunner.desktop
