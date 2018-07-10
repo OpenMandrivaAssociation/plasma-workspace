@@ -4,8 +4,8 @@
 %define stable %([ "`echo %{version} |cut -d. -f3`" -ge 80 ] && echo -n un; echo -n stable)
 
 Name: plasma-workspace
-Version: 5.10.5
-Release: 3
+Version: 5.12.6
+Release: 1
 Source0: http://download.kde.org//%{stable}/plasma/%{plasmaver}/%{name}-%{version}.tar.xz
 Source1: kde.pam
 Source100: %{name}.rpmlintrc
@@ -172,8 +172,7 @@ KDE Breeze theme for the SDDM display manager.
 %prep
 %setup -q
 %apply_patches
-
-sed -i -e 's,@LIBDIR@,%{_lib},g' startkde/startkde.cmake
+sed -i -e 's,@LIBDIR@,%{_lib},g' startkde/startkde.cmake startkde/startplasmacompositor.cmake
 
 %cmake_kde5 -DKDE4_COMMON_PAM_SERVICE=kde -DKDE_DEFAULT_HOME=.kde4
 
@@ -197,10 +196,12 @@ sed -i -e "s#^type=.*#type=image#" %{buildroot}%{_datadir}/sddm/themes/breeze/th
 
 %find_lang %{name} --all-name --with-html
 
+%libpackage colorcorrect 5
+
 %files -f %{name}.lang
 %{_sysconfdir}/xdg/autostart/krunner.desktop
 %{_sysconfdir}/xdg/autostart/klipper.desktop
-%{_sysconfdir}/xdg/autostart/plasmashell.desktop
+%{_sysconfdir}/xdg/autostart/org.kde.plasmashell.desktop
 %{_sysconfdir}/xdg/autostart/xembedsniproxy.desktop
 %{_sysconfdir}/xdg/plasmoids.knsrc
 %{_sysconfdir}/xdg/wallpaper.knsrc
@@ -224,8 +225,8 @@ sed -i -e "s#^type=.*#type=image#" %{buildroot}%{_datadir}/sddm/themes/breeze/th
 %{_bindir}/systemmonitor
 %{_bindir}/startplasmacompositor
 %{_bindir}/xembedsniproxy
+%{_libdir}/libexec/baloorunner
 %{_libdir}/libexec/startplasma
-%{_libdir}/libexec/drkonqi
 %{_libdir}/libexec/ksyncdbusenv
 %{_libdir}/libexec/ksmserver-logout-greeter
 %{_libdir}/libexec/ksmserver-switchuser-greeter
@@ -251,6 +252,7 @@ sed -i -e "s#^type=.*#type=image#" %{buildroot}%{_datadir}/sddm/themes/breeze/th
 %{_libdir}/qt5/plugins/plasma-geolocation-gps.so
 %{_libdir}/qt5/plugins/plasma-geolocation-ip.so
 %{_libdir}/qt5/plugins/plasmacalendarplugins
+%{_libdir}/qt5/qml/org/kde/colorcorrect
 %dir %{_libdir}/qt5/qml/org/kde/plasma/private
 %{_libdir}/qt5/qml/org/kde/plasma/private/digitalclock
 %{_libdir}/qt5/qml/org/kde/plasma/private/notifications
@@ -262,6 +264,8 @@ sed -i -e "s#^type=.*#type=image#" %{buildroot}%{_datadir}/sddm/themes/breeze/th
 %{_libdir}/qt5/qml/org/kde/plasma/private/appmenu
 %{_datadir}/metainfo/*.xml
 %{_datadir}/applications/org.kde.klipper.desktop
+%{_datadir}/applications/org.kde.plasmashell.desktop
+%{_datadir}/applications/org.kde.systemmonitor.desktop
 %{_datadir}/applications/plasma-windowed.desktop
 %{_datadir}/config.kcfg/*.kcfg
 %{_datadir}/dbus-1/services/*.service
@@ -269,11 +273,9 @@ sed -i -e "s#^type=.*#type=image#" %{buildroot}%{_datadir}/sddm/themes/breeze/th
 %{_datadir}/kio_desktop/DesktopLinks/*.desktop
 %{_datadir}/kio_desktop/directory.desktop
 %{_datadir}/kio_desktop/directory.trash
-%{_datadir}/drkonqi
 %{_datadir}/knotifications5/*.notifyrc
 %{_datadir}/kservices5/*
 %{_datadir}/kservicetypes5/*.desktop
-%{_datadir}/ksmserver
 %{_datadir}/ksplash
 %{_datadir}/kstyle
 %{_datadir}/solid/actions/test-predicate-openinwindow.desktop
@@ -335,4 +337,5 @@ sed -i -e "s#^type=.*#type=image#" %{buildroot}%{_datadir}/sddm/themes/breeze/th
 %{_libdir}/cmake/KSMServerDBusInterface
 %{_libdir}/cmake/LibKWorkspace
 %{_libdir}/cmake/LibTaskManager
+%{_libdir}/cmake/LibColorCorrect
 %{_datadir}/dbus-1/interfaces/*.xml
