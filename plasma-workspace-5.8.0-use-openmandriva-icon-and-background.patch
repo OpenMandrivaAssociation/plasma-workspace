@@ -1,7 +1,7 @@
-diff -Naur plasma-workspace-5.9.0/ksplash/ksplashqml/themes/Classic/main.qml plasma-workspace-5.9.0.tpg/ksplash/ksplashqml/themes/Classic/main.qml
---- plasma-workspace-5.9.0/ksplash/ksplashqml/themes/Classic/main.qml	2017-01-26 12:28:32.000000000 +0000
-+++ plasma-workspace-5.9.0.tpg/ksplash/ksplashqml/themes/Classic/main.qml	2017-02-01 21:00:05.977659905 +0000
-@@ -52,7 +52,7 @@
+diff -up plasma-workspace-5.13.4/ksplash/ksplashqml/themes/Classic/main.qml.0002~ plasma-workspace-5.13.4/ksplash/ksplashqml/themes/Classic/main.qml
+--- plasma-workspace-5.13.4/ksplash/ksplashqml/themes/Classic/main.qml.0002~	2018-07-31 14:57:52.000000000 +0200
++++ plasma-workspace-5.13.4/ksplash/ksplashqml/themes/Classic/main.qml	2018-07-31 18:05:04.924510151 +0200
+@@ -52,7 +52,7 @@ Item {
      Image {
          id: background
          anchors.fill: parent
@@ -10,12 +10,12 @@ diff -Naur plasma-workspace-5.9.0/ksplash/ksplashqml/themes/Classic/main.qml pla
      }
  
      Image {
-diff -Naur plasma-workspace-5.9.0/lookandfeel/contents/splash/Splash.qml plasma-workspace-5.9.0.tpg/lookandfeel/contents/splash/Splash.qml
---- plasma-workspace-5.9.0/lookandfeel/contents/splash/Splash.qml	2017-01-26 12:28:32.000000000 +0000
-+++ plasma-workspace-5.9.0.tpg/lookandfeel/contents/splash/Splash.qml	2017-02-01 21:04:01.266098291 +0000
-@@ -19,9 +19,10 @@
- 
+diff -up plasma-workspace-5.13.4/lookandfeel/contents/splash/Splash.qml.0002~ plasma-workspace-5.13.4/lookandfeel/contents/splash/Splash.qml
+--- plasma-workspace-5.13.4/lookandfeel/contents/splash/Splash.qml.0002~	2018-07-31 14:57:52.000000000 +0200
++++ plasma-workspace-5.13.4/lookandfeel/contents/splash/Splash.qml	2018-07-31 18:10:46.934066186 +0200
+@@ -20,9 +20,10 @@
  import QtQuick 2.5
+ import QtQuick.Window 2.2
  
 -Rectangle {
 +Image {
@@ -26,7 +26,7 @@ diff -Naur plasma-workspace-5.9.0/lookandfeel/contents/splash/Splash.qml plasma-
  
      property int stage
  
-@@ -55,7 +56,7 @@
+@@ -56,7 +57,7 @@ Rectangle {
  
              anchors.centerIn: parent
  
