@@ -5,7 +5,7 @@
 
 Name: plasma-workspace
 Version: 5.13.4
-Release: 1
+Release: 2
 Source0: http://download.kde.org//%{stable}/plasma/%{plasmaver}/%{name}-%{version}.tar.xz
 Source1: kde.pam
 Source100: %{name}.rpmlintrc
@@ -121,6 +121,7 @@ Requires: iso-codes
 Requires: x11-server-xwayland
 # needed for backgrounds and patch 2
 Requires: distro-theme-OpenMandriva
+Provides: virtual-notification-daemon
 Conflicts: kdebase4-workspace
 Conflicts: kdebase-workspace
 # Because of pam file
