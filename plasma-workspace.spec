@@ -3,6 +3,9 @@
 %define plasmaver %(echo %{version} |cut -d. -f1-3)
 %define stable %([ "`echo %{version} |cut -d. -f3`" -ge 80 ] && echo -n un; echo -n stable)
 
+# filter qml/plugins provides
+%global __provides_exclude_from ^(%{_kde5_qmldir}/.*\\.so|%{_qt5_plugindir}/.*\\.so)$
+
 Name: plasma-workspace
 Version: 5.14.0
 Release: 1
