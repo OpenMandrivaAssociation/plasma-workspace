@@ -103,7 +103,7 @@ BuildRequires: pkgconfig(xcb-image)
 BuildRequires: pam-devel
 BuildRequires: gmp-devel
 BuildRequires: mpfr-devel
-BuildRequires: iso-codes
+BuildRequires: pkgconfig(iso-codes)
 Requires: qt5-qtquickcontrols >= 5.5.0
 # External KF5 and Plasma 5 required packages
 Requires: kactivitymanagerd >= 5.6.0
