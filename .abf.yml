@@ -1,4 +1,5 @@
 removed_sources:
   plasma-workspace-5.12.3.tar.xz: 868ea884cd18eaa150ce4e170e8a03f0e6abb5fb
-sources:
   plasma-workspace-5.12.6.tar.xz: 9087f0fa205b0ad0b775d89d1ea5b49049efc308
+sources:
+  plasma-workspace-5.12.7.tar.xz: 406ab5cb984f7d6d8ad8cd36711d96f95571c7a3
