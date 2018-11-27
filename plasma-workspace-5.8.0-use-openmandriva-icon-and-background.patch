@@ -14,8 +14,8 @@ diff -Naur plasma-workspace-5.9.0/lookandfeel/contents/splash/Splash.qml plasma-
 --- plasma-workspace-5.9.0/lookandfeel/contents/splash/Splash.qml	2017-01-26 12:28:32.000000000 +0000
 +++ plasma-workspace-5.9.0.tpg/lookandfeel/contents/splash/Splash.qml	2017-02-01 21:04:01.266098291 +0000
 @@ -19,9 +19,10 @@
- 
  import QtQuick 2.5
+ import QtQuick.Window 2.2
  
 -Rectangle {
 +Image {
