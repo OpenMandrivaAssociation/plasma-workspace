@@ -7,7 +7,7 @@
 
 Name: plasma-workspace
 Version: 5.15.4
-Release: 1
+Release: 2
 Source0: http://download.kde.org//%{stable}/plasma/%{plasmaver}/%{name}-%{version}.tar.xz
 Source1: kde.pam
 Source100: %{name}.rpmlintrc
@@ -64,6 +64,7 @@ BuildRequires: cmake(KScreenLocker)
 BuildRequires: cmake(KF5Holidays)
 BuildRequires: cmake(KDED)
 BuildRequires: cmake(AppStreamQt)
+BuildRequires: cmake(KF5Kirigami2)
 BuildRequires: pkgconfig(dbusmenu-qt5)
 BuildRequires: pkgconfig(kscreen2)
 BuildRequires: pkgconfig(libqalculate)
