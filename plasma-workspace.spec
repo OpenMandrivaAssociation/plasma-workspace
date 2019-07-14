@@ -6,8 +6,8 @@
 %global __provides_exclude_from ^(%{_kde5_qmldir}/.*\\.so|%{_qt5_plugindir}/.*\\.so)$
 
 Name: plasma-workspace
-Version: 5.15.5
-Release: 2
+Version: 5.16.3
+Release: 1
 Source0: http://download.kde.org//%{stable}/plasma/%{plasmaver}/%{name}-%{version}.tar.xz
 Source1: kde.pam
 Source100: %{name}.rpmlintrc
@@ -209,6 +209,8 @@ sed -i -e "s#^type=.*#type=image#" %{buildroot}%{_datadir}/sddm/themes/breeze/th
 %find_lang %{name} --all-name --with-html
 
 %libpackage colorcorrect 5
+%libpackage notificationmanager 5
+%{_libdir}/libnotificationmanager.so.1
 
 %files -f %{name}.lang
 %{_sysconfdir}/xdg/autostart/gmenudbusmenuproxy.desktop
@@ -216,13 +218,9 @@ sed -i -e "s#^type=.*#type=image#" %{buildroot}%{_datadir}/sddm/themes/breeze/th
 %{_sysconfdir}/xdg/autostart/klipper.desktop
 %{_sysconfdir}/xdg/autostart/org.kde.plasmashell.desktop
 %{_sysconfdir}/xdg/autostart/xembedsniproxy.desktop
-%{_sysconfdir}/xdg/plasmoids.knsrc
-%{_sysconfdir}/xdg/wallpaper.knsrc
-%{_sysconfdir}/xdg/klipper.categories
-%{_sysconfdir}/xdg/kuiserver.categories
-%{_sysconfdir}/xdg/plasma-workspace.categories
+%{_datadir}/knsrcfiles/plasmoids.knsrc
+%{_datadir}/knsrcfiles/wallpaper.knsrc
 %{_sysconfdir}/xdg/taskmanagerrulesrc
-%{_sysconfdir}/xdg/wallpaperplugin.knsrc
 %{_sysconfdir}/pam.d/kde
 %{_bindir}/gmenudbusmenuproxy
 %{_bindir}/kcheckrunning
@@ -234,7 +232,6 @@ sed -i -e "s#^type=.*#type=image#" %{buildroot}%{_datadir}/sddm/themes/breeze/th
 %{_bindir}/ksmserver
 %{_bindir}/ksplashqml
 %{_bindir}/kstartupconfig5
-%{_bindir}/kuiserver5
 %{_bindir}/plasmashell
 %{_bindir}/plasma_waitforname
 %{_bindir}/plasmawindowed
@@ -247,7 +244,6 @@ sed -i -e "s#^type=.*#type=image#" %{buildroot}%{_datadir}/sddm/themes/breeze/th
 %{_libdir}/libexec/ksyncdbusenv
 %{_libdir}/libexec/ksmserver-logout-greeter
 %{_libdir}/qt5/plugins/kcm_krunner_kill.so
-%{_libdir}/qt5/plugins/kio_*.so
 %{_libdir}/qt5/plugins/krunner_*.so
 %{_libdir}/qt5/plugins/kf5/kded/*.so
 %{_libdir}/qt5/plugins/kpackage/packagestructure/*.so
@@ -271,7 +267,6 @@ sed -i -e "s#^type=.*#type=image#" %{buildroot}%{_datadir}/sddm/themes/breeze/th
 %{_libdir}/qt5/qml/org/kde/colorcorrect
 %dir %{_libdir}/qt5/qml/org/kde/plasma/private
 %{_libdir}/qt5/qml/org/kde/plasma/private/digitalclock
-%{_libdir}/qt5/qml/org/kde/plasma/private/notifications
 %{_libdir}/qt5/qml/org/kde/plasma/private/shell
 %{_libdir}/qt5/qml/org/kde/plasma/private/sessions
 %{_libdir}/qt5/qml/org/kde/plasma/wallpapers
@@ -341,6 +336,13 @@ sed -i -e "s#^type=.*#type=image#" %{buildroot}%{_datadir}/sddm/themes/breeze/th
 %{_datadir}/kdevappwizard/templates/ion-dataengine.tar.bz2
 %{_libdir}/kconf_update_bin/krunnerplugins
 %{_datadir}/kconf_update/krunnerplugins.upd
+%{_sysconfdir}/xdg/klipper.categories
+%{_sysconfdir}/xdg/libnotificationmanager.categories
+%{_sysconfdir}/xdg/plasma-workspace.categories
+%{_sysconfdir}/xdg/plasmanotifyrc
+%{_libdir}/qt5/plugins/kf5/kio/applications.so
+%{_libdir}/qt5/qml/org/kde/notificationmanager
+%{_datadir}/knsrcfiles/wallpaperplugin.knsrc
 
 %files -n sddm-theme-breeze
 %{_datadir}/sddm/themes/breeze
@@ -355,3 +357,4 @@ sed -i -e "s#^type=.*#type=image#" %{buildroot}%{_datadir}/sddm/themes/breeze/th
 %{_libdir}/cmake/LibTaskManager
 %{_libdir}/cmake/LibColorCorrect
 %{_datadir}/dbus-1/interfaces/*.xml
+%{_libdir}/cmake/LibNotificationManager
