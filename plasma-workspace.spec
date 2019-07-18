@@ -7,7 +7,7 @@
 
 Name: plasma-workspace
 Version: 5.16.3
-Release: 1
+Release: 2
 Source0: http://download.kde.org//%{stable}/plasma/%{plasmaver}/%{name}-%{version}.tar.xz
 Source1: kde.pam
 Source100: %{name}.rpmlintrc
@@ -153,6 +153,11 @@ The KDE Plasma workspace.
 %libpackage taskmanager 6
 %{_libdir}/libtaskmanager.so.5*
 
+%libpackage colorcorrect 5
+
+%libpackage notificationmanager 5
+%{_libdir}/libnotificationmanager.so.1
+
 %package -n %{devname}
 Summary: Development files for the KDE Plasma workspace
 Group: Development/KDE and Qt
@@ -161,11 +166,13 @@ Requires: %{mklibname plasma-geolocation-interface 5} = %{EVRD}
 Requires: %{mklibname taskmanager 6} = %{EVRD}
 Requires: %{mklibname weather_ion 7} = %{EVRD}
 Requires: %{mklibname colorcorrect 5} = %{EVRD}
+Requires: %{mklibname notificationmanager 5} = %{EVRD}
 Provides: %{mklibname -d kworkspace} = %{EVRD}
 Provides: %{mklibname -d plasma-geolocation-interface} = %{EVRD}
 Provides: %{mklibname -d taskmanager} = %{EVRD}
 Provides: %{mklibname -d weather_ion} = %{EVRD}
 Provides: %{mklibname -d colorcorrect} = %{EVRD}
+Provides: %{mklibname -d notificationmanager} = %{EVRD}
 # Autodetected devel(libprocesscore) is also provided by KDE 4.x -- let's
 # make sure we pick the right thing
 Requires: cmake(KF5SysGuard)
@@ -207,10 +214,6 @@ sed -i -e "s#^background=.*#background=%{_datadir}/mdk/backgrounds/OpenMandriva-
 sed -i -e "s#^type=.*#type=image#" %{buildroot}%{_datadir}/sddm/themes/breeze/theme.conf
 
 %find_lang %{name} --all-name --with-html
-
-%libpackage colorcorrect 5
-%libpackage notificationmanager 5
-%{_libdir}/libnotificationmanager.so.1
 
 %files -f %{name}.lang
 %{_sysconfdir}/xdg/autostart/gmenudbusmenuproxy.desktop
