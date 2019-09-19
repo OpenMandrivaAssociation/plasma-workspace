@@ -6,12 +6,14 @@
 %global __provides_exclude_from ^(%{_kde5_qmldir}/.*\\.so|%{_qt5_plugindir}/.*\\.so)$
 
 Name: plasma-workspace
-Version: 5.16.5
+Version: 5.16.90.1
 Release: 1
 Source0: http://download.kde.org//%{stable}/plasma/%{plasmaver}/%{name}-%{version}.tar.xz
 Source1: kde.pam
 Source100: %{name}.rpmlintrc
-Patch0: plasma-workspace-5.9.0-startup-scripts.patch
+# FIXME a forward port of this to the new C++ based startup tool
+# may be necessary
+#Patch0: plasma-workspace-5.9.0-startup-scripts.patch
 #Patch1: plasma-workspace-5.3.2-no-lto-in-plasmashell.patch
 Patch2: plasma-workspace-5.8.0-use-openmandriva-icon-and-background.patch
 Summary: The KDE Plasma workspace
@@ -191,8 +193,6 @@ KDE Breeze theme for the SDDM display manager.
 %prep
 %setup -q
 %apply_patches
-sed -i -e 's,@LIBDIR@,%{_lib},g' startkde/startkde.cmake startkde/startplasmacompositor.cmake
-
 %cmake_kde5 -DKDE4_COMMON_PAM_SERVICE=kde -DKDE_DEFAULT_HOME=.kde4
 
 %build
@@ -217,7 +217,6 @@ sed -i -e "s#^type=.*#type=image#" %{buildroot}%{_datadir}/sddm/themes/breeze/th
 
 %files -f %{name}.lang
 %{_sysconfdir}/xdg/autostart/gmenudbusmenuproxy.desktop
-%{_sysconfdir}/xdg/autostart/krunner.desktop
 %{_sysconfdir}/xdg/autostart/klipper.desktop
 %{_sysconfdir}/xdg/autostart/org.kde.plasmashell.desktop
 %{_sysconfdir}/xdg/autostart/xembedsniproxy.desktop
@@ -226,24 +225,21 @@ sed -i -e "s#^type=.*#type=image#" %{buildroot}%{_datadir}/sddm/themes/breeze/th
 %{_sysconfdir}/xdg/taskmanagerrulesrc
 %{_sysconfdir}/pam.d/kde
 %{_bindir}/gmenudbusmenuproxy
-%{_bindir}/kcheckrunning
 %{_bindir}/kcminit
 %{_bindir}/kcminit_startup
-%{_bindir}/kdostartupconfig5
 %{_bindir}/klipper
 %{_bindir}/krunner
 %{_bindir}/ksmserver
 %{_bindir}/ksplashqml
-%{_bindir}/kstartupconfig5
 %{_bindir}/plasmashell
 %{_bindir}/plasma_waitforname
 %{_bindir}/plasmawindowed
-%{_bindir}/startkde
+%{_bindir}/plasma_session
+%{_bindir}/startplasma-wayland
+%{_bindir}/startplasma-x11
 %{_bindir}/systemmonitor
-%{_bindir}/startplasmacompositor
 %{_bindir}/xembedsniproxy
 %{_libdir}/libexec/baloorunner
-%{_libdir}/libexec/startplasma
 %{_libdir}/libexec/ksyncdbusenv
 %{_libdir}/libexec/ksmserver-logout-greeter
 %{_libdir}/qt5/plugins/kcm_krunner_kill.so
@@ -257,13 +253,6 @@ sed -i -e "s#^type=.*#type=image#" %{buildroot}%{_datadir}/sddm/themes/breeze/th
 %dir %{_libdir}/qt5/plugins/plasma
 %dir %{_libdir}/qt5/plugins/plasma/applets
 %{_libdir}/qt5/plugins/plasma/dataengine
-%{_libdir}/qt5/plugins/plasma/packagestructure
-%{_libdir}/qt5/plugins/plasma_containmentactions_applauncher.so
-%{_libdir}/qt5/plugins/plasma_containmentactions_contextmenu.so
-%{_libdir}/qt5/plugins/plasma_containmentactions_paste.so
-%{_libdir}/qt5/plugins/plasma_containmentactions_switchactivity.so
-%{_libdir}/qt5/plugins/plasma_containmentactions_switchdesktop.so
-%{_libdir}/qt5/plugins/plasma_containmentactions_switchwindow.so
 %{_libdir}/qt5/plugins/plasma-geolocation-gps.so
 %{_libdir}/qt5/plugins/plasma-geolocation-ip.so
 %{_libdir}/qt5/plugins/plasmacalendarplugins
@@ -284,6 +273,7 @@ sed -i -e "s#^type=.*#type=image#" %{buildroot}%{_datadir}/sddm/themes/breeze/th
 %{_datadir}/config.kcfg/*.kcfg
 %{_datadir}/dbus-1/services/*.service
 %{_datadir}/desktop-directories
+%{_datadir}/kconf_update/krunnerglobalshortcuts.upd
 %{_datadir}/kio_desktop/directory.desktop
 %{_datadir}/kio_desktop/directory.trash
 %{_datadir}/knotifications5/*.notifyrc
@@ -316,18 +306,6 @@ sed -i -e "s#^type=.*#type=image#" %{buildroot}%{_datadir}/sddm/themes/breeze/th
 %{_datadir}/plasma/plasmoids/org.kde.plasma.private.systemtray
 %{_datadir}/plasma/plasmoids/org.kde.plasma.appmenu
 %{_datadir}/plasma/services/*.operations
-%dir %{_datadir}/plasma/shareprovider
-%{_datadir}/plasma/shareprovider/im9
-%{_datadir}/plasma/shareprovider/imgsusepasteorg
-%{_datadir}/plasma/shareprovider/imgur
-%{_datadir}/plasma/shareprovider/kde
-%{_datadir}/plasma/shareprovider/pastebincom
-%{_datadir}/plasma/shareprovider/pasteopensuseorg
-%{_datadir}/plasma/shareprovider/pasteubuntucom
-%{_datadir}/plasma/shareprovider/privatepastecom
-%{_datadir}/plasma/shareprovider/simplestimagehosting
-%{_datadir}/plasma/shareprovider/wklej
-%{_datadir}/plasma/shareprovider/wstaw
 %dir %{_datadir}/plasma/wallpapers
 %{_datadir}/plasma/wallpapers/org.kde.color
 %{_datadir}/plasma/wallpapers/org.kde.image
@@ -339,13 +317,21 @@ sed -i -e "s#^type=.*#type=image#" %{buildroot}%{_datadir}/sddm/themes/breeze/th
 %{_datadir}/kdevappwizard/templates/ion-dataengine.tar.bz2
 %{_libdir}/kconf_update_bin/krunnerplugins
 %{_datadir}/kconf_update/krunnerplugins.upd
-%{_sysconfdir}/xdg/klipper.categories
-%{_sysconfdir}/xdg/libnotificationmanager.categories
-%{_sysconfdir}/xdg/plasma-workspace.categories
+%{_datadir}/qlogging-categories5/klipper.categories
+%{_datadir}/qlogging-categories5/libnotificationmanager.categories
+%{_datadir}/qlogging-categories5/plasma-workspace.categories
 %{_sysconfdir}/xdg/plasmanotifyrc
 %{_libdir}/qt5/plugins/kf5/kio/applications.so
+%{_libdir}/qt5/plugins/plasma/containmentactions
+%{_libdir}/qt5/plugins/plasma_containmentactions_switchactivity.so
 %{_libdir}/qt5/qml/org/kde/notificationmanager
+%{_libdir}/qt5/qml/org/kde/plasma/private/containmentlayoutmanager
+%{_libdir}/qt5/qml/org/kde/plasma/private/kicker
 %{_datadir}/knsrcfiles/wallpaperplugin.knsrc
+%{_libdir}/kconf_update_bin/krunnerglobalshortcuts
+%{_libdir}/libexec/plasma-sourceenv.sh
+%{_libdir}/libexec/startplasma-waylandsession
+%{_datadir}/kglobalaccel/krunner.desktop
 
 %files -n sddm-theme-breeze
 %{_datadir}/sddm/themes/breeze
