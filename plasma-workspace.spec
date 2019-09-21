@@ -7,7 +7,7 @@
 
 Name: plasma-workspace
 Version: 5.16.90.1
-Release: 1
+Release: 2
 Source0: http://download.kde.org//%{stable}/plasma/%{plasmaver}/%{name}-%{version}.tar.xz
 Source1: kde.pam
 Source100: %{name}.rpmlintrc
@@ -144,6 +144,7 @@ Obsoletes: kactivities-workspace < 5.5.0-3
 Provides: kactivities-workspace = 5.5.0-3
 Obsoletes: %{mklibname legacytaskmanager 5} < 5.8.2
 Provides: %{mklibname legacytaskmanager 5} = 5.8.2
+Conflicts: plasma-desktop < 5.16.90
 
 %description
 The KDE Plasma workspace.
