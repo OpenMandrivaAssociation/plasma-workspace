@@ -7,7 +7,7 @@
 
 Name: plasma-workspace
 Version: 5.17.2
-Release: 1
+Release: 2
 Source0: http://download.kde.org//%{stable}/plasma/%{plasmaver}/%{name}-%{version}.tar.xz
 Source1: kde.pam
 Source100: %{name}.rpmlintrc
@@ -16,6 +16,7 @@ Source100: %{name}.rpmlintrc
 #Patch0: plasma-workspace-5.9.0-startup-scripts.patch
 #Patch1: plasma-workspace-5.3.2-no-lto-in-plasmashell.patch
 Patch2: plasma-workspace-5.8.0-use-openmandriva-icon-and-background.patch
+Patch3: https://gitweb.frugalware.org/frugalware-current/raw/master/source/plasma/plasma-workspace/startkde.patch
 Summary: The KDE Plasma workspace
 URL: http://kde.org/
 License: GPL
@@ -194,8 +195,7 @@ Requires: sddm
 KDE Breeze theme for the SDDM display manager.
 
 %prep
-%setup -q
-%apply_patches
+%autosetup -p1
 %cmake_kde5 -DKDE4_COMMON_PAM_SERVICE=kde -DKDE_DEFAULT_HOME=.kde4
 
 %build
