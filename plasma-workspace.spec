@@ -7,7 +7,7 @@
 
 Name: plasma-workspace
 Version: 5.18.1
-Release: 1
+Release: 2
 Source0: http://download.kde.org//%{stable}/plasma/%{plasmaver}/%{name}-%{version}.tar.xz
 Source1: kde.pam
 Source100: %{name}.rpmlintrc
@@ -126,6 +126,7 @@ Requires: qt5-qtgraphicaleffects >= 5.5.0
 Requires: xmessage
 Requires: iso-codes
 Requires: x11-server-xwayland
+Requires:	dbus-x11
 # needed for backgrounds and patch 2
 Requires: distro-theme-OpenMandriva
 Provides: virtual-notification-daemon
