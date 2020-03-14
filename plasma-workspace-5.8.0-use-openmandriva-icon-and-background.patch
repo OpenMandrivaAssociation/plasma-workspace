@@ -52,20 +52,3 @@ diff -Naur plasma-workspace-5.18.3/lookandfeel/contents/splash/Splash.qml plasma
  
              sourceSize.width: size
              sourceSize.height: size
-diff -Naur plasma-workspace-5.18.3/sddm-theme/components/WallpaperFader.qml plasma-workspace-5.18.3.tpg/sddm-theme/components/WallpaperFader.qml
---- plasma-workspace-5.18.3/sddm-theme/components/WallpaperFader.qml	2020-03-10 13:24:06.000000000 +0000
-+++ plasma-workspace-5.18.3.tpg/sddm-theme/components/WallpaperFader.qml	2020-03-14 21:57:45.245508163 +0000
-@@ -115,11 +115,11 @@
-             }
-             PropertyChanges {
-                 target: wallpaperFader
--                factor: 1
-+                factor: 0
-             }
-             PropertyChanges {
-                 target: clock.shadow
--                opacity: 0
-+                opacity: 1
-             }
-             PropertyChanges {
-                 target: clock
