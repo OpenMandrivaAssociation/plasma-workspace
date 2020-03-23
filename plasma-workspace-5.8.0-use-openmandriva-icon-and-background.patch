@@ -6,7 +6,7 @@ diff -Naur plasma-workspace-5.18.3/ksplash/ksplashqml/themes/Classic/main.qml pl
          id: background
          anchors.fill: parent
 -        source: "images/background.png"
-+        source: "/usr/share/mdk/backgrounds/default.png"
++        source: "/usr/share/mdk/backgrounds/OpenMandriva-splash.png"
      }
  
      Image {
@@ -38,7 +38,7 @@ diff -Naur plasma-workspace-5.18.3/lookandfeel/contents/splash/Splash.qml plasma
 +Image {
      id: root
 -    color: "black"
-+    source: "../components/artwork/background.png"
++    source: "/usr/share/mdk/backgrounds/OpenMandriva-splash.png"
 +    fillMode: Image.PreserveAspectCrop
  
      property int stage
