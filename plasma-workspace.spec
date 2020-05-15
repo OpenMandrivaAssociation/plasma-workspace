@@ -6,7 +6,7 @@
 %global __provides_exclude_from ^(%{_kde5_qmldir}/.*\\.so|%{_qt5_plugindir}/.*\\.so)$
 
 Name: plasma-workspace
-Version: 5.18.5
+Version: 5.18.90
 Release: 1
 Source0: http://download.kde.org//%{stable}/plasma/%{plasmaver}/%{name}-%{version}.tar.xz
 Source1: kde.pam
@@ -219,6 +219,7 @@ sed -i -e "s#^type=.*#type=image#" %{buildroot}%{_datadir}/sddm/themes/breeze/th
 %find_lang %{name} --all-name --with-html
 
 %files -f %{name}.lang
+%{_bindir}/plasma-shutdown
 %{_sysconfdir}/xdg/autostart/gmenudbusmenuproxy.desktop
 %{_sysconfdir}/xdg/autostart/klipper.desktop
 %{_sysconfdir}/xdg/autostart/org.kde.plasmashell.desktop
@@ -301,7 +302,9 @@ sed -i -e "s#^type=.*#type=image#" %{buildroot}%{_datadir}/sddm/themes/breeze/th
 %{_datadir}/plasma/plasmoids/org.kde.plasma.notifications
 %{_datadir}/plasma/plasmoids/org.kde.plasma.panelspacer
 %{_datadir}/plasma/plasmoids/org.kde.plasma.systemtray
+%{_datadir}/plasma/plasmoids/org.kde.plasma.systemmonitor
 %{_datadir}/plasma/plasmoids/org.kde.plasma.systemmonitor.cpu
+%{_datadir}/plasma/plasmoids/org.kde.plasma.systemmonitor.cpucore
 %{_datadir}/plasma/plasmoids/org.kde.plasma.systemmonitor.diskactivity
 %{_datadir}/plasma/plasmoids/org.kde.plasma.systemmonitor.diskusage
 %{_datadir}/plasma/plasmoids/org.kde.plasma.systemmonitor.memory
