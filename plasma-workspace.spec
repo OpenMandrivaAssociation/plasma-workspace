@@ -7,7 +7,7 @@
 
 Name: plasma-workspace
 Version: 5.18.90
-Release: 1
+Release: 2
 Source0: http://download.kde.org//%{stable}/plasma/%{plasmaver}/%{name}-%{version}.tar.xz
 Source1: kde.pam
 Source100: %{name}.rpmlintrc
@@ -71,6 +71,7 @@ BuildRequires: cmake(KDED)
 BuildRequires: cmake(AppStreamQt)
 BuildRequires: cmake(KF5Kirigami2)
 BuildRequires: cmake(KF5QuickCharts)
+BuildRequires: cmake(KUserFeedback)
 BuildRequires: pkgconfig(dbusmenu-qt5)
 BuildRequires: pkgconfig(kscreen2)
 BuildRequires: pkgconfig(libqalculate)
