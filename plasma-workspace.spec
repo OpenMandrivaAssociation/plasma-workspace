@@ -253,6 +253,7 @@ sed -i -e "s#^type=.*#type=image#" %{buildroot}%{_datadir}/sddm/themes/breeze/th
 %{_libdir}/qt5/plugins/kpackage/packagestructure/*.so
 %{_libdir}/qt5/plugins/phonon_platform
 %{_libdir}/qt5/plugins/plasma/applets/*.so
+%{_libdir}/qt5/plugins/kcms/kcm_feedback.so
 %{_libdir}/qt5/plugins/kcms/kcm_translations.so
 %{_libdir}/qt5/plugins/kf5/kio/desktop.so
 %dir %{_libdir}/qt5/plugins/plasma
@@ -282,6 +283,7 @@ sed -i -e "s#^type=.*#type=image#" %{buildroot}%{_datadir}/sddm/themes/breeze/th
 %{_datadir}/kio_desktop/directory.desktop
 %{_datadir}/kio_desktop/directory.trash
 %{_datadir}/knotifications5/*.notifyrc
+%{_datadir}/kpackage/kcms/kcm_feedback
 %{_datadir}/kpackage/kcms/kcm_translations
 %{_datadir}/kservices5/*
 %{_datadir}/kservicetypes5/*.desktop
