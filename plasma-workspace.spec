@@ -5,9 +5,11 @@
 # filter qml/plugins provides
 %global __provides_exclude_from ^(%{_kde5_qmldir}/.*\\.so|%{_qt5_plugindir}/.*\\.so)$
 
+%define optflags %{optflags} -O3
+
 Name: plasma-workspace
 Version: 5.18.90
-Release: 3
+Release: 4
 Source0: http://download.kde.org//%{stable}/plasma/%{plasmaver}/%{name}-%{version}.tar.xz
 Source1: kde.pam
 Source100: %{name}.rpmlintrc
@@ -199,6 +201,9 @@ KDE Breeze theme for the SDDM display manager.
 
 %prep
 %autosetup -p1
+# (tpg) do not start second dbus user session
+sed -i -e 's/dbus-run-session//g' login-sessions/plasmawayland.desktop.cmake
+
 %cmake_kde5 -DKDE4_COMMON_PAM_SERVICE=kde -DKDE_DEFAULT_HOME=.kde4
 
 %build
