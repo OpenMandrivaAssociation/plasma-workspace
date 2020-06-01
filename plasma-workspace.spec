@@ -5,7 +5,7 @@
 # filter qml/plugins provides
 %global __provides_exclude_from ^(%{_kde5_qmldir}/.*\\.so|%{_qt5_plugindir}/.*\\.so)$
 
-%define optflags %{optflags} -O3
+%global optflags %{optflags} -O3
 
 Name: plasma-workspace
 Version: 5.18.90
