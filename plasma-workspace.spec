@@ -9,7 +9,7 @@
 
 Name: plasma-workspace
 Version: 5.19.4
-Release: 1
+Release: 2
 Source0: http://download.kde.org//%{stable}/plasma/%{plasmaver}/%{name}-%{version}.tar.xz
 Source1: kde.pam
 Source100: %{name}.rpmlintrc
@@ -202,7 +202,8 @@ KDE Breeze theme for the SDDM display manager.
 %prep
 %autosetup -p1
 # (tpg) do not start second dbus user session
-sed -i -e 's/dbus-run-session//g' login-sessions/plasmawayland.desktop.cmake
+# see also https://invent.kde.org/plasma/plasma-workspace/-/merge_requests/128/diffs?commit_id=8475fe4545998c806704a45a7d912f777a11533f
+sed -i -e 's/dbus-run-session //g' login-sessions/plasmawayland*.desktop.cmake
 
 %cmake_kde5 -DKDE4_COMMON_PAM_SERVICE=kde -DKDE_DEFAULT_HOME=.kde4
 
