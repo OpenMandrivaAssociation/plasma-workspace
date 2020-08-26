@@ -128,8 +128,6 @@ Requires: qt5-qtgraphicaleffects >= 5.5.0
 # needed if anything will fail on startkde
 Requires: xmessage
 Requires: iso-codes
-Requires: x11-server-xwayland
-Requires: dbus-x11
 # needed for feedback module
 Requires: kuserfeedback
 # needed for backgrounds and patch 2
@@ -137,6 +135,8 @@ Requires: distro-theme-OpenMandriva
 Provides: virtual-notification-daemon
 Conflicts: kdebase4-workspace
 Conflicts: kdebase-workspace
+# We need to run on either X11 or Wayland...
+Requires: %{name}-backend = %{EVRD}
 # Because of pam file
 Conflicts: kdm < 2:4.11.22-1.1
 Conflicts: kio-extras < 15.08.0
@@ -199,6 +199,23 @@ Requires: sddm
 %description -n sddm-theme-breeze
 KDE Breeze theme for the SDDM display manager.
 
+%package x11
+Summary: X11 support for Plasma Workspace
+Group: Graphical desktop/KDE
+Provides: %{name}-backend = %{EVRD}
+
+%description x11
+X11 support for Plasma Workspace
+
+%package wayland
+Summary: Wayland support for Plasma Workspace
+Group: Graphical desktop/KDE
+Provides: %{name}-backend = %{EVRD}
+Requires: x11-server-xwayland
+
+%description wayland
+Wayland support for Plasma Workspace
+
 %prep
 %autosetup -p1
 # (tpg) do not start second dbus user session
@@ -248,8 +265,6 @@ sed -i -e "s#^type=.*#type=image#" %{buildroot}%{_datadir}/sddm/themes/breeze/th
 %{_bindir}/plasma_waitforname
 %{_bindir}/plasmawindowed
 %{_bindir}/plasma_session
-%{_bindir}/startplasma-wayland
-%{_bindir}/startplasma-x11
 %{_bindir}/systemmonitor
 %{_bindir}/xembedsniproxy
 %{_libdir}/libexec/baloorunner
@@ -327,8 +342,6 @@ sed -i -e "s#^type=.*#type=image#" %{buildroot}%{_datadir}/sddm/themes/breeze/th
 %{_datadir}/plasma/wallpapers/org.kde.color
 %{_datadir}/plasma/wallpapers/org.kde.image
 %{_datadir}/plasma/wallpapers/org.kde.slideshow
-%{_datadir}/xsessions/plasma.desktop
-%{_datadir}/wayland-sessions/plasmawayland.desktop
 %{_libdir}/libkdeinit5_*.so
 %{_libdir}/qt5/qml/org/kde/taskmanager
 %{_datadir}/kdevappwizard/templates/ion-dataengine.tar.bz2
@@ -349,6 +362,14 @@ sed -i -e "s#^type=.*#type=image#" %{buildroot}%{_datadir}/sddm/themes/breeze/th
 %{_libdir}/libexec/plasma-sourceenv.sh
 %{_libdir}/libexec/startplasma-waylandsession
 %{_datadir}/kglobalaccel/krunner.desktop
+
+%files x11
+%{_bindir}/startplasma-x11
+%{_datadir}/xsessions/plasma.desktop
+
+%files wayland
+%{_bindir}/startplasma-wayland
+%{_datadir}/wayland-sessions/plasmawayland.desktop
 
 %files -n sddm-theme-breeze
 %{_datadir}/sddm/themes/breeze
