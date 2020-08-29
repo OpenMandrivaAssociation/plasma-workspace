@@ -21,6 +21,10 @@ Patch2: plasma-workspace-5.8.0-use-openmandriva-icon-and-background.patch
 Patch3: https://gitweb.frugalware.org/frugalware-current/raw/master/source/plasma/plasma-workspace/startkde.patch
 # Already used by systemd 246 - but not yet in Plasma 5.19 branch
 Patch4: https://invent.kde.org/plasma/plasma-workspace/commit/6cd25ded9934b1e37e4c727d78dda28623fe0a37.patch
+# Adapt to current libgps API
+Patch5: https://invent.kde.org/plasma/plasma-workspace/commit/e3134289f522edb140797818fffd60d641b86cd8.patch
+# Screenshot support for Plasma Mobile
+Patch6: https://invent.kde.org/plasma/plasma-workspace/commit/577ffd6da3653061e2044a56842388eb989dd792.patch
 Summary: The KDE Plasma workspace
 URL: http://kde.org/
 License: GPL
