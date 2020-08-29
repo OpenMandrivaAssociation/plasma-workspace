@@ -9,7 +9,7 @@
 
 Name: plasma-workspace
 Version: 5.19.4
-Release: 2
+Release: 3
 Source0: http://download.kde.org//%{stable}/plasma/%{plasmaver}/%{name}-%{version}.tar.xz
 Source1: kde.pam
 Source100: %{name}.rpmlintrc
@@ -19,6 +19,8 @@ Source100: %{name}.rpmlintrc
 #Patch1: plasma-workspace-5.3.2-no-lto-in-plasmashell.patch
 Patch2: plasma-workspace-5.8.0-use-openmandriva-icon-and-background.patch
 Patch3: https://gitweb.frugalware.org/frugalware-current/raw/master/source/plasma/plasma-workspace/startkde.patch
+# Already used by systemd 246 - but not yet in Plasma 5.19 branch
+Patch4: https://invent.kde.org/plasma/plasma-workspace/commit/6cd25ded9934b1e37e4c727d78dda28623fe0a37.patch
 Summary: The KDE Plasma workspace
 URL: http://kde.org/
 License: GPL
@@ -267,6 +269,7 @@ sed -i -e "s#^type=.*#type=image#" %{buildroot}%{_datadir}/sddm/themes/breeze/th
 %{_bindir}/plasma_session
 %{_bindir}/systemmonitor
 %{_bindir}/xembedsniproxy
+%{_bindir}/kde-systemd-start-condition
 %{_libdir}/libexec/baloorunner
 %{_libdir}/libexec/ksyncdbusenv
 %{_libdir}/libexec/ksmserver-logout-greeter
