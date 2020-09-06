@@ -8,8 +8,8 @@
 %global optflags %{optflags} -O3
 
 Name: plasma-workspace
-Version: 5.19.4
-Release: 4
+Version: 5.19.5
+Release: 1
 Source0: http://download.kde.org//%{stable}/plasma/%{plasmaver}/%{name}-%{version}.tar.xz
 Source1: kde.pam
 Source100: %{name}.rpmlintrc
