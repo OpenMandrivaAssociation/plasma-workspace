@@ -8,7 +8,7 @@
 %global optflags %{optflags} -O3
 
 Name: plasma-workspace
-Version: 5.19.5
+Version: 5.19.90
 Release: 1
 Source0: http://download.kde.org//%{stable}/plasma/%{plasmaver}/%{name}-%{version}.tar.xz
 Source1: kde.pam
@@ -18,13 +18,6 @@ Source100: %{name}.rpmlintrc
 #Patch0: plasma-workspace-5.9.0-startup-scripts.patch
 #Patch1: plasma-workspace-5.3.2-no-lto-in-plasmashell.patch
 Patch2: plasma-workspace-5.8.0-use-openmandriva-icon-and-background.patch
-Patch3: https://gitweb.frugalware.org/frugalware-current/raw/master/source/plasma/plasma-workspace/startkde.patch
-# Already used by systemd 246 - but not yet in Plasma 5.19 branch
-Patch4: https://invent.kde.org/plasma/plasma-workspace/commit/6cd25ded9934b1e37e4c727d78dda28623fe0a37.patch
-# Adapt to current libgps API
-Patch5: https://invent.kde.org/plasma/plasma-workspace/commit/e3134289f522edb140797818fffd60d641b86cd8.patch
-# Screenshot support for Plasma Mobile
-Patch6: https://invent.kde.org/plasma/plasma-workspace/commit/577ffd6da3653061e2044a56842388eb989dd792.patch
 Summary: The KDE Plasma workspace
 URL: http://kde.org/
 License: GPL
@@ -250,6 +243,9 @@ sed -i -e "s#^type=.*#type=image#" %{buildroot}%{_datadir}/sddm/themes/breeze/th
 
 %find_lang %{name} --all-name --with-html
 
+%libpackage kfontinst 5
+%libpackage kfontinstui 5
+
 %files -f %{name}.lang
 %{_bindir}/plasma-shutdown
 %{_sysconfdir}/xdg/autostart/gmenudbusmenuproxy.desktop
@@ -275,10 +271,8 @@ sed -i -e "s#^type=.*#type=image#" %{buildroot}%{_datadir}/sddm/themes/breeze/th
 %{_bindir}/xembedsniproxy
 %{_bindir}/kde-systemd-start-condition
 %{_libdir}/libexec/baloorunner
-%{_libdir}/libexec/ksyncdbusenv
 %{_libdir}/libexec/ksmserver-logout-greeter
 %{_libdir}/qt5/plugins/kcm_krunner_kill.so
-%{_libdir}/qt5/plugins/krunner_*.so
 %{_libdir}/qt5/plugins/kf5/kded/*.so
 %{_libdir}/qt5/plugins/kpackage/packagestructure/*.so
 %{_libdir}/qt5/plugins/phonon_platform
@@ -369,6 +363,128 @@ sed -i -e "s#^type=.*#type=image#" %{buildroot}%{_datadir}/sddm/themes/breeze/th
 %{_libdir}/libexec/plasma-sourceenv.sh
 %{_libdir}/libexec/startplasma-waylandsession
 %{_datadir}/kglobalaccel/krunner.desktop
+%{_bindir}/kcolorschemeeditor
+%{_bindir}/kfontinst
+%{_bindir}/kfontview
+%{_bindir}/krdb
+%{_bindir}/lookandfeeltool
+%{_libdir}/kconf_update_bin/krdb_clearlibrarypath
+%{_libdir}/libexec/kauth/fontinst*
+%{_libdir}/libexec/kfontprint
+%{_libdir}/libexec/plasma-changeicons
+%{_libdir}/libexec/plasma-dbus-run-session-if-needed
+%{_libdir}/qt5/plugins/fontthumbnail.so
+%{_libdir}/qt5/plugins/kcm_fontinst.so
+%{_libdir}/qt5/plugins/kcms/kcm_colors.so
+%{_libdir}/qt5/plugins/kcms/kcm_cursortheme.so
+%{_libdir}/qt5/plugins/kcms/kcm_desktoptheme.so
+%{_libdir}/qt5/plugins/kcms/kcm_fonts.so
+%{_libdir}/qt5/plugins/kcms/kcm_icons.so
+%{_libdir}/qt5/plugins/kcms/kcm_lookandfeel.so
+%{_libdir}/qt5/plugins/kcms/kcm_style.so
+%dir %{_libdir}/qt5/plugins/kf5/krunner
+%{_libdir}/qt5/plugins/kf5/krunner/krunner_activities.so
+%{_libdir}/qt5/plugins/kf5/krunner/krunner_appstream.so
+%{_libdir}/qt5/plugins/kf5/krunner/krunner_bookmarksrunner.so
+%{_libdir}/qt5/plugins/kf5/krunner/krunner_calculatorrunner.so
+%{_libdir}/qt5/plugins/kf5/krunner/krunner_kill.so
+%{_libdir}/qt5/plugins/kf5/krunner/krunner_locations.so
+%{_libdir}/qt5/plugins/kf5/krunner/krunner_placesrunner.so
+%{_libdir}/qt5/plugins/kf5/krunner/krunner_powerdevil.so
+%{_libdir}/qt5/plugins/kf5/krunner/krunner_recentdocuments.so
+%{_libdir}/qt5/plugins/kf5/krunner/krunner_services.so
+%{_libdir}/qt5/plugins/kf5/krunner/krunner_sessions.so
+%{_libdir}/qt5/plugins/kf5/krunner/krunner_shell.so
+%{_libdir}/qt5/plugins/kf5/krunner/krunner_webshortcuts.so
+%{_libdir}/qt5/plugins/kf5/krunner/krunner_windowedwidgets.so
+%{_libdir}/qt5/plugins/kf5/krunner/krunner_windows.so
+%{_libdir}/qt5/plugins/kfontviewpart.so
+%{_libdir}/qt5/plugins/kio_fonts.so
+%{_datadir}/applications/org.kde.kcolorschemeeditor.desktop
+%{_datadir}/applications/org.kde.kfontview.desktop
+%{_datadir}/dbus-1/system-services/org.kde.fontinst.service
+%{_datadir}/dbus-1/system.d/org.kde.fontinst.conf
+%{_datadir}/icons/hicolor/*/mimetypes/fonts-package.*
+%{_datadir}/icons/hicolor/*/apps/kfontview.*
+%{_datadir}/icons/hicolor/scalable/apps/preferences-desktop-font-installer.svgz
+%{_datadir}/kconf_update/delete_cursor_old_default_size.pl
+%{_datadir}/kconf_update/delete_cursor_old_default_size.upd
+%{_datadir}/kconf_update/icons_remove_effects.upd
+%{_datadir}/kconf_update/krdb_libpathwipe.upd
+%{_datadir}/kconf_update/style_widgetstyle_default_breeze.pl
+%{_datadir}/kconf_update/style_widgetstyle_default_breeze.upd
+%{_datadir}/kcontrol/pics/logo.png
+%{_datadir}/kcontrol/pics/mini-world.png
+%{_datadir}/kdisplay/app-defaults/AAAAAAGeneral.ad
+%{_datadir}/kdisplay/app-defaults/AAAMotif.ad
+%{_datadir}/kdisplay/app-defaults/AAATk.ad
+%{_datadir}/kdisplay/app-defaults/AAAXaw.ad
+%{_datadir}/kdisplay/app-defaults/AcroRead.ad
+%{_datadir}/kdisplay/app-defaults/Editres.ad
+%{_datadir}/kdisplay/app-defaults/Emacs.ad
+%{_datadir}/kdisplay/app-defaults/GV.ad
+%{_datadir}/kdisplay/app-defaults/ML.ad
+%{_datadir}/kdisplay/app-defaults/Nedit.ad
+%{_datadir}/kdisplay/app-defaults/Netscape.ad
+%{_datadir}/kdisplay/app-defaults/RVPlayer.ad
+%{_datadir}/kdisplay/app-defaults/WPerfect.ad
+%{_datadir}/kdisplay/app-defaults/XCalc.ad
+%{_datadir}/kdisplay/app-defaults/XOsview.ad
+%{_datadir}/kdisplay/app-defaults/XTerm.ad
+%{_datadir}/kdisplay/app-defaults/XV.ad
+%{_datadir}/kdisplay/app-defaults/Xawtv.ad
+%{_datadir}/kdisplay/app-defaults/Xdvi.ad
+%{_datadir}/kdisplay/app-defaults/Xpdf.ad
+%{_datadir}/kfontinst/icons/hicolor/16x16/actions/addfont.png
+%{_datadir}/kfontinst/icons/hicolor/16x16/actions/font-disable.png
+%{_datadir}/kfontinst/icons/hicolor/16x16/actions/font-enable.png
+%{_datadir}/kfontinst/icons/hicolor/16x16/actions/fontstatus.png
+%{_datadir}/kfontinst/icons/hicolor/22x22/actions/addfont.png
+%{_datadir}/kfontinst/icons/hicolor/22x22/actions/font-disable.png
+%{_datadir}/kfontinst/icons/hicolor/22x22/actions/font-enable.png
+%{_datadir}/kfontinst/icons/hicolor/22x22/actions/fontstatus.png
+%{_datadir}/knsrcfiles/colorschemes.knsrc
+%{_datadir}/knsrcfiles/gtk_themes.knsrc
+%{_datadir}/knsrcfiles/icons.knsrc
+%{_datadir}/knsrcfiles/kfontinst.knsrc
+%{_datadir}/knsrcfiles/lookandfeel.knsrc
+%{_datadir}/knsrcfiles/plasma-themes.knsrc
+%{_datadir}/knsrcfiles/xcursor.knsrc
+%{_datadir}/konqsidebartng/virtual_folders/services/fonts.desktop
+%{_datadir}/kpackage/kcms/kcm5_icons/contents/ui/IconSizePopup.qml
+%{_datadir}/kpackage/kcms/kcm5_icons/contents/ui/main.qml
+%{_datadir}/kpackage/kcms/kcm5_icons/metadata.desktop
+%{_datadir}/kpackage/kcms/kcm5_icons/metadata.json
+%{_datadir}/kpackage/kcms/kcm_colors/contents/ui/main.qml
+%{_datadir}/kpackage/kcms/kcm_colors/metadata.desktop
+%{_datadir}/kpackage/kcms/kcm_colors/metadata.json
+%{_datadir}/kpackage/kcms/kcm_cursortheme/contents/ui/Delegate.qml
+%{_datadir}/kpackage/kcms/kcm_cursortheme/contents/ui/main.qml
+%{_datadir}/kpackage/kcms/kcm_cursortheme/metadata.desktop
+%{_datadir}/kpackage/kcms/kcm_cursortheme/metadata.json
+%{_datadir}/kpackage/kcms/kcm_desktoptheme/contents/ui/Hand.qml
+%{_datadir}/kpackage/kcms/kcm_desktoptheme/contents/ui/ThemePreview.qml
+%{_datadir}/kpackage/kcms/kcm_desktoptheme/contents/ui/main.qml
+%{_datadir}/kpackage/kcms/kcm_desktoptheme/metadata.desktop
+%{_datadir}/kpackage/kcms/kcm_desktoptheme/metadata.json
+%{_datadir}/kpackage/kcms/kcm_fonts/contents/ui/ContextualHelpButton.qml
+%{_datadir}/kpackage/kcms/kcm_fonts/contents/ui/FontWidget.qml
+%{_datadir}/kpackage/kcms/kcm_fonts/contents/ui/main.qml
+%{_datadir}/kpackage/kcms/kcm_fonts/metadata.desktop
+%{_datadir}/kpackage/kcms/kcm_fonts/metadata.json
+%{_datadir}/kpackage/kcms/kcm_lookandfeel/contents/ui/main.qml
+%{_datadir}/kpackage/kcms/kcm_lookandfeel/metadata.desktop
+%{_datadir}/kpackage/kcms/kcm_lookandfeel/metadata.json
+%{_datadir}/kpackage/kcms/kcm_style/contents/ui/EffectSettingsPopup.qml
+%{_datadir}/kpackage/kcms/kcm_style/contents/ui/GtkStylePage.qml
+%{_datadir}/kpackage/kcms/kcm_style/contents/ui/main.qml
+%{_datadir}/kpackage/kcms/kcm_style/metadata.desktop
+%{_datadir}/kpackage/kcms/kcm_style/metadata.json
+%{_datadir}/krunner/dbusplugins/plasma-runner-baloosearch.desktop
+%{_datadir}/kxmlgui5/kfontinst/kfontviewpart.rc
+%{_datadir}/kxmlgui5/kfontview/kfontviewui.rc
+%{_datadir}/polkit-1/actions/org.kde.fontinst.policy
+%{_datadir}/qlogging-categories5/myproject.categories
 
 %files x11
 %{_bindir}/startplasma-x11

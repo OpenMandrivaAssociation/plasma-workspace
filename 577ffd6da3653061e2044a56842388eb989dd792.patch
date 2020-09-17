@@ -1,8 +1,0 @@
-diff -up plasma-workspace-5.19.4/shell/org.kde.plasmashell.desktop.cmake.5~ plasma-workspace-5.19.4/shell/org.kde.plasmashell.desktop.cmake
---- plasma-workspace-5.19.4/shell/org.kde.plasmashell.desktop.cmake.5~	2020-08-29 20:42:58.415849403 +0200
-+++ plasma-workspace-5.19.4/shell/org.kde.plasmashell.desktop.cmake	2020-08-29 20:45:58.815521250 +0200
-@@ -59,3 +59,4 @@ Icon=plasma
- NoDisplay=true
- 
- X-KDE-Wayland-Interfaces=org_kde_plasma_window_management,org_kde_kwin_keystate
-+X-KDE-DBUS-Restricted-Interfaces=org.kde.kwin.Screenshot
