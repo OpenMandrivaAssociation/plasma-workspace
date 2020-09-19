@@ -81,6 +81,8 @@ BuildRequires: pkgconfig(libqalculate)
 BuildRequires: pkgconfig(libgps) >= 3.15
 BuildRequires: pkgconfig(libpipewire-0.3)
 BuildRequires: pkgconfig(libdrm)
+BuildRequires: pkgconfig(freetype2)
+BuildRequires: pkgconfig(fontconfig)
 BuildRequires: pkgconfig(phonon4qt5)
 BuildRequires: pkgconfig(Qt5Concurrent)
 BuildRequires: pkgconfig(Qt5Core)
