@@ -8,7 +8,7 @@
 %global optflags %{optflags} -O3
 
 Name: plasma-workspace
-Version: 5.20.0
+Version: 5.20.1
 Release: 1
 Source0: http://download.kde.org//%{stable}/plasma/%{plasmaver}/%{name}-%{version}.tar.xz
 Source1: kde.pam
@@ -229,6 +229,9 @@ Wayland support for Plasma Workspace
 # (tpg) do not start second dbus user session
 # see also https://invent.kde.org/plasma/plasma-workspace/-/merge_requests/128/diffs?commit_id=8475fe4545998c806704a45a7d912f777a11533f
 sed -i -e 's/dbus-run-session //g' login-sessions/plasmawayland*.desktop.cmake
+
+# FIXME this should probably be removed once systemsettings is updated
+find . -name index.docbook |xargs sed -i -e 's,&systemsettings;,systemsettings,g'
 
 %cmake_kde5 -DKDE4_COMMON_PAM_SERVICE=kde -DKDE_DEFAULT_HOME=.kde4
 
