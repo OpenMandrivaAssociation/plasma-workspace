@@ -8,7 +8,7 @@
 %global optflags %{optflags} -O3
 
 Name: plasma-workspace
-Version: 5.20.2
+Version: 5.20.3
 Release: 1
 Source0: http://download.kde.org//%{stable}/plasma/%{plasmaver}/%{name}-%{version}.tar.xz
 Source1: kde.pam
@@ -492,7 +492,6 @@ sed -i -e "s#^type=.*#type=image#" %{buildroot}%{_datadir}/sddm/themes/breeze/th
 %{_datadir}/krunner/dbusplugins/plasma-runner-baloosearch.desktop
 %{_datadir}/kxmlgui5/kfontinst/kfontviewpart.rc
 %{_datadir}/kxmlgui5/kfontview/kfontviewui.rc
-%{_datadir}/polkit-1/actions/org.kde.fontinst.policy
 %{_datadir}/qlogging-categories5/myproject.categories
 
 %files x11
