@@ -9,7 +9,7 @@
 
 Name: plasma-workspace
 Version: 5.20.3
-Release: 4
+Release: 5
 Source0: http://download.kde.org//%{stable}/plasma/%{plasmaver}/%{name}-%{version}.tar.xz
 Source1: kde.pam
 Source100: %{name}.rpmlintrc
@@ -379,6 +379,7 @@ sed -i -e "s#^type=.*#type=image#" %{buildroot}%{_datadir}/sddm/themes/breeze/th
 %{_bindir}/lookandfeeltool
 %{_libdir}/kconf_update_bin/krdb_clearlibrarypath
 %{_libdir}/libexec/kauth/fontinst*
+%{_datadir}/polkit-1/actions/org.kde.fontinst.policy
 %{_libdir}/libexec/kfontprint
 %{_libdir}/libexec/plasma-changeicons
 %{_libdir}/libexec/plasma-dbus-run-session-if-needed
