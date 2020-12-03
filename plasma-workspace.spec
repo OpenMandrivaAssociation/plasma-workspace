@@ -251,7 +251,7 @@ sed -i -e "s#^background=.*#background=%{_datadir}/mdk/backgrounds/OpenMandriva-
 sed -i -e "s#^type=.*#type=image#" %{buildroot}%{_datadir}/sddm/themes/breeze/theme.conf
 
 # (tpg) fix autostart permissions
-chmod -m644 %{buildroot}%{_sysconfdir}/xdg/autostart/*
+chmod -m 644 %{buildroot}%{_sysconfdir}/xdg/autostart/*
 
 %find_lang %{name} --all-name --with-html
 
