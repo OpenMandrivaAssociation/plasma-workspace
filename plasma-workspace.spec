@@ -9,7 +9,7 @@
 
 Name: plasma-workspace
 Version: 5.20.4
-Release: 2
+Release: 3
 Source0: http://download.kde.org//%{stable}/plasma/%{plasmaver}/%{name}-%{version}.tar.xz
 Source1: kde.pam
 Source100: %{name}.rpmlintrc
@@ -23,6 +23,7 @@ URL: http://kde.org/
 License: GPL
 Obsoletes: simplesystray < %{EVRD}
 Group: Graphical desktop/KDE
+BuildRequires: cmake(Breeze)
 BuildRequires: cmake(KF5DocTools)
 BuildRequires: cmake(KF5Activities)
 BuildRequires: cmake(KF5CoreAddons)
