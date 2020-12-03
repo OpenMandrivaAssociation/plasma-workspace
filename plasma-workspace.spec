@@ -9,7 +9,7 @@
 
 Name: plasma-workspace
 Version: 5.20.4
-Release: 1
+Release: 2
 Source0: http://download.kde.org//%{stable}/plasma/%{plasmaver}/%{name}-%{version}.tar.xz
 Source1: kde.pam
 Source100: %{name}.rpmlintrc
@@ -249,6 +249,9 @@ rm -rf %{buildroot}%{_datadir}/sddm/themes/breeze/components/artwork/background.
 ln -sf %{_datadir}/mdk/backgrounds/OpenMandriva-splash.png %{buildroot}%{_datadir}/sddm/themes/breeze/components/artwork/background.png
 sed -i -e "s#^background=.*#background=%{_datadir}/mdk/backgrounds/OpenMandriva-splash.png#" %{buildroot}%{_datadir}/sddm/themes/breeze/theme.conf
 sed -i -e "s#^type=.*#type=image#" %{buildroot}%{_datadir}/sddm/themes/breeze/theme.conf
+
+# (tpg) fix autostart permissions
+chmod -m644 %{buildroot}%{_sysconfdir}/xdg/autostart/*
 
 %find_lang %{name} --all-name --with-html
 
