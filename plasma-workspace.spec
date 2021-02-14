@@ -8,7 +8,7 @@
 %global optflags %{optflags} -O3
 
 Name: plasma-workspace
-Version: 5.20.5
+Version: 5.21.0
 Release: 1
 Source0: http://download.kde.org//%{stable}/plasma/%{plasmaver}/%{name}-%{version}.tar.xz
 Source1: kde.pam
@@ -359,8 +359,6 @@ chmod 644 %{buildroot}%{_sysconfdir}/xdg/autostart/*
 %{_libdir}/libkdeinit5_*.so
 %{_libdir}/qt5/qml/org/kde/taskmanager
 %{_datadir}/kdevappwizard/templates/ion-dataengine.tar.bz2
-%{_libdir}/kconf_update_bin/krunnerplugins
-%{_datadir}/kconf_update/krunnerplugins.upd
 %{_datadir}/qlogging-categories5/klipper.categories
 %{_datadir}/qlogging-categories5/libnotificationmanager.categories
 %{_datadir}/qlogging-categories5/plasma-workspace.categories
@@ -411,9 +409,22 @@ chmod 644 %{buildroot}%{_sysconfdir}/xdg/autostart/*
 %{_libdir}/qt5/plugins/kf5/krunner/krunner_shell.so
 %{_libdir}/qt5/plugins/kf5/krunner/krunner_webshortcuts.so
 %{_libdir}/qt5/plugins/kf5/krunner/krunner_windowedwidgets.so
-%{_libdir}/qt5/plugins/kf5/krunner/krunner_windows.so
 %{_libdir}/qt5/plugins/kfontviewpart.so
 %{_libdir}/qt5/plugins/kio_fonts.so
+%{_prefix}/lib/systemd/user/plasma-baloorunner.service
+%{_prefix}/lib/systemd/user/plasma-core.target
+%{_prefix}/lib/systemd/user/plasma-gmenudbusmenuproxy.service
+%{_prefix}/lib/systemd/user/plasma-kcminit-phase1.service
+%{_prefix}/lib/systemd/user/plasma-kcminit.service
+%{_prefix}/lib/systemd/user/plasma-krunner.service
+%{_prefix}/lib/systemd/user/plasma-ksmserver.service
+%{_prefix}/lib/systemd/user/plasma-ksplash-ready.service
+%{_prefix}/lib/systemd/user/plasma-plasmashell.service
+%{_prefix}/lib/systemd/user/plasma-restoresession.service
+%{_prefix}/lib/systemd/user/plasma-workspace@.target
+%{_prefix}/lib/systemd/user/plasma-xembedsniproxy.service
+%{_libdir}/kconf_update_bin/krunnerhistory
+%{_datadir}/kconf_update/krunnerhistory.upd
 %{_datadir}/applications/org.kde.kcolorschemeeditor.desktop
 %{_datadir}/applications/org.kde.kfontview.desktop
 %{_datadir}/dbus-1/system-services/org.kde.fontinst.service

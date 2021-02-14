@@ -1,7 +1,7 @@
-diff -Naur plasma-workspace-5.18.3/ksplash/ksplashqml/themes/Classic/main.qml plasma-workspace-5.18.3.tpg/ksplash/ksplashqml/themes/Classic/main.qml
---- plasma-workspace-5.18.3/ksplash/ksplashqml/themes/Classic/main.qml	2020-03-10 13:24:06.000000000 +0000
-+++ plasma-workspace-5.18.3.tpg/ksplash/ksplashqml/themes/Classic/main.qml	2020-03-14 21:55:47.465592926 +0000
-@@ -52,7 +52,7 @@
+diff -up plasma-workspace-5.21.0/ksplash/ksplashqml/themes/Classic/main.qml.1~ plasma-workspace-5.21.0/ksplash/ksplashqml/themes/Classic/main.qml
+--- plasma-workspace-5.21.0/ksplash/ksplashqml/themes/Classic/main.qml.1~	2021-02-11 13:20:10.000000000 +0100
++++ plasma-workspace-5.21.0/ksplash/ksplashqml/themes/Classic/main.qml	2021-02-14 22:43:51.903785127 +0100
+@@ -52,7 +52,7 @@ Item {
      Image {
          id: background
          anchors.fill: parent
@@ -10,10 +10,10 @@ diff -Naur plasma-workspace-5.18.3/ksplash/ksplashqml/themes/Classic/main.qml pl
      }
  
      Image {
-diff -Naur plasma-workspace-5.18.3/lookandfeel/contents/components/WallpaperFader.qml plasma-workspace-5.18.3.tpg/lookandfeel/contents/components/WallpaperFader.qml
---- plasma-workspace-5.18.3/lookandfeel/contents/components/WallpaperFader.qml	2020-03-10 13:24:06.000000000 +0000
-+++ plasma-workspace-5.18.3.tpg/lookandfeel/contents/components/WallpaperFader.qml	2020-03-14 21:57:45.245508163 +0000
-@@ -115,11 +115,11 @@
+diff -up plasma-workspace-5.21.0/lookandfeel/contents/components/WallpaperFader.qml.1~ plasma-workspace-5.21.0/lookandfeel/contents/components/WallpaperFader.qml
+--- plasma-workspace-5.21.0/lookandfeel/contents/components/WallpaperFader.qml.1~	2021-02-11 13:20:10.000000000 +0100
++++ plasma-workspace-5.21.0/lookandfeel/contents/components/WallpaperFader.qml	2021-02-14 22:43:51.903785127 +0100
+@@ -114,11 +114,11 @@ Item {
              }
              PropertyChanges {
                  target: wallpaperFader
@@ -27,12 +27,12 @@ diff -Naur plasma-workspace-5.18.3/lookandfeel/contents/components/WallpaperFade
              }
              PropertyChanges {
                  target: clock
-diff -Naur plasma-workspace-5.18.3/lookandfeel/contents/splash/Splash.qml plasma-workspace-5.18.3.tpg/lookandfeel/contents/splash/Splash.qml
---- plasma-workspace-5.18.3/lookandfeel/contents/splash/Splash.qml	2020-03-10 13:24:06.000000000 +0000
-+++ plasma-workspace-5.18.3.tpg/lookandfeel/contents/splash/Splash.qml	2020-03-14 21:55:47.465592926 +0000
-@@ -20,9 +20,10 @@
- import QtQuick 2.5
+diff -up plasma-workspace-5.21.0/lookandfeel/contents/splash/Splash.qml.1~ plasma-workspace-5.21.0/lookandfeel/contents/splash/Splash.qml
+--- plasma-workspace-5.21.0/lookandfeel/contents/splash/Splash.qml.1~	2021-02-11 13:20:10.000000000 +0100
++++ plasma-workspace-5.21.0/lookandfeel/contents/splash/Splash.qml	2021-02-14 22:53:53.986180815 +0100
+@@ -21,9 +21,10 @@ import QtQuick 2.5
  import QtQuick.Window 2.2
+ import org.kde.plasma.core 2.0 as PlasmaCore
  
 -Rectangle {
 +Image {
@@ -43,7 +43,7 @@ diff -Naur plasma-workspace-5.18.3/lookandfeel/contents/splash/Splash.qml plasma
  
      property int stage
  
-@@ -56,7 +57,7 @@
+@@ -57,7 +58,7 @@ Rectangle {
  
              anchors.centerIn: parent
  
