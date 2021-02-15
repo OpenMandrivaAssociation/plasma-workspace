@@ -214,16 +214,17 @@ Group: Graphical desktop/KDE
 Provides: %{name}-backend = %{EVRD}
 
 %description x11
-X11 support for Plasma Workspace
+X11 support for Plasma Workspace.
 
 %package wayland
 Summary: Wayland support for Plasma Workspace
 Group: Graphical desktop/KDE
 Provides: %{name}-backend = %{EVRD}
 Requires: x11-server-xwayland
+Requires: kwin-wayland
 
 %description wayland
-Wayland support for Plasma Workspace
+Wayland support for Plasma Workspace.
 
 %prep
 %autosetup -p1
