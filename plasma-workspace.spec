@@ -231,7 +231,7 @@ Wayland support for Plasma Workspace
 # see also https://invent.kde.org/plasma/plasma-workspace/-/merge_requests/128/diffs?commit_id=8475fe4545998c806704a45a7d912f777a11533f
 sed -i -e 's/dbus-run-session //g' login-sessions/plasmawayland*.desktop.cmake
 
-%cmake_kde5 -DKDE4_COMMON_PAM_SERVICE=kde -DKDE_DEFAULT_HOME=.kde4
+%cmake_kde5 -DKDE4_COMMON_PAM_SERVICE=kde -DKDE_DEFAULT_HOME=.kde4 -DPLASMA_SYSTEMD_BOOT=true
 
 %build
 %ninja -C build
