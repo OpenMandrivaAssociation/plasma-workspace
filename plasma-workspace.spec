@@ -9,7 +9,7 @@
 
 Name: plasma-workspace
 Version: 5.21.5
-Release: 1
+Release: 2
 Source0: http://download.kde.org//%{stable}/plasma/%{plasmaver}/%{name}-%{version}.tar.xz
 Source1: kde.pam
 Source100: %{name}.rpmlintrc
@@ -136,6 +136,9 @@ Requires: qt5-qttools-qtdbus >= 5.5.0
 Requires: qt5-qtgraphicaleffects >= 5.5.0
 # needed if anything will fail on startkde
 Requires: xmessage
+Requires: xprop
+Requires: xset
+Requires: xrdb
 Requires: iso-codes
 # needed for feedback module
 Requires: kuserfeedback
@@ -219,8 +222,9 @@ X11 support for Plasma Workspace.
 %package wayland
 Summary: Wayland support for Plasma Workspace
 Group: Graphical desktop/KDE
+Requires: %{name}
 Provides: %{name}-backend = %{EVRD}
-Requires: x11-server-xwayland
+Requires: xwayland
 Requires: kwin-wayland
 
 %description wayland
