@@ -8,8 +8,8 @@
 %global optflags %{optflags} -O3
 
 Name: plasma-workspace
-Version: 5.21.5
-Release: 2
+Version: 5.22.0
+Release: 1
 Source0: http://download.kde.org//%{stable}/plasma/%{plasmaver}/%{name}-%{version}.tar.xz
 Source1: kde.pam
 Source100: %{name}.rpmlintrc
@@ -265,6 +265,11 @@ chmod 644 %{buildroot}%{_sysconfdir}/xdg/autostart/*
 %libpackage kfontinstui 5
 
 %files -f %{name}.lang
+%{_bindir}/plasma-apply-colorscheme
+%{_bindir}/plasma-apply-cursortheme
+%{_bindir}/plasma-apply-desktoptheme
+%{_bindir}/plasma-apply-lookandfeel
+%{_bindir}/plasma-apply-wallpaperimage
 %{_bindir}/plasma-shutdown
 %{_sysconfdir}/xdg/autostart/gmenudbusmenuproxy.desktop
 %{_sysconfdir}/xdg/autostart/klipper.desktop
@@ -321,7 +326,6 @@ chmod 644 %{buildroot}%{_sysconfdir}/xdg/autostart/*
 %{_datadir}/config.kcfg/*.kcfg
 %{_datadir}/dbus-1/services/*.service
 %{_datadir}/desktop-directories
-%{_datadir}/kconf_update/krunnerglobalshortcuts.upd
 %{_datadir}/kio_desktop/directory.desktop
 %{_datadir}/kio_desktop/directory.trash
 %{_datadir}/knotifications5/*.notifyrc
@@ -378,20 +382,17 @@ chmod 644 %{buildroot}%{_sysconfdir}/xdg/autostart/*
 %{_libdir}/kconf_update_bin/krunnerglobalshortcuts
 %{_libdir}/libexec/plasma-sourceenv.sh
 %{_libdir}/libexec/startplasma-waylandsession
-%{_datadir}/kglobalaccel/krunner.desktop
 %{_bindir}/kcolorschemeeditor
 %{_bindir}/kfontinst
 %{_bindir}/kfontview
 %{_bindir}/krdb
 %{_bindir}/lookandfeeltool
-%{_libdir}/kconf_update_bin/krdb_clearlibrarypath
 %{_libdir}/libexec/kauth/fontinst*
 %{_datadir}/polkit-1/actions/org.kde.fontinst.policy
 %{_libdir}/libexec/kfontprint
 %{_libdir}/libexec/plasma-changeicons
 %{_libdir}/libexec/plasma-dbus-run-session-if-needed
 %{_libdir}/qt5/plugins/fontthumbnail.so
-%{_libdir}/qt5/plugins/kcm_fontinst.so
 %{_libdir}/qt5/plugins/kcms/kcm_colors.so
 %{_libdir}/qt5/plugins/kcms/kcm_cursortheme.so
 %{_libdir}/qt5/plugins/kcms/kcm_desktoptheme.so
@@ -400,12 +401,9 @@ chmod 644 %{buildroot}%{_sysconfdir}/xdg/autostart/*
 %{_libdir}/qt5/plugins/kcms/kcm_lookandfeel.so
 %{_libdir}/qt5/plugins/kcms/kcm_style.so
 %dir %{_libdir}/qt5/plugins/kf5/krunner
-%{_libdir}/qt5/plugins/kf5/krunner/krunner_activities.so
 %{_libdir}/qt5/plugins/kf5/krunner/krunner_appstream.so
 %{_libdir}/qt5/plugins/kf5/krunner/krunner_bookmarksrunner.so
-%{_libdir}/qt5/plugins/kf5/krunner/krunner_calculatorrunner.so
 %{_libdir}/qt5/plugins/kf5/krunner/krunner_kill.so
-%{_libdir}/qt5/plugins/kf5/krunner/krunner_locations.so
 %{_libdir}/qt5/plugins/kf5/krunner/krunner_placesrunner.so
 %{_libdir}/qt5/plugins/kf5/krunner/krunner_powerdevil.so
 %{_libdir}/qt5/plugins/kf5/krunner/krunner_recentdocuments.so
@@ -416,6 +414,7 @@ chmod 644 %{buildroot}%{_sysconfdir}/xdg/autostart/*
 %{_libdir}/qt5/plugins/kf5/krunner/krunner_windowedwidgets.so
 %{_libdir}/qt5/plugins/kfontviewpart.so
 %{_libdir}/qt5/plugins/kio_fonts.so
+%{_datadir}/qlogging-categories5/kcm_translations.categories
 %{_prefix}/lib/systemd/user/plasma-baloorunner.service
 %{_prefix}/lib/systemd/user/plasma-core.target
 %{_prefix}/lib/systemd/user/plasma-gmenudbusmenuproxy.service
@@ -440,11 +439,8 @@ chmod 644 %{buildroot}%{_sysconfdir}/xdg/autostart/*
 %{_datadir}/kconf_update/delete_cursor_old_default_size.pl
 %{_datadir}/kconf_update/delete_cursor_old_default_size.upd
 %{_datadir}/kconf_update/icons_remove_effects.upd
-%{_datadir}/kconf_update/krdb_libpathwipe.upd
 %{_datadir}/kconf_update/style_widgetstyle_default_breeze.pl
 %{_datadir}/kconf_update/style_widgetstyle_default_breeze.upd
-%{_datadir}/kcontrol/pics/logo.png
-%{_datadir}/kcontrol/pics/mini-world.png
 %{_datadir}/kdisplay/app-defaults/AAAAAAGeneral.ad
 %{_datadir}/kdisplay/app-defaults/AAAMotif.ad
 %{_datadir}/kdisplay/app-defaults/AAATk.ad
@@ -497,7 +493,6 @@ chmod 644 %{buildroot}%{_sysconfdir}/xdg/autostart/*
 %{_datadir}/kpackage/kcms/kcm_desktoptheme/contents/ui/main.qml
 %{_datadir}/kpackage/kcms/kcm_desktoptheme/metadata.desktop
 %{_datadir}/kpackage/kcms/kcm_desktoptheme/metadata.json
-%{_datadir}/kpackage/kcms/kcm_fonts/contents/ui/ContextualHelpButton.qml
 %{_datadir}/kpackage/kcms/kcm_fonts/contents/ui/FontWidget.qml
 %{_datadir}/kpackage/kcms/kcm_fonts/contents/ui/main.qml
 %{_datadir}/kpackage/kcms/kcm_fonts/metadata.desktop
@@ -514,6 +509,19 @@ chmod 644 %{buildroot}%{_sysconfdir}/xdg/autostart/*
 %{_datadir}/kxmlgui5/kfontinst/kfontviewpart.rc
 %{_datadir}/kxmlgui5/kfontview/kfontviewui.rc
 %{_datadir}/qlogging-categories5/myproject.categories
+%{_libdir}/qt5/plugins/kcm_formats.so
+%{_libdir}/qt5/plugins/kcms/kcm_autostart.so
+%{_libdir}/qt5/plugins/kcms/kcm_fontinst.so
+%{_libdir}/qt5/plugins/kcms/kcm_nightcolor.so
+%{_libdir}/qt5/plugins/kcms/kcm_notifications.so
+%{_libdir}/qt5/plugins/kf5/krunner/calculator.so
+%{_libdir}/qt5/plugins/kf5/krunner/locations.so
+%{_datadir}/kconf_update/krunnerglobalshortcuts2.upd
+%{_datadir}/kglobalaccel/org.kde.krunner.desktop
+%{_datadir}/knsrcfiles/wallpaper-mobile.knsrc
+%{_datadir}/kpackage/kcms/kcm_autostart
+%{_datadir}/kpackage/kcms/kcm_nightcolor
+%{_datadir}/kpackage/kcms/kcm_notifications
 
 %files x11
 %{_bindir}/startplasma-x11
