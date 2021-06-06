@@ -9,7 +9,7 @@
 
 Name: plasma-workspace
 Version: 5.22.0
-Release: 1
+Release: 2
 Source0: http://download.kde.org//%{stable}/plasma/%{plasmaver}/%{name}-%{version}.tar.xz
 Source1: kde.pam
 Source100: %{name}.rpmlintrc
@@ -78,6 +78,7 @@ BuildRequires: cmake(PlasmaWaylandProtocols)
 BuildRequires: cmake(Qt5WaylandClient)
 BuildRequires: cmake(LayerShellQt)
 BuildRequires: cmake(Qt5XkbCommonSupport)
+BuildRequires: cmake(packagekitqt5)
 BuildRequires: qt5-qtwayland-private-devel
 BuildRequires: pkgconfig(xkbcommon)
 BuildRequires: pkgconfig(dbusmenu-qt5)
@@ -156,6 +157,8 @@ Requires: %{name}-backend = %{EVRD}
 # Because of pam file
 Conflicts: kdm < 2:4.11.22-1.1
 Conflicts: kio-extras < 15.08.0
+Requires: kio-extras
+Requires: kio-fuse
 Obsoletes: kde-base-artwork < 15.08.3-3
 Provides: kde-base-artwork = 15.08.3-3
 Obsoletes: superkaramba < 15.08.3-3
