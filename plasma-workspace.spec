@@ -77,6 +77,8 @@ BuildRequires: cmake(KUserFeedback)
 BuildRequires: cmake(PlasmaWaylandProtocols)
 BuildRequires: cmake(Qt5WaylandClient)
 BuildRequires: cmake(LayerShellQt)
+BuildRequires: cmake(Qt5XkbCommonSupport)
+BuildRequires: qt5-qtwayland-private-devel
 BuildRequires: pkgconfig(xkbcommon)
 BuildRequires: pkgconfig(dbusmenu-qt5)
 BuildRequires: pkgconfig(kscreen2)
