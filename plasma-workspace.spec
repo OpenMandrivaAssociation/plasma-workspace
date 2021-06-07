@@ -282,8 +282,6 @@ chmod 644 %{buildroot}%{_sysconfdir}/xdg/autostart/*
 %{_sysconfdir}/xdg/autostart/klipper.desktop
 %{_sysconfdir}/xdg/autostart/org.kde.plasmashell.desktop
 %{_sysconfdir}/xdg/autostart/xembedsniproxy.desktop
-%{_datadir}/knsrcfiles/plasmoids.knsrc
-%{_datadir}/knsrcfiles/wallpaper.knsrc
 %{_sysconfdir}/xdg/taskmanagerrulesrc
 %{_sysconfdir}/pam.d/kde
 %{_bindir}/gmenudbusmenuproxy
@@ -394,11 +392,9 @@ chmod 644 %{buildroot}%{_sysconfdir}/xdg/autostart/*
 %{_libdir}/libexec/kfontprint
 %{_libdir}/libexec/plasma-changeicons
 %{_libdir}/libexec/plasma-dbus-run-session-if-needed
-%{_libdir}/qt5/plugins/fontthumbnail.so
 %{_userunitdir}/*.service
 %{_userunitdir}/*.target
 %{_libdir}/kconf_update_bin/krunnerhistory
-%{_datadir}/kconf_update/krunnerhistory.upd
 %{_datadir}/applications/org.kde.kcolorschemeeditor.desktop
 %{_datadir}/applications/org.kde.kfontview.desktop
 %{_datadir}/dbus-1/system-services/org.kde.fontinst.service
@@ -445,6 +441,7 @@ chmod 644 %{buildroot}%{_sysconfdir}/xdg/autostart/*
 %{_datadir}/kpackage/kcms/kcm_notifications
 %{_datadir}/krunner/dbusplugins/plasma-runner-baloosearch.desktop
 %{_datadir}/kxmlgui5/kfontview/*.rc
+%{_datadir}/kxmlgui5/kfontinst/*.rc
 %{_datadir}/kglobalaccel/org.kde.krunner.desktop
 
 %files x11
