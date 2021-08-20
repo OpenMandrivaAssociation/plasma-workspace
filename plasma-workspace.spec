@@ -9,7 +9,7 @@
 
 Name: plasma-workspace
 Version: 5.22.4
-Release: 2
+Release: 3
 Source0: http://download.kde.org//%{stable}/plasma/%{plasmaver}/%{name}-%{version}.tar.xz
 Source1: kde.pam
 Source100: %{name}.rpmlintrc
