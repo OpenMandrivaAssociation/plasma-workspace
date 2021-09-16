@@ -8,7 +8,7 @@
 %global optflags %{optflags} -O3
 
 Name: plasma-workspace
-Version: 5.22.5
+Version: 5.22.90
 Release: 1
 Source0: http://download.kde.org//%{stable}/plasma/%{plasmaver}/%{name}-%{version}.tar.xz
 Source1: kde.pam
@@ -370,10 +370,8 @@ chmod 644 %{buildroot}%{_sysconfdir}/xdg/autostart/*
 %{_datadir}/plasma/wallpapers/org.kde.color
 %{_datadir}/plasma/wallpapers/org.kde.image
 %{_datadir}/plasma/wallpapers/org.kde.slideshow
-%{_libdir}/libkdeinit5_*.so
 %{_libdir}/libkrdb.so
 %{_libdir}/qt5/qml/org/kde/taskmanager
-%{_datadir}/kdevappwizard/templates/ion-dataengine.tar.bz2
 %{_datadir}/qlogging-categories5/*.categories
 %{_sysconfdir}/xdg/plasmanotifyrc
 %{_libdir}/qt5/qml/org/kde/notificationmanager
@@ -385,7 +383,6 @@ chmod 644 %{buildroot}%{_sysconfdir}/xdg/autostart/*
 %{_bindir}/kcolorschemeeditor
 %{_bindir}/kfontinst
 %{_bindir}/kfontview
-%{_bindir}/krdb
 %{_bindir}/lookandfeeltool
 %{_libdir}/libexec/kauth/fontinst*
 %{_datadir}/polkit-1/actions/org.kde.fontinst.policy
@@ -404,7 +401,6 @@ chmod 644 %{buildroot}%{_sysconfdir}/xdg/autostart/*
 %{_datadir}/icons/hicolor/scalable/apps/preferences-desktop-font-installer.svgz
 %{_datadir}/kconf_update/*.pl
 %{_datadir}/kconf_update/*.upd
-%{_datadir}/kdisplay/app-defaults/*.ad
 %{_datadir}/kfontinst/icons/hicolor/*/actions/*.png
 %{_datadir}/knsrcfiles/*.knsrc
 %{_datadir}/konqsidebartng/virtual_folders/services/fonts.desktop
@@ -443,6 +439,10 @@ chmod 644 %{buildroot}%{_sysconfdir}/xdg/autostart/*
 %{_datadir}/kxmlgui5/kfontview/*.rc
 %{_datadir}/kxmlgui5/kfontinst/*.rc
 %{_datadir}/kglobalaccel/org.kde.krunner.desktop
+%{_datadir}/plasma/plasmoids/org.kde.plasma.manage-inputmethod
+%{_libdir}/qt5/plugins/plasma/geolocationprovider
+%{_libdir}/qt5/plugins/kf5/parts/kfontviewpart.so
+%{_bindir}/plasma-interactiveconsole
 
 %files x11
 %{_bindir}/startplasma-x11
