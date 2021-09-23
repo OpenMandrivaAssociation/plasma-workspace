@@ -1,6 +1,6 @@
 %define devname %mklibname plasma-workspace -d
 %define plasmaver %(echo %{version} |cut -d. -f1-3)
-%define stable %([ "`echo %{version} |cut -d. -f3`" -ge 80 ] && echo -n un; echo -n stable)
+%define stable %([ "$(echo %{version} |cut -d. -f3)" -ge 80 ] && echo -n un; echo -n stable)
 
 # filter qml/plugins provides
 %global __provides_exclude_from ^(%{_kde5_qmldir}/.*\\.so|%{_qt5_plugindir}/.*\\.so)$
@@ -148,7 +148,7 @@ Requires: iso-codes
 # needed for feedback module
 Requires: kuserfeedback
 # needed for backgrounds and patch 2
-Requires: distro-theme-OpenMandriva
+Requires: distro-release-theme
 Provides: virtual-notification-daemon
 Conflicts: kdebase4-workspace
 Conflicts: kdebase-workspace
