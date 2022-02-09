@@ -8,8 +8,8 @@
 %global optflags %{optflags} -O3
 
 Name: plasma-workspace
-Version: 5.23.5
-Release: 2
+Version: 5.24.0
+Release: 1
 Source0: http://download.kde.org//%{stable}/plasma/%{plasmaver}/%{name}-%{version}.tar.xz
 Source1: kde.pam
 Source100: %{name}.rpmlintrc
@@ -311,7 +311,6 @@ chmod 644 %{buildroot}%{_sysconfdir}/xdg/autostart/*
 %{_libdir}/qt5/plugins/kpackage/packagestructure/*.so
 %{_libdir}/qt5/plugins/phonon_platform
 %{_libdir}/qt5/plugins/plasma/applets/*.so
-%{_libdir}/qt5/plugins/kcms/*.so
 %{_libdir}/qt5/plugins/plasma/dataengine
 %{_libdir}/qt5/plugins/plasmacalendarplugins
 %{_libdir}/qt5/qml/org/kde/colorcorrect
@@ -327,7 +326,6 @@ chmod 644 %{buildroot}%{_sysconfdir}/xdg/autostart/*
 %{_datadir}/applications/org.kde.klipper.desktop
 %{_datadir}/applications/org.kde.plasmashell.desktop
 %{_datadir}/applications/org.kde.systemmonitor.desktop
-%{_datadir}/applications/plasma-windowed.desktop
 %{_datadir}/config.kcfg/*.kcfg
 %{_datadir}/dbus-1/services/*.service
 %{_datadir}/desktop-directories
@@ -379,7 +377,6 @@ chmod 644 %{buildroot}%{_sysconfdir}/xdg/autostart/*
 %{_libdir}/qt5/qml/org/kde/plasma/private/kicker
 %{_libdir}/kconf_update_bin/krunnerglobalshortcuts
 %{_libdir}/libexec/plasma-sourceenv.sh
-%{_libdir}/libexec/startplasma-waylandsession
 %{_bindir}/kcolorschemeeditor
 %{_bindir}/kfontinst
 %{_bindir}/kfontview
@@ -404,45 +401,67 @@ chmod 644 %{buildroot}%{_sysconfdir}/xdg/autostart/*
 %{_datadir}/kfontinst/icons/hicolor/*/actions/*.png
 %{_datadir}/knsrcfiles/*.knsrc
 %{_datadir}/konqsidebartng/virtual_folders/services/fonts.desktop
-%{_datadir}/kpackage/kcms/kcm5_icons/contents/ui/IconSizePopup.qml
-%{_datadir}/kpackage/kcms/kcm5_icons/contents/ui/main.qml
-%{_datadir}/kpackage/kcms/kcm5_icons/metadata.desktop
-%{_datadir}/kpackage/kcms/kcm5_icons/metadata.json
 %{_datadir}/kpackage/kcms/kcm_colors/contents/ui/main.qml
-%{_datadir}/kpackage/kcms/kcm_colors/metadata.desktop
-%{_datadir}/kpackage/kcms/kcm_colors/metadata.json
 %{_datadir}/kpackage/kcms/kcm_cursortheme/contents/ui/Delegate.qml
 %{_datadir}/kpackage/kcms/kcm_cursortheme/contents/ui/main.qml
-%{_datadir}/kpackage/kcms/kcm_cursortheme/metadata.desktop
-%{_datadir}/kpackage/kcms/kcm_cursortheme/metadata.json
 %{_datadir}/kpackage/kcms/kcm_desktoptheme/contents/ui/Hand.qml
 %{_datadir}/kpackage/kcms/kcm_desktoptheme/contents/ui/ThemePreview.qml
 %{_datadir}/kpackage/kcms/kcm_desktoptheme/contents/ui/main.qml
-%{_datadir}/kpackage/kcms/kcm_desktoptheme/metadata.desktop
-%{_datadir}/kpackage/kcms/kcm_desktoptheme/metadata.json
 %{_datadir}/kpackage/kcms/kcm_fonts/contents/ui/FontWidget.qml
 %{_datadir}/kpackage/kcms/kcm_fonts/contents/ui/main.qml
-%{_datadir}/kpackage/kcms/kcm_fonts/metadata.desktop
-%{_datadir}/kpackage/kcms/kcm_fonts/metadata.json
 %{_datadir}/kpackage/kcms/kcm_lookandfeel/contents/ui/main.qml
-%{_datadir}/kpackage/kcms/kcm_lookandfeel/metadata.desktop
-%{_datadir}/kpackage/kcms/kcm_lookandfeel/metadata.json
 %{_datadir}/kpackage/kcms/kcm_style/contents/ui/EffectSettingsPopup.qml
 %{_datadir}/kpackage/kcms/kcm_style/contents/ui/GtkStylePage.qml
 %{_datadir}/kpackage/kcms/kcm_style/contents/ui/main.qml
-%{_datadir}/kpackage/kcms/kcm_style/metadata.desktop
-%{_datadir}/kpackage/kcms/kcm_style/metadata.json
 %{_datadir}/kpackage/kcms/kcm_autostart
 %{_datadir}/kpackage/kcms/kcm_nightcolor
 %{_datadir}/kpackage/kcms/kcm_notifications
 %{_datadir}/krunner/dbusplugins/plasma-runner-baloosearch.desktop
 %{_datadir}/kxmlgui5/kfontview/*.rc
-%{_datadir}/kxmlgui5/kfontinst/*.rc
 %{_datadir}/kglobalaccel/org.kde.krunner.desktop
 %{_datadir}/plasma/plasmoids/org.kde.plasma.manage-inputmethod
 %{_libdir}/qt5/plugins/plasma/geolocationprovider
 %{_libdir}/qt5/plugins/kf5/parts/kfontviewpart.so
 %{_bindir}/plasma-interactiveconsole
+%{_libdir}/qt5/plugins/kf5/krunner/kcms/kcm_krunner_kill.so
+%{_libdir}/qt5/plugins/plasma/kcminit/kcm_fonts_init.so
+%{_libdir}/qt5/plugins/plasma/kcminit/kcm_style_init.so
+%{_libdir}/qt5/plugins/plasma/kcms/systemsettings/kcm_autostart.so
+%{_libdir}/qt5/plugins/plasma/kcms/systemsettings/kcm_colors.so
+%{_libdir}/qt5/plugins/plasma/kcms/systemsettings/kcm_cursortheme.so
+%{_libdir}/qt5/plugins/plasma/kcms/systemsettings/kcm_desktoptheme.so
+%{_libdir}/qt5/plugins/plasma/kcms/systemsettings/kcm_feedback.so
+%{_libdir}/qt5/plugins/plasma/kcms/systemsettings/kcm_fonts.so
+%{_libdir}/qt5/plugins/plasma/kcms/systemsettings/kcm_formats.so
+%{_libdir}/qt5/plugins/plasma/kcms/systemsettings/kcm_icons.so
+%{_libdir}/qt5/plugins/plasma/kcms/systemsettings/kcm_lookandfeel.so
+%{_libdir}/qt5/plugins/plasma/kcms/systemsettings/kcm_nightcolor.so
+%{_libdir}/qt5/plugins/plasma/kcms/systemsettings/kcm_notifications.so
+%{_libdir}/qt5/plugins/plasma/kcms/systemsettings/kcm_style.so
+%{_libdir}/qt5/plugins/plasma/kcms/systemsettings/kcm_translations.so
+%{_libdir}/qt5/plugins/plasma/kcms/systemsettings/kcm_users.so
+%{_libdir}/qt5/plugins/plasma/kcms/systemsettings_qwidgets/kcm_fontinst.so
+%{_libdir}/qt5/qml/org/kde/plasma/lookandfeel
+%{_datadir}/applications/kcm_autostart.desktop
+%{_datadir}/applications/kcm_colors.desktop
+%{_datadir}/applications/kcm_cursortheme.desktop
+%{_datadir}/applications/kcm_desktoptheme.desktop
+%{_datadir}/applications/kcm_feedback.desktop
+%{_datadir}/applications/kcm_fontinst.desktop
+%{_datadir}/applications/kcm_fonts.desktop
+%{_datadir}/applications/kcm_formats.desktop
+%{_datadir}/applications/kcm_icons.desktop
+%{_datadir}/applications/kcm_lookandfeel.desktop
+%{_datadir}/applications/kcm_nightcolor.desktop
+%{_datadir}/applications/kcm_notifications.desktop
+%{_datadir}/applications/kcm_style.desktop
+%{_datadir}/applications/kcm_translations.desktop
+%{_datadir}/applications/kcm_users.desktop
+%{_datadir}/applications/org.kde.plasmawindowed.desktop
+%{_datadir}/kpackage/kcms/kcm_formats
+%{_datadir}/kpackage/kcms/kcm_icons
+%{_datadir}/kpackage/kcms/kcm_users
+%{_datadir}/plasma/avatars
 
 %files x11
 %{_bindir}/startplasma-x11
