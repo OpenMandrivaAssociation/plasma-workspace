@@ -9,7 +9,7 @@
 
 Name: plasma-workspace
 Version: 5.24.2
-Release: 1
+Release: 2
 Source0: http://download.kde.org//%{stable}/plasma/%{plasmaver}/%{name}-%{version}.tar.xz
 Source1: kde.pam
 Source100: %{name}.rpmlintrc
@@ -139,12 +139,6 @@ Requires: baloo5
 Requires: qt5-qttools >= 5.5.0
 Requires: qt5-qttools-qtdbus >= 5.5.0
 Requires: qt5-qtgraphicaleffects >= 5.5.0
-# needed if anything will fail on startkde
-Requires: xmessage
-Requires: xprop
-Requires: xset
-Requires: xrdb
-Requires: iso-codes
 # needed for feedback module
 Requires: kuserfeedback
 # needed for backgrounds and patch 2
@@ -152,8 +146,12 @@ Requires: distro-release-theme
 Provides: virtual-notification-daemon
 Conflicts: kdebase4-workspace
 Conflicts: kdebase-workspace
-# We need to run on either X11 or Wayland...
+%if %omvver >= 4050000
+Requires: %{name}-wayland = %{EVRD}
+%else
 Requires: %{name}-backend = %{EVRD}
+%endif
+Requires: iso-codes
 # Because of pam file
 Conflicts: kdm < 2:4.11.22-1.1
 Conflicts: kio-extras < 15.08.0
@@ -222,6 +220,12 @@ KDE Breeze theme for the SDDM display manager.
 Summary: X11 support for Plasma Workspace
 Group: Graphical desktop/KDE
 Provides: %{name}-backend = %{EVRD}
+# needed if anything will fail on startkde
+Requires: xmessage
+Requires: xprop
+Requires: xset
+Requires: xrdb
+Requires: iso-codes
 
 %description x11
 X11 support for Plasma Workspace.
@@ -233,6 +237,12 @@ Requires: %{name}
 Provides: %{name}-backend = %{EVRD}
 Requires: xwayland
 Requires: kwin-wayland
+Requires: kwayland-integration
+Requires: qt5-qttools
+Recommends: xdg-desktop-portal-kde
+%if %omvver >= 4050000
+Requires: sddm >= 0.19.0-12.20220222.1
+%endif
 
 %description wayland
 Wayland support for Plasma Workspace.
@@ -243,7 +253,13 @@ Wayland support for Plasma Workspace.
 # see also https://invent.kde.org/plasma/plasma-workspace/-/merge_requests/128/diffs?commit_id=8475fe4545998c806704a45a7d912f777a11533f
 sed -i -e 's/dbus-run-session //g' login-sessions/plasmawayland*.desktop.cmake
 
-%cmake_kde5 -DKDE4_COMMON_PAM_SERVICE=kde -DKDE_DEFAULT_HOME=.kde4 -DPLASMA_SYSTEMD_BOOT=true
+%cmake_kde5 \
+	-DKDE4_COMMON_PAM_SERVICE=kde \
+	-DKDE_DEFAULT_HOME=.kde4 \
+%if %omvver >= 4050000
+	-DINSTALL_SDDM_WAYLAND_SESSION:BOOL=On \
+%endif
+	-DPLASMA_SYSTEMD_BOOT=true
 
 %build
 %ninja -C build
@@ -468,6 +484,9 @@ chmod 644 %{buildroot}%{_sysconfdir}/xdg/autostart/*
 %{_datadir}/xsessions/plasma.desktop
 
 %files wayland
+%if %omvver >= 4050000
+%{_sysconfdir}/sddm.conf.d/plasma-wayland.conf
+%endif
 %{_bindir}/startplasma-wayland
 %{_datadir}/wayland-sessions/plasmawayland.desktop
 
