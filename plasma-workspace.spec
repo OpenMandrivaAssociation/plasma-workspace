@@ -113,6 +113,7 @@ BuildRequires: pkgconfig(wayland-client)
 BuildRequires: pkgconfig(wayland-scanner)
 BuildRequires: pkgconfig(wayland-server)
 BuildRequires: pkgconfig(wayland-egl)
+BuildRequires: pkgconfig(wayland-protocols) >= 1.24
 BuildRequires: pkgconfig(x11)
 BuildRequires: pkgconfig(xcb)
 BuildRequires: pkgconfig(xcb-keysyms)
