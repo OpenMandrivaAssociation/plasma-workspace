@@ -78,6 +78,7 @@ BuildRequires: cmake(PlasmaWaylandProtocols)
 BuildRequires: cmake(Qt5WaylandClient)
 BuildRequires: cmake(LayerShellQt)
 BuildRequires: cmake(Qt5XkbCommonSupport)
+BuildRequires: cmake(WaylandProtocols)
 BuildRequires: cmake(packagekitqt5)
 BuildRequires: qt5-qtwayland-private-devel
 BuildRequires: pkgconfig(xkbcommon)
