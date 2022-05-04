@@ -243,7 +243,7 @@ Requires: kwayland-integration
 Requires: qt5-qttools
 Recommends: xdg-desktop-portal-kde
 %if %omvver >= 4050000
-Requires: sddm >= 0.19.0-12.20220222.1
+Requires: sddm
 %endif
 
 %description wayland
