@@ -9,9 +9,13 @@
 
 Name: plasma-workspace
 Version: 5.24.5
-Release: 2
+Release: 3
 Source0: http://download.kde.org//%{stable}/plasma/%{plasmaver}/%{name}-%{version}.tar.xz
 Source1: kde.pam
+# Workaround for https://bugs.kde.org/show_bug.cgi?id=422948
+# Partially based on https://bugs.kde.org/show_bug.cgi?id=422948#c49
+Source2: plasma-startupsound
+Source3: org.kde.plasma.startupsound.desktop
 Source100: %{name}.rpmlintrc
 # FIXME a forward port of this to the new C++ based startup tool
 # may be necessary
@@ -281,6 +285,10 @@ ln -sf %{_datadir}/mdk/backgrounds/OpenMandriva-splash.png %{buildroot}%{_datadi
 sed -i -e "s#^background=.*#background=%{_datadir}/mdk/backgrounds/OpenMandriva-splash.png#" %{buildroot}%{_datadir}/sddm/themes/breeze/theme.conf
 sed -i -e "s#^type=.*#type=image#" %{buildroot}%{_datadir}/sddm/themes/breeze/theme.conf
 
+# Workaround for https://bugs.kde.org/show_bug.cgi?id=422948
+cp -a %{S:2} %{buildroot}%{_bindir}/
+cp -a %{S:3} %{buildroot}%{_sysconfdir}/xdg/autostart/
+
 # (tpg) fix autostart permissions
 chmod 644 %{buildroot}%{_sysconfdir}/xdg/autostart/*
 
@@ -296,10 +304,12 @@ chmod 644 %{buildroot}%{_sysconfdir}/xdg/autostart/*
 %{_bindir}/plasma-apply-lookandfeel
 %{_bindir}/plasma-apply-wallpaperimage
 %{_bindir}/plasma-shutdown
+%{_bindir}/plasma-startupsound
 %{_sysconfdir}/xdg/autostart/gmenudbusmenuproxy.desktop
 %{_sysconfdir}/xdg/autostart/klipper.desktop
 %{_sysconfdir}/xdg/autostart/org.kde.plasmashell.desktop
 %{_sysconfdir}/xdg/autostart/xembedsniproxy.desktop
+%{_sysconfdir}/xdg/autostart/org.kde.plasma.startupsound.desktop
 %{_sysconfdir}/xdg/taskmanagerrulesrc
 %{_sysconfdir}/pam.d/kde
 %{_bindir}/gmenudbusmenuproxy
