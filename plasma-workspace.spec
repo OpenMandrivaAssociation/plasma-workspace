@@ -9,7 +9,7 @@
 
 Name: plasma-workspace
 Version: 5.24.5
-Release: 3
+Release: 4
 Source0: http://download.kde.org//%{stable}/plasma/%{plasmaver}/%{name}-%{version}.tar.xz
 Source1: kde.pam
 # Workaround for https://bugs.kde.org/show_bug.cgi?id=422948
@@ -286,7 +286,7 @@ sed -i -e "s#^background=.*#background=%{_datadir}/mdk/backgrounds/OpenMandriva-
 sed -i -e "s#^type=.*#type=image#" %{buildroot}%{_datadir}/sddm/themes/breeze/theme.conf
 
 # Workaround for https://bugs.kde.org/show_bug.cgi?id=422948
-cp -a %{S:2} %{buildroot}%{_bindir}/
+install -c -m 755 %{S:2} %{buildroot}%{_bindir}/
 cp -a %{S:3} %{buildroot}%{_sysconfdir}/xdg/autostart/
 
 # (tpg) fix autostart permissions
