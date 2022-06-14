@@ -8,8 +8,8 @@
 %global optflags %{optflags} -O3
 
 Name: plasma-workspace
-Version: 5.24.5
-Release: 5
+Version: 5.25.0
+Release: 1
 Source0: http://download.kde.org//%{stable}/plasma/%{plasmaver}/%{name}-%{version}.tar.xz
 Source1: kde.pam
 # Workaround for https://bugs.kde.org/show_bug.cgi?id=422948
@@ -437,7 +437,6 @@ chmod 644 %{buildroot}%{_sysconfdir}/xdg/autostart/*
 %{_datadir}/kpackage/kcms/kcm_desktoptheme/contents/ui/main.qml
 %{_datadir}/kpackage/kcms/kcm_fonts/contents/ui/FontWidget.qml
 %{_datadir}/kpackage/kcms/kcm_fonts/contents/ui/main.qml
-%{_datadir}/kpackage/kcms/kcm_lookandfeel/contents/ui/main.qml
 %{_datadir}/kpackage/kcms/kcm_style/contents/ui/EffectSettingsPopup.qml
 %{_datadir}/kpackage/kcms/kcm_style/contents/ui/GtkStylePage.qml
 %{_datadir}/kpackage/kcms/kcm_style/contents/ui/main.qml
@@ -489,6 +488,7 @@ chmod 644 %{buildroot}%{_sysconfdir}/xdg/autostart/*
 %{_datadir}/kpackage/kcms/kcm_formats
 %{_datadir}/kpackage/kcms/kcm_icons
 %{_datadir}/kpackage/kcms/kcm_users
+%{_datadir}/kpackage/kcms/kcm_lookandfeel
 %{_datadir}/plasma/avatars
 
 %files x11
