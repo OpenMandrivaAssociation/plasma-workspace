@@ -9,7 +9,7 @@
 
 Name: plasma-workspace
 Version: 5.25.0
-Release: 1
+Release: 2
 Source0: http://download.kde.org//%{stable}/plasma/%{plasmaver}/%{name}-%{version}.tar.xz
 Source1: kde.pam
 # Workaround for https://bugs.kde.org/show_bug.cgi?id=422948
@@ -286,8 +286,14 @@ sed -i -e "s#^background=.*#background=%{_datadir}/mdk/backgrounds/OpenMandriva-
 sed -i -e "s#^type=.*#type=image#" %{buildroot}%{_datadir}/sddm/themes/breeze/theme.conf
 
 # Workaround for https://bugs.kde.org/show_bug.cgi?id=422948
+# This bug is fixed in 5.25.0, but it has a habit of coming back
+# every other release -- so we'll leave the workaround here and
+# just comment it out until we can be reasonably sure it has
+# been fixed for real this time.
+%if 0
 install -c -m 755 %{S:2} %{buildroot}%{_bindir}/
 cp -a %{S:3} %{buildroot}%{_sysconfdir}/xdg/autostart/
+%endif
 
 # (tpg) fix autostart permissions
 chmod 644 %{buildroot}%{_sysconfdir}/xdg/autostart/*
@@ -304,12 +310,10 @@ chmod 644 %{buildroot}%{_sysconfdir}/xdg/autostart/*
 %{_bindir}/plasma-apply-lookandfeel
 %{_bindir}/plasma-apply-wallpaperimage
 %{_bindir}/plasma-shutdown
-%{_bindir}/plasma-startupsound
 %{_sysconfdir}/xdg/autostart/gmenudbusmenuproxy.desktop
 %{_sysconfdir}/xdg/autostart/klipper.desktop
 %{_sysconfdir}/xdg/autostart/org.kde.plasmashell.desktop
 %{_sysconfdir}/xdg/autostart/xembedsniproxy.desktop
-%{_sysconfdir}/xdg/autostart/org.kde.plasma.startupsound.desktop
 %{_sysconfdir}/xdg/taskmanagerrulesrc
 %{_sysconfdir}/pam.d/kde
 %{_bindir}/gmenudbusmenuproxy
