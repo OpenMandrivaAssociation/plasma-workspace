@@ -8,7 +8,7 @@
 %global optflags %{optflags} -O3
 
 Name: plasma-workspace
-Version: 5.25.1
+Version: 5.25.2
 Release: 1
 Source0: http://download.kde.org//%{stable}/plasma/%{plasmaver}/%{name}-%{version}.tar.xz
 Source1: kde.pam
@@ -232,6 +232,7 @@ Requires: xprop
 Requires: xset
 Requires: xrdb
 Requires: iso-codes
+Requires: kwin-x11
 
 %description x11
 X11 support for Plasma Workspace.
