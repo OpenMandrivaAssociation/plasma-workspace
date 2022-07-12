@@ -8,7 +8,7 @@
 %global optflags %{optflags} -O3
 
 Name: plasma-workspace
-Version: 5.25.2
+Version: 5.25.3.1
 Release: 1
 Source0: http://download.kde.org//%{stable}/plasma/%{plasmaver}/%{name}-%{version}.tar.xz
 Source1: kde.pam
@@ -513,7 +513,6 @@ chmod 644 %{buildroot}%{_sysconfdir}/xdg/autostart/*
 %files -n %{devname}
 %{_includedir}/*
 %{_libdir}/lib*.so
-%exclude %{_libdir}/libkdeinit5_*.so
 %exclude %{_libdir}/libkrdb.so
 %{_libdir}/cmake/KRunnerAppDBusInterface
 %{_libdir}/cmake/KSMServerDBusInterface
