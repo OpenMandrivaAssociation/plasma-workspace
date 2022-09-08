@@ -22,6 +22,8 @@ Source100: %{name}.rpmlintrc
 #Patch0: plasma-workspace-5.9.0-startup-scripts.patch
 #Patch1: plasma-workspace-5.3.2-no-lto-in-plasmashell.patch
 Patch2: plasma-workspace-5.8.0-use-openmandriva-icon-and-background.patch
+# https://bugs.kde.org/show_bug.cgi?id=458829
+Patch3: https://invent.kde.org/plasma/plasma-workspace/-/commit/c7ba560ccaac5e469cb2d6bf66c39e1acf967454.patch
 Summary: The KDE Plasma workspace
 URL: http://kde.org/
 License: GPL
