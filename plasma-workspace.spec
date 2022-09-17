@@ -8,8 +8,8 @@
 %global optflags %{optflags} -O3
 
 Name: plasma-workspace
-Version: 5.25.5
-Release: 2
+Version: 5.25.90
+Release: 1
 Source0: http://download.kde.org//%{stable}/plasma/%{plasmaver}/%{name}-%{version}.tar.xz
 Source1: kde.pam
 # Workaround for https://bugs.kde.org/show_bug.cgi?id=422948
@@ -17,13 +17,8 @@ Source1: kde.pam
 Source2: plasma-startupsound
 Source3: org.kde.plasma.startupsound.desktop
 Source100: %{name}.rpmlintrc
-# FIXME a forward port of this to the new C++ based startup tool
-# may be necessary
-#Patch0: plasma-workspace-5.9.0-startup-scripts.patch
-#Patch1: plasma-workspace-5.3.2-no-lto-in-plasmashell.patch
-Patch2: plasma-workspace-5.8.0-use-openmandriva-icon-and-background.patch
-# https://bugs.kde.org/show_bug.cgi?id=458829
-Patch3: https://invent.kde.org/plasma/plasma-workspace/-/commit/c7ba560ccaac5e469cb2d6bf66c39e1acf967454.patch
+# FIXME this needs to be redone properly (OM theme)
+# Patch2: plasma-workspace-5.8.0-use-openmandriva-icon-and-background.patch
 Summary: The KDE Plasma workspace
 URL: http://kde.org/
 License: GPL
@@ -364,10 +359,8 @@ chmod 644 %{buildroot}%{_sysconfdir}/xdg/autostart/*
 %{_datadir}/kio_desktop/*.trash
 %{_datadir}/knotifications5/*.notifyrc
 %{_datadir}/kpackage/kcms/kcm_feedback
-%{_datadir}/kpackage/kcms/kcm_translations
 %{_datadir}/kservices5/*
 %{_datadir}/kservicetypes5/*.desktop
-%{_datadir}/ksplash
 %{_datadir}/kstyle
 %{_datadir}/solid/actions/test-predicate-openinwindow.desktop
 %{_datadir}/plasma/look-and-feel
@@ -462,37 +455,40 @@ chmod 644 %{buildroot}%{_sysconfdir}/xdg/autostart/*
 %{_libdir}/qt5/plugins/plasma/kcms/systemsettings/kcm_desktoptheme.so
 %{_libdir}/qt5/plugins/plasma/kcms/systemsettings/kcm_feedback.so
 %{_libdir}/qt5/plugins/plasma/kcms/systemsettings/kcm_fonts.so
-%{_libdir}/qt5/plugins/plasma/kcms/systemsettings/kcm_formats.so
 %{_libdir}/qt5/plugins/plasma/kcms/systemsettings/kcm_icons.so
 %{_libdir}/qt5/plugins/plasma/kcms/systemsettings/kcm_lookandfeel.so
 %{_libdir}/qt5/plugins/plasma/kcms/systemsettings/kcm_nightcolor.so
 %{_libdir}/qt5/plugins/plasma/kcms/systemsettings/kcm_notifications.so
 %{_libdir}/qt5/plugins/plasma/kcms/systemsettings/kcm_style.so
-%{_libdir}/qt5/plugins/plasma/kcms/systemsettings/kcm_translations.so
 %{_libdir}/qt5/plugins/plasma/kcms/systemsettings/kcm_users.so
 %{_libdir}/qt5/plugins/plasma/kcms/systemsettings_qwidgets/kcm_fontinst.so
 %{_libdir}/qt5/qml/org/kde/plasma/lookandfeel
 %{_datadir}/applications/kcm_autostart.desktop
 %{_datadir}/applications/kcm_colors.desktop
 %{_datadir}/applications/kcm_cursortheme.desktop
-%{_datadir}/applications/kcm_desktoptheme.desktop
 %{_datadir}/applications/kcm_feedback.desktop
 %{_datadir}/applications/kcm_fontinst.desktop
 %{_datadir}/applications/kcm_fonts.desktop
-%{_datadir}/applications/kcm_formats.desktop
 %{_datadir}/applications/kcm_icons.desktop
 %{_datadir}/applications/kcm_lookandfeel.desktop
 %{_datadir}/applications/kcm_nightcolor.desktop
 %{_datadir}/applications/kcm_notifications.desktop
 %{_datadir}/applications/kcm_style.desktop
-%{_datadir}/applications/kcm_translations.desktop
 %{_datadir}/applications/kcm_users.desktop
 %{_datadir}/applications/org.kde.plasmawindowed.desktop
-%{_datadir}/kpackage/kcms/kcm_formats
 %{_datadir}/kpackage/kcms/kcm_icons
 %{_datadir}/kpackage/kcms/kcm_users
 %{_datadir}/kpackage/kcms/kcm_lookandfeel
 %{_datadir}/plasma/avatars
+%{_bindir}/plasma-localegen-helper
+%{_libdir}/qt5/plugins/plasma/kcms/systemsettings/kcm_regionandlang.so
+%{_datadir}/applications/kcm_regionandlang.desktop
+%{_datadir}/dbus-1/system-services/org.kde.localegenhelper.service
+%{_datadir}/dbus-1/system.d/org.kde.localegenhelper.conf
+%{_datadir}/kio/servicemenus/setaswallpaper.desktop
+%{_datadir}/kpackage/kcms/kcm_regionandlang
+%{_datadir}/plasma/nightcolor/worldmap.png
+%{_datadir}/polkit-1/actions/org.kde.localegenhelper.policy
 
 %files x11
 %{_bindir}/startplasma-x11
