@@ -128,6 +128,9 @@ BuildRequires: pkgconfig(xcb-image)
 BuildRequires: pam-devel
 BuildRequires: pkgconfig(iso-codes)
 BuildRequires: cmake(Qt5QuickTest)
+BuildRequires: cmake(PolkitQt5-1)
+BuildRequires: cmake(KPipeWire)
+BuildRequires: cmake(KF5KExiv2)
 Requires: qt5-qtquickcontrols >= 5.5.0
 # External KF5 and Plasma 5 required packages
 Requires: kquickcharts
