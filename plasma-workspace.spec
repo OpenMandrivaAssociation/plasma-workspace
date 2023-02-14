@@ -8,7 +8,7 @@
 %global optflags %{optflags} -O3
 
 Name: plasma-workspace
-Version: 5.26.5
+Version: 5.27.0
 Release: 1
 Source0: http://download.kde.org//%{stable}/plasma/%{plasmaver}/%{name}-%{version}.tar.xz
 Source1: kde.pam
@@ -333,7 +333,6 @@ chmod 644 %{buildroot}%{_sysconfdir}/xdg/autostart/*
 %dir %{_libdir}/qt5/plugins/plasma
 %dir %{_libdir}/qt5/plugins/plasma/applets
 %dir %{_libdir}/qt5/plugins/kf5/krunner
-%{_libdir}/qt5/plugins/*.so
 %{_libdir}/qt5/plugins/kf5/kded/*.so
 %{_libdir}/qt5/plugins/kf5/kio/*.so
 %{_libdir}/qt5/plugins/kf5/krunner/*.so
@@ -493,6 +492,11 @@ chmod 644 %{buildroot}%{_sysconfdir}/xdg/autostart/*
 %{_datadir}/kpackage/kcms/kcm_regionandlang
 %{_datadir}/plasma/nightcolor/worldmap.png
 %{_datadir}/polkit-1/actions/org.kde.localegenhelper.policy
+%{_libdir}/kconf_update_bin/plasmashell-5.27-use-panel-thickness-in-default-group
+%{_libdir}/qt5/plugins/kf5/thumbcreator/fontthumbnail.so
+%{_libdir}/qt5/qml/org/kde/plasma/private/mediacontroller
+%{_datadir}/kpackage/kcms/kcm_cursortheme/contents/ui/LaunchFeedbackDialog.qml
+%{_datadir}/zsh/site-functions/_plasmashell
 
 %files x11
 %{_bindir}/startplasma-x11
