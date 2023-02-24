@@ -5,11 +5,9 @@
 # filter qml/plugins provides
 %global __provides_exclude_from ^(%{_kde5_qmldir}/.*\\.so|%{_qt5_plugindir}/.*\\.so)$
 
-%global optflags %{optflags} -O3
-
 Name: plasma-workspace
 Version: 5.27.1
-Release: 1
+Release: 2
 Source0: http://download.kde.org//%{stable}/plasma/%{plasmaver}/%{name}-%{version}.tar.xz
 Source1: kde.pam
 # Workaround for https://bugs.kde.org/show_bug.cgi?id=422948
@@ -153,7 +151,11 @@ Requires: distro-release-theme
 Provides: virtual-notification-daemon
 Conflicts: kdebase4-workspace
 Conflicts: kdebase-workspace
+%ifarch %{armx}
+Requires: %{name}-wayland = %{EVRD}
+%else
 Requires: %{name}-backend = %{EVRD}
+%endif
 Requires: iso-codes
 # Because of pam file
 Conflicts: kdm < 2:4.11.22-1.1
