@@ -6,8 +6,8 @@
 %global __provides_exclude_from ^(%{_kde5_qmldir}/.*\\.so|%{_qt5_plugindir}/.*\\.so)$
 
 Name: plasma-workspace
-Version: 5.27.3
-Release: 2
+Version: 5.27.4.1
+Release: 1
 Source0: http://download.kde.org//%{stable}/plasma/%{plasmaver}/%{name}-%{version}.tar.xz
 Source1: kde.pam
 # Workaround for https://bugs.kde.org/show_bug.cgi?id=422948
