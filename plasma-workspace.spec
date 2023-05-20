@@ -7,7 +7,7 @@
 
 Name: plasma-workspace
 Version: 5.27.5
-Release: 1
+Release: 2
 Source0: http://download.kde.org//%{stable}/plasma/%{plasmaver}/%{name}-%{version}.tar.xz
 Source1: kde.pam
 # Workaround for https://bugs.kde.org/show_bug.cgi?id=422948
@@ -127,7 +127,9 @@ BuildRequires: pam-devel
 BuildRequires: pkgconfig(iso-codes)
 BuildRequires: cmake(Qt5QuickTest)
 BuildRequires: cmake(PolkitQt5-1)
-BuildRequires: cmake(KPipeWire)
+# Both Plasma 5 and Plasma 6 provide
+# cmake(KPipeWire)
+BuildRequires: cmake(KPipeWire) < 5.27.80
 BuildRequires: cmake(KF5KExiv2)
 Requires: qt5-qtquickcontrols >= 5.5.0
 # External KF5 and Plasma 5 required packages
