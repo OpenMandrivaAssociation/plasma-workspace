@@ -22,7 +22,7 @@ URL: http://kde.org/
 License: GPL
 Obsoletes: simplesystray < %{EVRD}
 Group: Graphical desktop/KDE
-BuildRequires: cmake(Breeze)
+BuildRequires: cmake(Breeze) < 5.27.50
 BuildRequires: cmake(KF5DocTools)
 BuildRequires: cmake(KF5Activities)
 BuildRequires: cmake(KF5CoreAddons)
@@ -46,7 +46,7 @@ BuildRequires: cmake(KF5ActivitiesStats)
 BuildRequires: cmake(Gettext)
 BuildRequires: cmake(ECM)
 BuildRequires: cmake(KF5KIO)
-BuildRequires: cmake(KWinDBusInterface)
+BuildRequires: cmake(KWinDBusInterface) < 5.27.50
 BuildRequires: cmake(KF5Activities)
 BuildRequires: cmake(KF5Declarative)
 BuildRequires: cmake(KF5Plasma)
@@ -66,23 +66,23 @@ BuildRequires: cmake(KF5SysGuard)
 BuildRequires: cmake(KF5Screen)
 BuildRequires: cmake(KF5Baloo)
 BuildRequires: cmake(KF5Prison)
-BuildRequires: cmake(KScreenLocker)
+BuildRequires: cmake(KScreenLocker) < 5.27.50
 BuildRequires: cmake(KF5Holidays)
-BuildRequires: cmake(KDED)
-BuildRequires: cmake(AppStreamQt)
+BuildRequires: cmake(KDED) < 5.240.0
+BuildRequires: cmake(AppStreamQt) < 1.0.0
 BuildRequires: cmake(KF5Kirigami2)
 BuildRequires: cmake(KF5QuickCharts)
-BuildRequires: cmake(KUserFeedback)
+BuildRequires: cmake(KUserFeedback) < 5.27.50
 BuildRequires: cmake(PlasmaWaylandProtocols)
 BuildRequires: cmake(Qt5WaylandClient)
-BuildRequires: cmake(LayerShellQt)
+BuildRequires: cmake(LayerShellQt) < 5.27.50
 BuildRequires: cmake(Qt5XkbCommonSupport)
 BuildRequires: cmake(WaylandProtocols)
 BuildRequires: cmake(packagekitqt5)
 BuildRequires: qt5-qtwayland-private-devel
 BuildRequires: pkgconfig(xkbcommon)
 BuildRequires: pkgconfig(dbusmenu-qt5)
-BuildRequires: pkgconfig(kscreen2)
+BuildRequires: pkgconfig(kscreen2) < 5.27.50
 BuildRequires: pkgconfig(libqalculate)
 BuildRequires: pkgconfig(libgps) >= 3.15
 BuildRequires: pkgconfig(libpipewire-0.3)
