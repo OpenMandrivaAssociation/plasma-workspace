@@ -46,7 +46,7 @@ BuildRequires: cmake(KF5ActivitiesStats)
 BuildRequires: cmake(Gettext)
 BuildRequires: cmake(ECM)
 BuildRequires: cmake(KF5KIO)
-BuildRequires: cmake(KWinDBusInterface) < 5.27.50
+BuildRequires: cmake(KWinEffects) < 5.27.50
 BuildRequires: cmake(KF5Activities)
 BuildRequires: cmake(KF5Declarative)
 BuildRequires: cmake(KF5Plasma)
