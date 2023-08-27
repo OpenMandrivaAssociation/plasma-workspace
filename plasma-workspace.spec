@@ -7,7 +7,7 @@
 
 Name: plasma-workspace
 Version: 5.27.7
-Release: 1
+Release: 2
 Source0: http://download.kde.org//%{stable}/plasma/%{plasmaver}/%{name}-%{version}.tar.xz
 Source1: kde.pam
 # Workaround for https://bugs.kde.org/show_bug.cgi?id=422948
@@ -179,36 +179,43 @@ Conflicts: plasma-desktop < 5.16.90
 %description
 The KDE Plasma workspace.
 
-%libpackage kworkspace5 5
+%define libname %mklibname %{name}
+# Undo previous overdone package split
+%define libkworkspace5 %mklibname kworkspace5
+%define libplasma_geolocation_interface %mklibname plasma-geolocation-interface
+%define libweather_ion %mklibname weather_ion
+%define libtaskmanager %mklibname taskmanager
+%define libcolorcorrect %mklibname colorcorrect
+%define libnotificationmanager %mklibname notificationmanager
+%define libkfontinst %mklibname kfontinst
+%define libkfontinstui %mklibname kfontinstui
 
-%libpackage plasma-geolocation-interface 5
+%package -n %{libname}
+Summary: Libraries from Plasma 5 Workspace
+Group: System/Libraries
+%rename %{libkworkspace5}
+%rename %{libplasma_geolocation_interface}
+%rename %{libweather_ion}
+%rename %{libtaskmanager}
+%rename %{libcolorcorrect}
+%rename %{libnotificationmanager}
+%rename %{libkfontinst}
+%rename %{libkfontinstui}
 
-%libpackage weather_ion 7
-
-%libpackage taskmanager 6
-%{_libdir}/libtaskmanager.so.5*
-
-%libpackage colorcorrect 5
-
-%libpackage notificationmanager 5
-%{_libdir}/libnotificationmanager.so.1
+%description -n %{libname}
+Libraries from the Plasma 5 Workspace
 
 %package -n %{devname}
 Summary: Development files for the KDE Plasma workspace
 Group: Development/KDE and Qt
-Requires: %{mklibname kworkspace5} = %{EVRD}
-Requires: %{mklibname plasma-geolocation-interface} = %{EVRD}
-Requires: %{mklibname taskmanager} = %{EVRD}
-Requires: %{mklibname weather_ion} = %{EVRD}
-Requires: %{mklibname colorcorrect} = %{EVRD}
-Requires: %{mklibname notificationmanager} = %{EVRD}
+Requires: %{libname} = %{EVRD}
 Provides: %{mklibname -d kworkspace} = %{EVRD}
 Provides: %{mklibname -d plasma-geolocation-interface} = %{EVRD}
 Provides: %{mklibname -d taskmanager} = %{EVRD}
 Provides: %{mklibname -d weather_ion} = %{EVRD}
 Provides: %{mklibname -d colorcorrect} = %{EVRD}
 Provides: %{mklibname -d notificationmanager} = %{EVRD}
-# Autodetected devel(libprocesscore) is also provided by KDE 4.x -- let's
+# Autodetected devel(libprocesscore) is also provided by Plasma 6.x -- let's
 # make sure we pick the right thing
 Requires: cmake(KF5SysGuard)
 
@@ -302,8 +309,17 @@ chmod 644 %{buildroot}%{_sysconfdir}/xdg/autostart/*
 
 %find_lang %{name} --all-name --with-html
 
-%libpackage kfontinst 5
-%libpackage kfontinstui 5
+%files -n %{libname}
+%{_libdir}/libkworkspace5.so.5*
+%{_libdir}/libplasma-geolocation-interface.so.5*
+%{_libdir}/libweather_ion.so.7*
+%{_libdir}/libtaskmanager.so.6*
+%{_libdir}/libtaskmanager.so.5*
+%{_libdir}/libcolorcorrect.so.5*
+%{_libdir}/libnotificationmanager.so.5*
+%{_libdir}/libnotificationmanager.so.1
+%{_libdir}/libkfontinst.so.5*
+%{_libdir}/libkfontinstui.so.5*
 
 %files -f %{name}.lang
 %{_bindir}/plasma-apply-colorscheme
