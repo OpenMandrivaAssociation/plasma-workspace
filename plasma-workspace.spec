@@ -127,6 +127,8 @@ BuildRequires: pam-devel
 BuildRequires: pkgconfig(iso-codes)
 BuildRequires: cmake(Qt5QuickTest)
 BuildRequires: cmake(PolkitQt5-1)
+# for DBus interfaces
+BuildRequires: kwin
 # Both Plasma 5 and Plasma 6 provide
 # cmake(KPipeWire)
 BuildRequires: cmake(KPipeWire) < 5.27.80
