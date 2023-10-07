@@ -191,6 +191,13 @@ The KDE Plasma workspace.
 %define libnotificationmanager %mklibname notificationmanager
 %define libkfontinst %mklibname kfontinst
 %define libkfontinstui %mklibname kfontinstui
+%define oldlibkfontinst %mklibname kfontinst 5
+%define oldgeolocation %mklibname plasma-geolocation-interface 5
+%define oldlibkworkspace %mklibname kworkspace5 5
+%define oldlibkfontinstui %mklibname kfontinstui 5
+%define oldlibtaskmanager %mklibname taskmanager 6
+%define oldlibcolorcorrect %mklibname colorcorrect 5
+%define oldlibweatherion %mklibname weather_ion 7
 
 %package -n %{libname}
 Summary: Libraries from Plasma 5 Workspace
@@ -203,6 +210,13 @@ Group: System/Libraries
 %rename %{libnotificationmanager}
 %rename %{libkfontinst}
 %rename %{libkfontinstui}
+%rename %{oldlibkfontinst}
+%rename %{oldgeolocation}
+%rename %{oldlibkworkspace}
+%rename %{oldlibkfontinstui}
+%rename %{oldlibtaskmanager}
+%rename %{oldlibcolorcorrect}
+%rename %{oldlibweatherion}
 
 %description -n %{libname}
 Libraries from the Plasma 5 Workspace
