@@ -161,6 +161,7 @@ Requires: %{name}-wayland = %{EVRD}
 Requires: %{name}-backend = %{EVRD}
 %endif
 Requires: iso-codes
+Requires: %{libname} = %{EVRD}
 # Because of pam file
 Conflicts: kdm < 2:4.11.22-1.1
 Conflicts: kio-extras < 15.08.0
