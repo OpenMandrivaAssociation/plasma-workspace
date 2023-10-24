@@ -6,8 +6,8 @@
 %global __provides_exclude_from ^(%{_kde5_qmldir}/.*\\.so|%{_qt5_plugindir}/.*\\.so)$
 
 Name: plasma-workspace
-Version: 5.27.8
-Release: 2
+Version: 5.27.9
+Release: 1
 Source0: http://download.kde.org//%{stable}/plasma/%{plasmaver}/%{name}-%{version}.tar.xz
 Source1: kde.pam
 # Workaround for https://bugs.kde.org/show_bug.cgi?id=422948
@@ -210,13 +210,15 @@ Group: System/Libraries
 %rename %{libnotificationmanager}
 %rename %{libkfontinst}
 %rename %{libkfontinstui}
-%rename %{oldlibkfontinst}
-%rename %{oldgeolocation}
-%rename %{oldlibkworkspace}
-%rename %{oldlibkfontinstui}
-%rename %{oldlibtaskmanager}
-%rename %{oldlibcolorcorrect}
-%rename %{oldlibweatherion}
+# These unversioned Obsoletes: are intentional, since
+# we need to get rid of an Epoch
+Obsoletes: %{oldlibkfontinst}
+Obsoletes: %{oldgeolocation}
+Obsoletes: %{oldlibkworkspace}
+Obsoletes: %{oldlibkfontinstui}
+Obsoletes: %{oldlibtaskmanager}
+Obsoletes: %{oldlibcolorcorrect}
+Obsoletes: %{oldlibweatherion}
 
 %description -n %{libname}
 Libraries from the Plasma 5 Workspace
@@ -319,6 +321,9 @@ sed -i -e "s#^type=.*#type=image#" %{buildroot}%{_datadir}/sddm/themes/breeze/th
 install -c -m 755 %{S:2} %{buildroot}%{_bindir}/
 cp -a %{S:3} %{buildroot}%{_sysconfdir}/xdg/autostart/
 %endif
+
+# Work around a test being installed where it doesn't belong
+rm -rf %{buildroot}%{_builddir}
 
 # (tpg) fix autostart permissions
 chmod 644 %{buildroot}%{_sysconfdir}/xdg/autostart/*
