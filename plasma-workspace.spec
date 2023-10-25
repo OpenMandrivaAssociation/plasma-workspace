@@ -1,3 +1,4 @@
+%define libname %mklibname %{name}
 %define devname %mklibname plasma-workspace -d
 %define plasmaver %(echo %{version} |cut -d. -f1-3)
 %define stable %([ "$(echo %{version} |cut -d. -f3)" -ge 80 ] && echo -n un; echo -n stable)
@@ -182,7 +183,6 @@ Conflicts: plasma-desktop < 5.16.90
 %description
 The KDE Plasma workspace.
 
-%define libname %mklibname %{name}
 # Undo previous overdone package split
 %define libkworkspace5 %mklibname kworkspace5
 %define libplasma_geolocation_interface %mklibname plasma-geolocation-interface
