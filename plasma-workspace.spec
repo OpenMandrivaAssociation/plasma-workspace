@@ -70,7 +70,7 @@ BuildRequires: cmake(KF5Prison)
 BuildRequires: cmake(KScreenLocker) < 5.27.50
 BuildRequires: cmake(KF5Holidays)
 BuildRequires: cmake(KDED) < 5.240.0
-BuildRequires: cmake(AppStreamQt) < 1.0.0
+BuildRequires: cmake(AppStreamQt5) >= 1.0.3
 BuildRequires: cmake(KF5Kirigami2)
 BuildRequires: cmake(KF5QuickCharts)
 BuildRequires: cmake(KUserFeedback) < 5.27.50
