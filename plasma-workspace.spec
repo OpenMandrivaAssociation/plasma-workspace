@@ -8,7 +8,7 @@
 
 Name: plasma-workspace
 Version: 5.27.11
-Release: 4
+Release: 5
 Source0: http://download.kde.org//%{stable}/plasma/%{plasmaver}/%{name}-%{version}.tar.xz
 Source1: kde.pam
 # Workaround for https://bugs.kde.org/show_bug.cgi?id=422948
