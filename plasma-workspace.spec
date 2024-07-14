@@ -8,7 +8,7 @@
 
 Name: plasma-workspace
 Version: 5.27.11
-Release: 5
+Release: 6
 Source0: http://download.kde.org//%{stable}/plasma/%{plasmaver}/%{name}-%{version}.tar.xz
 Source1: kde.pam
 # Workaround for https://bugs.kde.org/show_bug.cgi?id=422948
@@ -331,6 +331,9 @@ chmod 644 %{buildroot}%{_sysconfdir}/xdg/autostart/*
 
 %find_lang %{name} --all-name --with-html
 
+# SDDM + Qt5 + Wayland = broken
+rm -f %{buildroot}%{_sysconfdir}/sddm.conf.d/plasma-wayland.conf
+
 %files -n %{libname}
 %{_libdir}/libkworkspace5.so.5*
 %{_libdir}/libplasma-geolocation-interface.so.5*
@@ -545,9 +548,6 @@ chmod 644 %{buildroot}%{_sysconfdir}/xdg/autostart/*
 %{_datadir}/xsessions/plasma.desktop
 
 %files wayland
-%if %omvver >= 4050000
-%{_sysconfdir}/sddm.conf.d/plasma-wayland.conf
-%endif
 %{_bindir}/startplasma-wayland
 %{_datadir}/wayland-sessions/plasmawayland.desktop
 
