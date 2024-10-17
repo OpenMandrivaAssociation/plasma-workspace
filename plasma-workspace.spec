@@ -19,7 +19,7 @@ Source100: %{name}.rpmlintrc
 # FIXME this needs to be redone properly (OM theme)
 # Patch2: plasma-workspace-5.8.0-use-openmandriva-icon-and-background.patch
 Summary: The KDE Plasma workspace
-URL: http://kde.org/
+URL: https://kde.org/
 License: GPL
 Obsoletes: simplesystray < %{EVRD}
 Group: Graphical desktop/KDE
