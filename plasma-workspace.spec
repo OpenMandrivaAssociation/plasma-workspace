@@ -13,9 +13,9 @@
 
 %define libname %mklibname kworkspace6
 
-Name: plasma6-workspace
+Name: plasma-workspace
 Version: 6.3.4
-Release: %{?git:0.%{git}.}3
+Release: %{?git:0.%{git}.}4
 %if 0%{?git:1}
 Source0:	https://invent.kde.org/plasma/plasma-workspace/-/archive/%{gitbranch}/plasma-workspace-%{gitbranchd}.tar.bz2#/plasma-workspace-%{git}.tar.bz2
 %else
@@ -182,6 +182,13 @@ Obsoletes: %{mklibname colorcorrect} = 5.240.0
 Obsoletes: %{mklibname weather_ion} = 5.240.0
 Obsoletes: %{mklibname taskmanager} = 5.240.0
 Obsoletes: %{mklibname notificationmanager} = 5.240.0
+# Renamed 2025-05-02 after 6.0
+%rename plasma6-workspace
+BuildSystem: cmake
+BuildOption: -DBUILD_QCH:BOOL=ON
+BuildOption: -DKDE_INSTALL_USE_QT_SYS_PATHS:BOOL=ON
+BuildOption: -DINSTALL_SDDM_WAYLAND_SESSION:BOOL=ON
+BuildOption: -DPLASMA_SYSTEMD_BOOT:BOOL=ON
 
 %patchlist
 plasma-workspace-bump-sonames.patch
@@ -226,6 +233,8 @@ Requires: iso-codes
 Requires: plasma6-kwin-x11
 Requires: kf6-kidletime-x11
 Requires: plasma6-libkscreen-x11
+# Renamed 2025-05-02 after 6.0
+%rename plasma6-workspace-x11
 
 %description x11
 X11 support for Plasma Workspace.
@@ -240,6 +249,8 @@ Requires: plasma6-kwin-wayland
 Requires: kf6-kidletime-wayland
 Requires: plasma6-libkscreen-wayland
 Recommends: plasma6-xdg-desktop-portal-kde
+# Renamed 2025-05-02 after 6.0
+%rename plasma6-workspace-wayland
 
 %description wayland
 Wayland support for Plasma Workspace.
@@ -280,26 +291,7 @@ Requires: %{libname} = %{EVRD}
 The org.kde.plasma.workspace QML component contains QML
 components used by Plasma Workspace and the SDDM Breeze theme
 
-%prep
-%autosetup -p1 -n plasma-workspace-%{?git:%{gitbranchd}}%{!?git:%{version}}
-# (tpg) do not start second dbus user session
-# see also https://invent.kde.org/plasma/plasma-workspace/-/merge_requests/128/diffs?commit_id=8475fe4545998c806704a45a7d912f777a11533f
-sed -i -e 's/dbus-run-session //g' login-sessions/plasmawayland*.desktop.cmake
-
-%cmake \
-	-DBUILD_QCH:BOOL=ON \
-	-DBUILD_WITH_QT6:BOOL=ON \
-	-DKDE_INSTALL_USE_QT_SYS_PATHS:BOOL=ON \
-	-DINSTALL_SDDM_WAYLAND_SESSION:BOOL=On \
-	-DPLASMA_SYSTEMD_BOOT=true \
-	-G Ninja
-
-%build
-%ninja_build -C build
-
-%install
-%ninja_install -C build
-
+%install -a
 install -Dpm 644 %{SOURCE1} %{buildroot}%{_sysconfdir}/pam.d/kde
 
 # (tpg) fix autostart permissions
@@ -309,12 +301,11 @@ chmod 644 %{buildroot}%{_sysconfdir}/xdg/autostart/*
 # Having the sddm wayland configuration installed crashes VBox and
 # leaves the VM unusable.
 # Use rootless X11 for the time being, even if we use plasma wayland.
-rm %{buildroot}%{_sysconfdir}/sddm.conf.d/plasma-wayland.conf
+# FIXME 2025-05-02: Commented out to see if the problem still exists
+#rm %{buildroot}%{_sysconfdir}/sddm.conf.d/plasma-wayland.conf
 
 # Bogus install of a test
 rm -rf %{buildroot}%{_builddir}
-
-%find_lang %{name} --all-name --with-html
 
 %libpackage klipper 6
 
@@ -549,7 +540,7 @@ rm -rf %{buildroot}%{_builddir}
 %{_datadir}/xsessions/plasmax11.desktop
 
 %files wayland
-#%{_sysconfdir}/sddm.conf.d/plasma-wayland.conf
+%{_sysconfdir}/sddm.conf.d/plasma-wayland.conf
 %{_bindir}/startplasma-wayland
 %{_datadir}/wayland-sessions/plasma.desktop
 
