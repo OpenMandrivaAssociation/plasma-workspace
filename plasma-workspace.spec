@@ -1,7 +1,7 @@
 # Not using mklibname here to avoid clashing with the package
 # by the same name from plasma-workspace 5.x
 # Change once we're removing P5.
-%define devname %{name}-devel
+%define devname %mklibname -d %{name}
 %define plasmaver %(echo %{version} |cut -d. -f1-3)
 %define stable %([ "$(echo %{version} |cut -d. -f2)" -ge 80 -o "$(echo %{version} |cut -d. -f3)" -ge 80 ] && echo -n un; echo -n stable)
 #define git 20240222
@@ -216,6 +216,8 @@ Summary: Development files for the KDE Plasma workspace
 Group: Development/KDE and Qt
 Requires: %{name} = %{EVRD}
 Requires: %{libname} = %{EVRD}
+# Renamed 2025-05-02 after 6.0
+%rename plasma6-workspace-devel
 
 %description -n %{devname}
 Development files for the KDE Plasma workspace.
