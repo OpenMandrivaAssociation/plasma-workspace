@@ -14,7 +14,7 @@
 %define libname %mklibname kworkspace6
 
 Name: plasma-workspace
-Version: 6.3.5
+Version: 6.4.0
 Release: %{?git:0.%{git}.}1
 %if 0%{?git:1}
 Source0:	https://invent.kde.org/plasma/plasma-workspace/-/archive/%{gitbranch}/plasma-workspace-%{gitbranchd}.tar.bz2#/plasma-workspace-%{git}.tar.bz2
@@ -386,10 +386,8 @@ rm -rf %{buildroot}%{_builddir}
 %{_datadir}/plasma/plasmoids/org.kde.plasma.digitalclock
 %{_datadir}/plasma/plasmoids/org.kde.plasma.icon
 %{_datadir}/plasma/plasmoids/org.kde.plasma.lock_logout
-%{_datadir}/plasma/plasmoids/org.kde.plasma.mediacontroller
 %{_datadir}/plasma/plasmoids/org.kde.plasma.notifications
 %{_datadir}/plasma/plasmoids/org.kde.plasma.panelspacer
-%{_datadir}/plasma/plasmoids/org.kde.plasma.systemtray
 %{_datadir}/plasma/plasmoids/org.kde.plasma.systemmonitor
 %{_datadir}/plasma/plasmoids/org.kde.plasma.systemmonitor.cpu
 %{_datadir}/plasma/plasmoids/org.kde.plasma.systemmonitor.cpucore
@@ -397,7 +395,6 @@ rm -rf %{buildroot}%{_builddir}
 %{_datadir}/plasma/plasmoids/org.kde.plasma.systemmonitor.diskusage
 %{_datadir}/plasma/plasmoids/org.kde.plasma.systemmonitor.memory
 %{_datadir}/plasma/plasmoids/org.kde.plasma.systemmonitor.net
-%{_datadir}/plasma/plasmoids/org.kde.plasma.private.systemtray
 %{_datadir}/plasma/plasmoids/org.kde.plasma.appmenu
 %dir %{_datadir}/plasma/wallpapers
 %{_datadir}/plasma/wallpapers/org.kde.color
@@ -478,7 +475,6 @@ rm -rf %{buildroot}%{_builddir}
 %{_datadir}/dbus-1/system.d/org.kde.localegenhelper.conf
 %{_datadir}/polkit-1/actions/org.kde.localegenhelper.policy
 %{_qtdir}/plugins/kf6/thumbcreator/fontthumbnail.so
-%{_qtdir}/qml/org/kde/plasma/private/mediacontroller
 %{_datadir}/zsh/site-functions/_plasmashell
 %{_qtdir}/plugins/plasma5support/dataengine
 %{_qtdir}/plugins/kf6/kfileitemaction/wallpaperfileitemaction.so
@@ -515,6 +511,12 @@ rm -rf %{buildroot}%{_builddir}
 %{_libdir}/libtaskmanager.so*
 %{_libdir}/libcolorcorrect.so.*
 %{_libdir}/libnotificationmanager.so*
+%{_libdir}/kconf_update_bin/plasma6.4-migrate-fullscreen-notifications-to-dnd
+%{_qtdir}/plugins/plasma/kcms/systemsettings/kcm_componentchooser.so
+%{_datadir}/applications/kcm_componentchooser.desktop
+%{_datadir}/kconf_update/plasma6.4-migrate-fullscreen-notifications-to-dnd.upd
+%{_datadir}/plasma/plasmoids/org.kde.plasma.systemtray
+%{_datadir}/timezonefiles/timezones.json
 
 %files -n %{libname}
 %{_libdir}/libkworkspace6.so*
@@ -524,6 +526,8 @@ rm -rf %{buildroot}%{_builddir}
 %dir %{_qtdir}/qml/org/kde/plasma/workspace
 %{_qtdir}/qml/org/kde/plasma/workspace/components
 %{_qtdir}/qml/org/kde/plasma/workspace/keyboardlayout
+%{_qtdir}/qml/org/kde/plasma/workspace/osd
+%{_qtdir}/qml/org/kde/plasma/workspace/timezoneselector
 %{_qtdir}/qml/org/kde/plasma/private/battery
 %{_qtdir}/qml/org/kde/plasma/private/keyboardindicator
 
