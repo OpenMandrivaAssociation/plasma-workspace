@@ -232,7 +232,7 @@ Requires: xprop
 Requires: xset
 Requires: xrdb
 Requires: iso-codes
-Requires: plasma6-kwin-x11
+Requires: kwin-x11
 Requires: kf6-kidletime-x11
 Requires: plasma6-libkscreen-x11
 # Renamed 2025-05-02 after 6.0
