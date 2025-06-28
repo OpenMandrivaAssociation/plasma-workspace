@@ -142,7 +142,7 @@ BuildRequires: pkgconfig(libudev)
 BuildRequires: spirv-tools
 BuildRequires: gettext
 # for DBus interfaces
-BuildRequires: kwin >= 6.4.0
+BuildRequires: plasma6-kwin-wayland >= 6.4.0
 # Both Plasma 5 and Plasma 6 provide
 # cmake(KPipeWire), cmake(KSysGuard) and friends
 BuildRequires: cmake(KPipeWire) >= 5.27.80
