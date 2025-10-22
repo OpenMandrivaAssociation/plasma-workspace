@@ -14,7 +14,7 @@
 %define libname %mklibname kworkspace6
 
 Name: plasma-workspace
-Version: 6.4.5
+Version: 6.5.0
 Release: %{?git:0.%{git}.}1
 %if 0%{?git:1}
 Source0:	https://invent.kde.org/plasma/plasma-workspace/-/archive/%{gitbranch}/plasma-workspace-%{gitbranchd}.tar.bz2#/plasma-workspace-%{git}.tar.bz2
@@ -192,7 +192,6 @@ BuildOption: -DINSTALL_SDDM_WAYLAND_SESSION:BOOL=ON
 BuildOption: -DPLASMA_SYSTEMD_BOOT:BOOL=ON
 
 %patchlist
-plasma-workspace-bump-sonames.patch
 plasma-workspace-set-QT_QPA_PLATFORM.patch
 plasma-workspace-wayland-egl-is-wayland.patch
 plasma-workspace-default-OM-wallpaper.patch
@@ -351,7 +350,6 @@ rm -rf %{buildroot}%{_builddir}
 %{_qtdir}/plugins/phonon_platform
 %{_qtdir}/plugins/plasma/applets/*.so
 %{_qtdir}/plugins/plasmacalendarplugins
-%{_qtdir}/qml/org/kde/colorcorrect
 %{_qtdir}/qml/org/kde/plasma/workspace/calendar
 %{_qtdir}/qml/org/kde/plasma/workspace/dialogs
 %{_qtdir}/qml/org/kde/plasma/workspace/trianglemousefilter
@@ -360,11 +358,9 @@ rm -rf %{buildroot}%{_builddir}
 %{_qtdir}/qml/org/kde/plasma/private/shell
 %{_qtdir}/qml/org/kde/plasma/wallpapers
 %{_qtdir}/qml/org/kde/plasma/private/appmenu
-%{_qtdir}/qml/org/kde/plasma/private/devicenotifier
 %{_qtdir}/qml/org/kde/plasma/private/holidayevents
 %{_qtdir}/qml/org/kde/plasma/private/systemtray
 %{_qtdir}/qml/org/kde/plasma/workspace/dbus
-%{_datadir}/metainfo/*.xml
 %{_datadir}/applications/org.kde.plasmashell.desktop
 %{_datadir}/config.kcfg/*.kcfg
 %{_datadir}/dbus-1/services/*.service
@@ -383,12 +379,7 @@ rm -rf %{buildroot}%{_builddir}
 %{_datadir}/plasma/plasmoids/org.kde.plasma.calendar
 %{_datadir}/plasma/plasmoids/org.kde.plasma.cameraindicator
 %{_datadir}/plasma/plasmoids/org.kde.plasma.clipboard
-%{_datadir}/plasma/plasmoids/org.kde.plasma.devicenotifier
-%{_datadir}/plasma/plasmoids/org.kde.plasma.digitalclock
 %{_datadir}/plasma/plasmoids/org.kde.plasma.icon
-%{_datadir}/plasma/plasmoids/org.kde.plasma.lock_logout
-%{_datadir}/plasma/plasmoids/org.kde.plasma.notifications
-%{_datadir}/plasma/plasmoids/org.kde.plasma.panelspacer
 %{_datadir}/plasma/plasmoids/org.kde.plasma.systemmonitor
 %{_datadir}/plasma/plasmoids/org.kde.plasma.systemmonitor.cpu
 %{_datadir}/plasma/plasmoids/org.kde.plasma.systemmonitor.cpucore
@@ -505,12 +496,9 @@ rm -rf %{buildroot}%{_builddir}
 %{_datadir}/applications/kcm_nightlight.desktop
 %{_datadir}/applications/org.kde.kfontinst.desktop
 %{_datadir}/applications/org.kde.plasma-fallback-session-save.desktop
-%{_datadir}/plasma/weather/noaa_station_list.xml
 # Please do NOT split those into separate libpackages. They're used only
 # internally.
-%{_libdir}/libweather_ion.so*
 %{_libdir}/libtaskmanager.so*
-%{_libdir}/libcolorcorrect.so.*
 %{_libdir}/libnotificationmanager.so*
 %{_libdir}/kconf_update_bin/plasma6.4-migrate-fullscreen-notifications-to-dnd
 %{_qtdir}/plugins/plasma/kcms/systemsettings/kcm_componentchooser.so
@@ -518,8 +506,14 @@ rm -rf %{buildroot}%{_builddir}
 %{_datadir}/kconf_update/plasma6.4-migrate-fullscreen-notifications-to-dnd.upd
 %{_datadir}/plasma/plasmoids/org.kde.plasma.systemtray
 %{_datadir}/timezonefiles/timezones.json
+%{_libdir}/kconf_update_bin/plasmashell-6.5-remove-stop-activity-shortcut
+%{_qtdir}/plugins/plasma/kcms/systemsettings/kcm_nighttime.so
+%{_datadir}/applications/kcm_nighttime.desktop
+%{_datadir}/applications/org.kde.plasma-interactiveconsole.desktop
+%{_datadir}/kconf_update/plasmashell-6.5-remove-stop-activity-shortcut.upd
 
 %files -n %{libname}
+%{_libdir}/libklookandfeel.so.*
 %{_libdir}/libkworkspace6.so*
 %{_libdir}/libbatterycontrol.so*
 
@@ -558,6 +552,7 @@ rm -rf %{buildroot}%{_builddir}
 %{_libdir}/cmake/KSMServerDBusInterface
 %{_libdir}/cmake/LibKWorkspace
 %{_libdir}/cmake/LibTaskManager
-%{_libdir}/cmake/LibColorCorrect
+%{_libdir}/cmake/Krdb
+%{_libdir}/cmake/LibKLookAndFeel
 %{_datadir}/dbus-1/interfaces/*.xml
 %{_libdir}/cmake/LibNotificationManager
