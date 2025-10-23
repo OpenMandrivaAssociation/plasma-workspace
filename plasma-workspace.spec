@@ -79,6 +79,8 @@ BuildRequires: cmake(Plasma5Support)
 BuildRequires: cmake(KExiv2Qt6)
 BuildRequires: cmake(KF6Svg)
 BuildRequires: cmake(KF6StatusNotifierItem)
+BuildRequires: cmake(KNightTime)
+BuildRequires: cmake(VulkanHeaders)
 BuildRequires: %mklibname -d KF6IconWidgets
 BuildRequires: cmake(KF6KirigamiAddons)
 BuildRequires: cmake(KF6UserFeedback)
