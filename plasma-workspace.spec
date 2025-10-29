@@ -14,7 +14,7 @@
 %define libname %mklibname kworkspace6
 
 Name: plasma-workspace
-Version: 6.5.0
+Version: 6.5.1
 Release: %{?git:0.%{git}.}1
 %if 0%{?git:1}
 Source0:	https://invent.kde.org/plasma/plasma-workspace/-/archive/%{gitbranch}/plasma-workspace-%{gitbranchd}.tar.bz2#/plasma-workspace-%{git}.tar.bz2
