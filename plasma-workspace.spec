@@ -14,7 +14,7 @@
 %define libname %mklibname kworkspace6
 
 Name: plasma-workspace
-Version: 6.5.1
+Version: 6.5.2
 Release: %{?git:0.%{git}.}1
 %if 0%{?git:1}
 Source0:	https://invent.kde.org/plasma/plasma-workspace/-/archive/%{gitbranch}/plasma-workspace-%{gitbranchd}.tar.bz2#/plasma-workspace-%{git}.tar.bz2
@@ -428,6 +428,7 @@ rm -rf %{buildroot}%{_builddir}
 %{_datadir}/kglobalaccel/org.kde.krunner.desktop
 %{_datadir}/plasma/plasmoids/org.kde.plasma.manage-inputmethod
 %{_qtdir}/plugins/kf6/parts/kfontviewpart.so
+%{_datadir}/kxmlgui5/kfontviewpart/kfontviewpart.rc
 %{_bindir}/plasma-interactiveconsole
 %{_qtdir}/plugins/kf6/krunner/kcms/kcm_krunner_kill.so
 %{_qtdir}/plugins/plasma/kcminit/kcm_fonts_init.so
