@@ -300,13 +300,6 @@ install -Dpm 644 %{SOURCE1} %{buildroot}%{_sysconfdir}/pam.d/kde
 # (tpg) fix autostart permissions
 chmod 644 %{buildroot}%{_sysconfdir}/xdg/autostart/*
 
-# FIXME as of Plasma 6 20230804 snapshot, mesa 23.2, VBox 7.0.10,
-# Having the sddm wayland configuration installed crashes VBox and
-# leaves the VM unusable.
-# Use rootless X11 for the time being, even if we use plasma wayland.
-# FIXME 2025-05-02: Commented out to see if the problem still exists
-#rm %{buildroot}%{_sysconfdir}/sddm.conf.d/plasma-wayland.conf
-
 # Bogus install of a test
 rm -rf %{buildroot}%{_builddir}
 
