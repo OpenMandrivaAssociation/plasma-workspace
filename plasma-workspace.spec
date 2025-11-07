@@ -235,7 +235,7 @@ Requires: xrdb
 Requires: iso-codes
 Requires: kwin-x11
 Requires: kf6-kidletime-x11
-Requires: plasma6-libkscreen-x11
+Requires: libkscreen-x11
 # Renamed 2025-05-02 after 6.0
 %rename plasma6-workspace-x11
 
@@ -248,10 +248,10 @@ Group: Graphical desktop/KDE
 Requires: %{name}
 Provides: %{name}-backend = %{EVRD}
 Requires: xwayland
-Requires: plasma6-kwin-wayland
+Requires: kwin
 Requires: kf6-kidletime-wayland
-Requires: plasma6-libkscreen-wayland
-Recommends: plasma6-xdg-desktop-portal-kde
+Requires: libkscreen-wayland
+Recommends: xdg-desktop-portal-kde
 # Renamed 2025-05-02 after 6.0
 %rename plasma6-workspace-wayland
 
