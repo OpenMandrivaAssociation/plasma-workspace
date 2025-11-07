@@ -15,7 +15,7 @@
 
 Name: plasma-workspace
 Version: 6.5.2
-Release: %{?git:0.%{git}.}1
+Release: %{?git:0.%{git}.}2
 %if 0%{?git:1}
 Source0:	https://invent.kde.org/plasma/plasma-workspace/-/archive/%{gitbranch}/plasma-workspace-%{gitbranchd}.tar.bz2#/plasma-workspace-%{git}.tar.bz2
 %else
@@ -394,7 +394,6 @@ rm -rf %{buildroot}%{_builddir}
 %{_datadir}/plasma/wallpapers/org.kde.color
 %{_datadir}/plasma/wallpapers/org.kde.image
 %{_datadir}/plasma/wallpapers/org.kde.slideshow
-%{_libdir}/libkrdb.so
 %{_qtdir}/qml/org/kde/taskmanager
 %{_datadir}/qlogging-categories6/*.categories
 %{_sysconfdir}/xdg/plasmanotifyrc
@@ -519,6 +518,7 @@ rm -rf %{buildroot}%{_builddir}
 %{_libdir}/libklookandfeel.so.*
 %{_libdir}/libkworkspace6.so*
 %{_libdir}/libbatterycontrol.so*
+%{_libdir}/libkrdb.so
 
 %files -n qml-org.kde.plasma.workspace
 %dir %{_qtdir}/qml/org/kde/plasma/workspace
