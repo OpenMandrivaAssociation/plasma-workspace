@@ -12,10 +12,11 @@
 %global __provides_exclude_from ^(%{_kde5_qmldir}/.*\\.so|%{_qt5_plugindir}/.*\\.so)$
 
 %define libname %mklibname kworkspace6
+%define libklipper %mklibname klipper
 
 Name: plasma-workspace
 Version: 6.5.5
-Release: %{?git:0.%{git}.}2
+Release: %{?git:0.%{git}.}3
 %if 0%{?git:1}
 Source0:	https://invent.kde.org/plasma/plasma-workspace/-/archive/%{gitbranch}/plasma-workspace-%{gitbranchd}.tar.bz2#/plasma-workspace-%{git}.tar.bz2
 %else
@@ -187,6 +188,9 @@ Obsoletes: %{mklibname taskmanager} = 5.240.0
 Obsoletes: %{mklibname notificationmanager} = 5.240.0
 # Renamed 2025-05-02 after 6.0
 %rename plasma6-workspace
+# Make sure we have Plasma's libklipper instead of Sonic's
+Requires: %{libklipper} = %{EVRD}
+
 BuildSystem: cmake
 BuildOption: -DBUILD_QCH:BOOL=ON
 BuildOption: -DKDE_INSTALL_USE_QT_SYS_PATHS:BOOL=ON
@@ -222,6 +226,17 @@ Requires: %{libname} = %{EVRD}
 
 %description -n %{devname}
 Development files for the KDE Plasma workspace.
+
+%package -n %{libklipper}
+Summary: Klipper library from Sonic Workspace
+Group: System/Libraries
+Conflicts: %mklibname klipper-sonic
+
+%description -n %{libklipper}
+The Klipper shared library used by Sonic Workspace and related components.
+
+%files -n %{libklipper}
+%{_libdir}/libklipper.so.6*
 
 %package x11
 Summary: X11 support for Plasma Workspace
@@ -271,6 +286,8 @@ components used by Plasma Workspace and the SDDM Breeze theme
 Summary: The org.kde.plasma.private.clipboard QML component
 Group: Graphical desktop/KDE
 Requires: %{libname} = %{EVRD}
+# Make sure we have Plasma's libklipper instead of Sonic's
+Requires: %{libklipper} = %{EVRD}
 
 %description -n qml-org.kde.plasma.private.clipboard
 The org.kde.plasma.private.clipboard QML component contains QML
@@ -302,8 +319,6 @@ chmod 644 %{buildroot}%{_sysconfdir}/xdg/autostart/*
 
 # Bogus install of a test
 rm -rf %{buildroot}%{_builddir}
-
-%libpackage klipper 6
 
 %files -f %{name}.lang
 %{_bindir}/plasma-apply-colorscheme
