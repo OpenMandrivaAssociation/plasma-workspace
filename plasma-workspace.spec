@@ -15,8 +15,8 @@
 %define libklipper %mklibname klipper
 
 Name: plasma-workspace
-Version: 6.5.5
-Release: %{?git:0.%{git}.}3
+Version: 6.6.0
+Release: %{?git:0.%{git}.}1
 %if 0%{?git:1}
 Source0:	https://invent.kde.org/plasma/plasma-workspace/-/archive/%{gitbranch}/plasma-workspace-%{gitbranchd}.tar.bz2#/plasma-workspace-%{git}.tar.bz2
 %else
@@ -331,7 +331,6 @@ rm -rf %{buildroot}%{_builddir}
 %{_sysconfdir}/xdg/autostart/org.kde.plasmashell.desktop
 %{_sysconfdir}/xdg/autostart/org.kde.plasma-fallback-session-restore.desktop
 %{_sysconfdir}/xdg/autostart/xembedsniproxy.desktop
-%{_sysconfdir}/xdg/taskmanagerrulesrc
 %{_sysconfdir}/xdg/menus/plasma-applications.menu
 %{_sysconfdir}/pam.d/kde
 %{_bindir}/gmenudbusmenuproxy
@@ -357,7 +356,6 @@ rm -rf %{buildroot}%{_builddir}
 %{_qtdir}/plugins/kf6/kio/*.so
 %{_qtdir}/plugins/kf6/krunner/*.so
 %{_qtdir}/plugins/plasma/containmentactions
-%{_qtdir}/plugins/phonon_platform
 %{_qtdir}/plugins/plasma/applets/*.so
 %{_qtdir}/plugins/plasmacalendarplugins
 %{_qtdir}/qml/org/kde/plasma/workspace/calendar
@@ -367,9 +365,7 @@ rm -rf %{buildroot}%{_builddir}
 %{_qtdir}/qml/org/kde/plasma/private/digitalclock
 %{_qtdir}/qml/org/kde/plasma/private/shell
 %{_qtdir}/qml/org/kde/plasma/wallpapers
-%{_qtdir}/qml/org/kde/plasma/private/appmenu
 %{_qtdir}/qml/org/kde/plasma/private/holidayevents
-%{_qtdir}/qml/org/kde/plasma/private/systemtray
 %{_qtdir}/qml/org/kde/plasma/workspace/dbus
 %{_datadir}/applications/org.kde.plasmashell.desktop
 %{_datadir}/config.kcfg/*.kcfg
@@ -384,12 +380,6 @@ rm -rf %{buildroot}%{_builddir}
 %{_datadir}/solid/actions/openWithFileManager.desktop
 %{_datadir}/xdg-desktop-portal/kde-portals.conf
 %dir %{_datadir}/plasma/plasmoids
-%{_datadir}/plasma/plasmoids/org.kde.plasma.activitybar
-%{_datadir}/plasma/plasmoids/org.kde.plasma.analogclock
-%{_datadir}/plasma/plasmoids/org.kde.plasma.calendar
-%{_datadir}/plasma/plasmoids/org.kde.plasma.cameraindicator
-%{_datadir}/plasma/plasmoids/org.kde.plasma.clipboard
-%{_datadir}/plasma/plasmoids/org.kde.plasma.icon
 %{_datadir}/plasma/plasmoids/org.kde.plasma.systemmonitor
 %{_datadir}/plasma/plasmoids/org.kde.plasma.systemmonitor.cpu
 %{_datadir}/plasma/plasmoids/org.kde.plasma.systemmonitor.cpucore
@@ -397,7 +387,6 @@ rm -rf %{buildroot}%{_builddir}
 %{_datadir}/plasma/plasmoids/org.kde.plasma.systemmonitor.diskusage
 %{_datadir}/plasma/plasmoids/org.kde.plasma.systemmonitor.memory
 %{_datadir}/plasma/plasmoids/org.kde.plasma.systemmonitor.net
-%{_datadir}/plasma/plasmoids/org.kde.plasma.appmenu
 %dir %{_datadir}/plasma/wallpapers
 %{_datadir}/plasma/wallpapers/org.kde.color
 %{_datadir}/plasma/wallpapers/org.kde.image
@@ -433,7 +422,6 @@ rm -rf %{buildroot}%{_builddir}
 %{_datadir}/konqsidebartng/virtual_folders/services/fonts.desktop
 %{_datadir}/krunner/dbusplugins/plasma-runner-baloosearch.desktop
 %{_datadir}/kglobalaccel/org.kde.krunner.desktop
-%{_datadir}/plasma/plasmoids/org.kde.plasma.manage-inputmethod
 %{_qtdir}/plugins/kf6/parts/kfontviewpart.so
 %{_datadir}/kxmlgui5/kfontviewpart/kfontviewpart.rc
 %{_bindir}/plasma-interactiveconsole
@@ -478,11 +466,9 @@ rm -rf %{buildroot}%{_builddir}
 %{_datadir}/polkit-1/actions/org.kde.localegenhelper.policy
 %{_qtdir}/plugins/kf6/thumbcreator/fontthumbnail.so
 %{_datadir}/zsh/site-functions/_plasmashell
-%{_qtdir}/plugins/plasma5support/dataengine
 %{_qtdir}/plugins/kf6/kfileitemaction/wallpaperfileitemaction.so
 %{_qtdir}/plugins/kf6/packagestructure/plasma_*.so
 %{_qtdir}/plugins/kf6/packagestructure/wallpaper_images.so
-%{_datadir}/plasma5support/services/*.operations
 %{_libdir}/libkmpris.so*
 %{_libdir}/qt6/qml/org/kde/plasma/private/mpris
 %{_qtdir}/plugins/plasma/kcms/systemsettings/kcm_wallpaper.so
@@ -514,13 +500,17 @@ rm -rf %{buildroot}%{_builddir}
 %{_qtdir}/plugins/plasma/kcms/systemsettings/kcm_componentchooser.so
 %{_datadir}/applications/kcm_componentchooser.desktop
 %{_datadir}/kconf_update/plasma6.4-migrate-fullscreen-notifications-to-dnd.upd
-%{_datadir}/plasma/plasmoids/org.kde.plasma.systemtray
 %{_datadir}/timezonefiles/timezones.json
 %{_libdir}/kconf_update_bin/plasmashell-6.5-remove-stop-activity-shortcut
 %{_qtdir}/plugins/plasma/kcms/systemsettings/kcm_nighttime.so
 %{_datadir}/applications/kcm_nighttime.desktop
 %{_datadir}/applications/org.kde.plasma-interactiveconsole.desktop
 %{_datadir}/kconf_update/plasmashell-6.5-remove-stop-activity-shortcut.upd
+%{_libdir}/libexec/ksecretprompter
+%{_qtdir}/qml/org/kde/plasma/clock
+%{_qtdir}/qml/org/kde/plasma/private/systemtray
+%{_datadir}/applications/org.kde.baloorunner.desktop
+%{_datadir}/applications/org.kde.secretprompter.desktop
 
 %files -n %{libname}
 %{_libdir}/libklookandfeel.so.*
