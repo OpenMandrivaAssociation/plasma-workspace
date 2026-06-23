@@ -15,8 +15,8 @@
 %define libklipper %mklibname klipper
 
 Name: plasma-workspace
-Version: 6.6.5
-Release: %{?git:0.%{git}.}2
+Version: 6.7.0
+Release: %{?git:0.%{git}.}1
 %if 0%{?git:1}
 Source0:	https://invent.kde.org/plasma/plasma-workspace/-/archive/%{gitbranch}/plasma-workspace-%{gitbranchd}.tar.bz2#/plasma-workspace-%{git}.tar.bz2
 %else
@@ -203,8 +203,6 @@ plasma-workspace-wayland-egl-is-wayland.patch
 plasma-workspace-default-OM-wallpaper.patch
 # FIXME this needs to be redone properly (OM theme)
 # plasma-workspace-5.8.0-use-openmandriva-icon-and-background.patch
-# Fix for Qt 6.11.1
-https://invent.kde.org/plasma/plasma-workspace/-/commit/faf0e944008a8ce3182e11a2ee192b1589c5661a.patch
 
 %description
 The KDE Plasma workspace.
@@ -361,7 +359,6 @@ rm -rf %{buildroot}%{_builddir}
 %{_qtdir}/plugins/plasma/applets/*.so
 %{_qtdir}/plugins/plasmacalendarplugins
 %{_qtdir}/qml/org/kde/plasma/workspace/calendar
-%{_qtdir}/qml/org/kde/plasma/workspace/dialogs
 %{_qtdir}/qml/org/kde/plasma/workspace/trianglemousefilter
 %dir %{_qtdir}/qml/org/kde/plasma/private
 %{_qtdir}/qml/org/kde/plasma/private/digitalclock
@@ -513,6 +510,8 @@ rm -rf %{buildroot}%{_builddir}
 %{_qtdir}/qml/org/kde/plasma/private/systemtray
 %{_datadir}/applications/org.kde.baloorunner.desktop
 %{_datadir}/applications/org.kde.secretprompter.desktop
+%{_libdir}/libexec/plasma-startup-sound
+%{_datadir}/xdg-desktop-portal/portals/plasmanotify.portal
 
 %files -n %{libname}
 %{_libdir}/libklookandfeel.so.*
@@ -543,9 +542,9 @@ rm -rf %{buildroot}%{_builddir}
 %{_datadir}/xsessions/plasmax11.desktop
 
 %files wayland
-%{_sysconfdir}/sddm.conf.d/plasma-wayland.conf
 %{_bindir}/startplasma-wayland
 %{_datadir}/wayland-sessions/plasma.desktop
+%{_prefix}/lib/sddm/sddm.conf.d/plasma-wayland.conf
 
 %files -n %{devname}
 %{_includedir}/*
