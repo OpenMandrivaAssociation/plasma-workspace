@@ -1,0 +1,5141 @@
+diff -ruN a/CMakeLists.txt b/CMakeLists.txt
+--- a/CMakeLists.txt	2026-10-08 13:24:14.000000000 +0200
++++ b/CMakeLists.txt	2026-10-18 19:01:32.232957987 +0200
+@@ -170,6 +170,11 @@
+ add_feature_info(PACKAGEKIT_OFFLINE_UPDATES PackageKitQt6_FOUND "Integrate with PackageKit for offline updates")
+ set(PACKAGEKIT_OFFLINE_UPDATES ${PackageKitQt6_FOUND})
+ 
++# The X11 session needs the same X11 libraries as the rest of the workspace.
++if(WITH_X11_SESSION)
++    set(WITH_X11 1)
++endif()
++
+ if(WITH_X11)
+     find_package(X11)
+     set_package_properties(X11 PROPERTIES DESCRIPTION "X11 libraries"
+@@ -402,6 +407,10 @@
+   add_subdirectory(doc)
+   kdoctools_install(po)
+ endif()
++# krdb is needed by libklookandfeel (colorsapplicator) as well as the X11 KCMs.
++if(HAVE_X11)
++    add_subdirectory(kcms/krdb)
++endif()
+ add_subdirectory(libklookandfeel)
+ add_subdirectory(libkworkspace)
+ add_subdirectory(libdbusmenuqt)
+diff -ruN a/kcms/colors/CMakeLists.txt b/kcms/colors/CMakeLists.txt
+--- a/kcms/colors/CMakeLists.txt	2026-10-08 13:24:14.000000000 +0200
++++ b/kcms/colors/CMakeLists.txt	2026-10-18 18:56:48.422993137 +0200
+@@ -25,7 +25,7 @@
+ )
+ 
+ if(HAVE_X11)
+-    target_link_libraries(kcm_colors PRIVATE X11::X11 Qt::GuiPrivate)
++    target_link_libraries(kcm_colors PRIVATE X11::X11 Qt::GuiPrivate krdb)
+ endif()
+ 
+ target_sources(kcm_colors PRIVATE
+@@ -72,6 +72,9 @@
+     PW::KWorkspace
+     X11::X11
+ )
++if(HAVE_X11)
++    target_link_libraries(plasma-apply-colorscheme krdb)
++endif()
+ 
+ kcoreaddons_add_plugin(plasma_accentcolor_service INSTALL_NAMESPACE "kf6/kded")
+ 
+@@ -97,6 +100,9 @@
+     PW::KWorkspace
+     X11::X11
+ )
++if(HAVE_X11)
++    target_link_libraries(plasma_accentcolor_service krdb)
++endif()
+ 
+ install(FILES colorssettings.kcfg DESTINATION ${KDE_INSTALL_KCFGDIR})
+ install(TARGETS plasma-apply-colorscheme DESTINATION ${KDE_INSTALL_BINDIR})
+diff -ruN a/kcms/colors/colorsapplicator.cpp b/kcms/colors/colorsapplicator.cpp
+--- a/kcms/colors/colorsapplicator.cpp	2026-10-08 13:24:14.000000000 +0200
++++ b/kcms/colors/colorsapplicator.cpp	2026-10-18 18:56:27.248742178 +0200
+@@ -7,6 +7,10 @@
+ 
+ #include <KColorScheme>
+ #include <KConfigGroup>
++#include <config-X11.h>
++#if HAVE_X11
++#include "../krdb/krdb.h"
++#endif
+ 
+ #include <QColorSpace>
+ #include <QCryptographicHash>
+@@ -357,4 +361,15 @@
+             groupEffectOut.writeEntry(effect, groupEffectTheme.readEntry(effect), writeConfigFlag);
+         }
+     }
++
++#if HAVE_X11
++    bool applyToAlien{true};
++    {
++        KConfig cfg(QStringLiteral("kcmdisplayrc"), KConfig::NoGlobals);
++        KConfigGroup group(configOutput, u"General"_s);
++        group = KConfigGroup(&cfg, u"X11"_s);
++        applyToAlien = group.readEntry("exportKDEColors", applyToAlien);
++    }
++    runRdb(KRdbExportQtColors | KRdbExportGtkTheme | (applyToAlien ? KRdbExportColors : 0));
++#endif
+ }
+diff -ruN a/kcms/fonts/CMakeLists.txt b/kcms/fonts/CMakeLists.txt
+--- a/kcms/fonts/CMakeLists.txt	2026-10-08 13:24:14.000000000 +0200
++++ b/kcms/fonts/CMakeLists.txt	2026-10-18 18:56:27.244779802 +0200
+@@ -17,6 +17,7 @@
+     previewimageprovider.cpp
+     fonts.cpp
+     fontsaasettings.cpp
++    fontinit.cpp
+     ../kfontinst/lib/FcEngine.cpp
+     ../kcms-common.cpp
+     devicepixelratiohelper.cpp
+@@ -30,12 +31,17 @@
+ )
+ kconfig_add_kcfg_files(kcm_fonts fontssettings.kcfgc fontsaasettingsbase.kcfgc GENERATE_MOC)
+ 
+-target_link_libraries(kcm_fonts PRIVATE Qt::Quick kcm_fonts_static)
++target_link_libraries(kcm_fonts PRIVATE Qt::Quick kcm_fonts_static krdb)
+ target_compile_definitions(kcm_fonts PRIVATE CMAKE_INSTALL_FULL_LIBEXECDIR="${CMAKE_INSTALL_FULL_LIBEXECDIR}")
+ 
+ ########### install files ###############
+ install(FILES fontssettings.kcfg DESTINATION ${KDE_INSTALL_KCFGDIR})
+ 
++add_custom_command(TARGET kcm_fonts POST_BUILD
++                   COMMAND ${CMAKE_COMMAND} -E create_symlink ../kcms/systemsettings/kcm_fonts.so kcm_fonts_init.so)
++
++install(FILES ${CMAKE_CURRENT_BINARY_DIR}/kcm_fonts_init.so DESTINATION ${KDE_INSTALL_PLUGINDIR}/plasma/kcminit)
++
+ add_subdirectory(kconf_update)
+ 
+ if (BUILD_TESTING)
+diff -ruN a/kcms/fonts/fontinit.cpp b/kcms/fonts/fontinit.cpp
+--- a/kcms/fonts/fontinit.cpp	1970-01-01 01:00:00.000000000 +0100
++++ b/kcms/fonts/fontinit.cpp	2026-09-08 12:57:37.000000000 +0200
+@@ -0,0 +1,36 @@
++/*
++    This file is part of the KDE project.
++
++    SPDX-FileCopyrightText: 2021 David Edmundson <davidedmundson@kde.org>
++
++    SPDX-License-Identifier: GPL-2.0-or-later
++*/
++
++#include "krdb.h"
++#include <KConfig>
++#include <KConfigGroup>
++#include <KWindowSystem>
++#include <QProcess>
++
++using namespace Qt::StringLiterals;
++
++extern "C" {
++Q_DECL_EXPORT void kcminit()
++{
++    KConfig cfg(QStringLiteral("kcmfonts"));
++    KConfigGroup fontsCfg(&cfg, u"General"_s);
++
++    const int dpi = xftDpi();
++    if (dpi <= 0) {
++        return;
++    }
++
++    const QByteArray input = "Xft.dpi: " + QByteArray::number(dpi);
++    QProcess p;
++    p.start(QStringLiteral("xrdb"), {QStringLiteral("-quiet"), QStringLiteral("-merge"), QStringLiteral("-nocpp")});
++    p.setProcessChannelMode(QProcess::ForwardedChannels);
++    p.write(input);
++    p.closeWriteChannel();
++    p.waitForFinished(-1);
++}
++}
+diff -ruN a/kcms/fonts/fonts.cpp b/kcms/fonts/fonts.cpp
+--- a/kcms/fonts/fonts.cpp	2026-10-08 13:24:14.000000000 +0200
++++ b/kcms/fonts/fonts.cpp	2026-10-18 18:56:27.247310261 +0200
+@@ -33,6 +33,8 @@
+ #include <KWindowSystem>
+ 
+ #include "../kcms-common_p.h"
++#include "../krdb/krdb.h"
++#include <config-X11.h>
+ #include "devicepixelratiohelper.h"
+ #include "kxftconfig.h"
+ #include "previewimageprovider.h"
+@@ -136,6 +138,14 @@
+     }
+ 
+     QProcess::startDetached(QStringLiteral(CMAKE_INSTALL_FULL_LIBEXECDIR "/plasma-setup-xwayland"));
++
++#if HAVE_X11
++    // X11 (and Xwayland clients started from an X11 session) still read Xft.* from xrdb.
++    // plasma-setup-xwayland above remains the Wayland Xwayland writer.
++    if (KWindowSystem::isPlatformX11()) {
++        runRdb(KRdbExportXftSettings | KRdbExportGtkTheme);
++    }
++#endif
+ }
+ 
+ void KFonts::adjustFont(const QFont &font, const QString &category)
+diff -ruN a/kcms/krdb/AUTHORS b/kcms/krdb/AUTHORS
+--- a/kcms/krdb/AUTHORS	1970-01-01 01:00:00.000000000 +0100
++++ b/kcms/krdb/AUTHORS	2026-09-08 12:57:37.000000000 +0200
+@@ -0,0 +1,9 @@
++Display Configuration Modules:
++
++  Martin Jones (mjones@powerup.com.au)
++  Mark Donohoe (donohoe@kde.org)
++  Geert Jansen (g.t.jansen@stud.tue.nl)
++
++Conversion to kcontrol applet:
++
++  Matthias Hoelzer (hoelzer@physik.uni-wuerzburg.de)
+diff -ruN a/kcms/krdb/CMakeLists.txt b/kcms/krdb/CMakeLists.txt
+--- a/kcms/krdb/CMakeLists.txt	1970-01-01 01:00:00.000000000 +0100
++++ b/kcms/krdb/CMakeLists.txt	2026-09-08 12:57:37.000000000 +0200
+@@ -0,0 +1,46 @@
++add_definitions(-DTRANSLATION_DOMAIN=\"krdb\")
++
++add_library(krdb krdb.cpp)
++
++generate_export_header(krdb)
++
++target_include_directories(krdb PUBLIC "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>" "$<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>" "$<INSTALL_INTERFACE:${KDE_INSTALL_INCLUDEDIR}/krdb>")
++
++target_link_libraries(krdb PRIVATE Qt::Widgets Qt::DBus KF6::CoreAddons KF6::DBusAddons KF6::GuiAddons KF6::I18n KF6::WindowSystem KF6::ColorScheme X11::X11 Qt::GuiPrivate)
++
++if(HAVE_X11)
++  target_link_libraries(krdb PRIVATE XCB::XCB XCB::CURSOR)
++endif()
++
++install(TARGETS krdb ${KDE_INSTALL_TARGETS_DEFAULT_ARGS} LIBRARY NAMELINK_SKIP)
++
++install(TARGETS krdb EXPORT krdbLibraryTargets ${KDE_INSTALL_TARGETS_DEFAULT_ARGS})
++
++install(FILES krdb.h
++    ${CMAKE_CURRENT_BINARY_DIR}/krdb_export.h
++    DESTINATION ${KDE_INSTALL_INCLUDEDIR}/krdb COMPONENT Devel
++)
++
++set(CMAKECONFIG_INSTALL_DIR ${KDE_INSTALL_CMAKEPACKAGEDIR}/Krdb)
++configure_package_config_file(KrdbConfig.cmake.in "${CMAKE_CURRENT_BINARY_DIR}/KrdbConfig.cmake"
++    INSTALL_DESTINATION ${CMAKECONFIG_INSTALL_DIR}
++)
++
++write_basic_config_version_file(${CMAKE_CURRENT_BINARY_DIR}/KrdbConfigVersion.cmake
++    VERSION "${PROJECT_VERSION}"
++    COMPATIBILITY AnyNewerVersion
++)
++
++install(
++    FILES
++        ${CMAKE_CURRENT_BINARY_DIR}/KrdbConfig.cmake
++        ${CMAKE_CURRENT_BINARY_DIR}/KrdbConfigVersion.cmake
++    DESTINATION ${CMAKECONFIG_INSTALL_DIR}
++)
++
++install(
++    EXPORT krdbLibraryTargets
++    NAMESPACE PW::
++    DESTINATION ${CMAKECONFIG_INSTALL_DIR}
++    FILE krdbLibraryTargets.cmake
++)
+diff -ruN a/kcms/krdb/KrdbConfig.cmake.in b/kcms/krdb/KrdbConfig.cmake.in
+--- a/kcms/krdb/KrdbConfig.cmake.in	1970-01-01 01:00:00.000000000 +0100
++++ b/kcms/krdb/KrdbConfig.cmake.in	2026-09-08 12:57:37.000000000 +0200
+@@ -0,0 +1,6 @@
++# SPDX-FileCopyrightText: 2025 Vlad Zahorodnii <vlad.zahorodnii@kde.org>
++# SPDX-License-Identifier: BSD-3-Clause
++
++@PACKAGE_INIT@
++
++include("${CMAKE_CURRENT_LIST_DIR}/krdbLibraryTargets.cmake")
+diff -ruN a/kcms/krdb/Messages.sh b/kcms/krdb/Messages.sh
+--- a/kcms/krdb/Messages.sh	1970-01-01 01:00:00.000000000 +0100
++++ b/kcms/krdb/Messages.sh	2026-09-08 12:57:37.000000000 +0200
+@@ -0,0 +1,2 @@
++#! /usr/bin/env bash
++$XGETTEXT *.cpp -o $podir/krdb.pot
+diff -ruN a/kcms/krdb/krdb.cpp b/kcms/krdb/krdb.cpp
+--- a/kcms/krdb/krdb.cpp	1970-01-01 01:00:00.000000000 +0100
++++ b/kcms/krdb/krdb.cpp	2026-09-08 12:57:37.000000000 +0200
+@@ -0,0 +1,544 @@
++/*
++   KRDB - puts current KDE color scheme into preprocessor statements
++   cats specially written application default files and uses xrdb -merge to
++   write to RESOURCE_MANAGER. Thus it gives a  simple way to make non-KDE
++   applications fit in with the desktop
++
++   SPDX-FileCopyrightText: 1998 Mark Donohoe
++   SPDX-FileCopyrightText: 2001 Waldo Bastian <bastian@kde.org>
++   SPDX-FileCopyrightText: 2002 Karol Szwed <gallium@kde.org>
++   SPDX-FileCopyrightText: 2022 Harald Sitter <sitter@kde.org>
++
++   reworked for KDE 2.0:
++   SPDX-FileCopyrightText: 1999 Dirk A. Mueller
++
++   add support for GTK applications:
++   SPDX-FileCopyrightText: 2001 Matthias Ettrich
++
++   SPDX-License-Identifier: GPL-2.0-or-later
++*/
++
++#include <config-X11.h>
++#include <config-workspace.h>
++#include <limits.h>
++#include <stdlib.h>
++#include <string.h>
++#include <unistd.h>
++
++#undef Unsorted
++#include <QApplication>
++#include <QBuffer>
++#include <QDir>
++#include <QFontDatabase>
++#include <QSettings>
++
++#include <QByteArray>
++#include <QDBusConnection>
++#include <QDateTime>
++#include <QDebug>
++#include <QPixmap>
++#include <QSaveFile>
++#include <QTemporaryFile>
++#include <QTextStream>
++
++#include <KColorScheme>
++#include <KConfig>
++#include <KConfigGroup>
++#include <KLocalizedString>
++#include <KProcess>
++#include <KWindowSystem>
++
++#include <KUpdateLaunchEnvironmentJob>
++
++#include "krdb.h"
++#if HAVE_X11
++#include <X11/Xlib.h>
++#include <private/qtx11extras_p.h>
++#include <xcb/xcb.h>
++#include <xcb/xcb_cursor.h>
++#endif
++
++#include <filesystem>
++
++using namespace Qt::StringLiterals;
++
++inline const char *gtkEnvVar(int version)
++{
++    return 2 == version ? "GTK2_RC_FILES" : "GTK_RC_FILES";
++}
++
++inline QLatin1String sysGtkrc(int version)
++{
++    std::error_code error;
++    if (version == 2) {
++        if (std::filesystem::exists("/etc/opt/gnome/gtk-2.0", error) && !error) {
++            return QLatin1String("/etc/opt/gnome/gtk-2.0/gtkrc");
++        }
++        return QLatin1String("/etc/gtk-2.0/gtkrc");
++    }
++    if (std::filesystem::exists("/etc/opt/gnome/gtk", error) && !error) {
++        return QLatin1String("/etc/opt/gnome/gtk/gtkrc");
++    }
++    return QLatin1String("/etc/gtk/gtkrc");
++}
++
++inline QLatin1String userGtkrc(int version)
++{
++    return version == 2 ? QLatin1String("/.gtkrc-2.0") : QLatin1String("/.gtkrc");
++}
++
++// -----------------------------------------------------------------------------
++static QString writableGtkrc(int version)
++{
++    QString gtkrc = QStandardPaths::writableLocation(QStandardPaths::GenericConfigLocation);
++    QDir dir;
++    dir.mkpath(gtkrc);
++    gtkrc += 2 == version ? u"/gtkrc-2.0"_s : u"/gtkrc"_s;
++    return gtkrc;
++}
++
++// -----------------------------------------------------------------------------
++static void applyGtkStyles(int version)
++{
++    const char *varName = gtkEnvVar(version);
++    const char *envVar = getenv(varName);
++    if (envVar) { // Already set by user, don't override it
++        return;
++    }
++
++    const QByteArray gtkrc(envVar);
++    const QString userHomeGtkrc = QDir::homePath() + userGtkrc(version);
++    QStringList list = QFile::decodeName(gtkrc).split(QLatin1Char(':'));
++    if (!list.contains(userHomeGtkrc)) {
++        list.prepend(userHomeGtkrc);
++    }
++
++    const QLatin1String systemGtkrc = sysGtkrc(version);
++    if (!list.contains(systemGtkrc)) {
++        list.prepend(systemGtkrc);
++    }
++
++    list.removeAll(QString());
++
++    const QString gtkkde = writableGtkrc(version);
++    list.removeAll(gtkkde);
++    list.append(gtkkde);
++
++    // Pass env. var to kdeinit.
++    const QString value = list.join(QLatin1Char(':'));
++    QProcessEnvironment newEnv;
++    newEnv.insert(QString::fromLatin1(varName), value);
++    new KUpdateLaunchEnvironmentJob(newEnv);
++}
++
++// -----------------------------------------------------------------------------
++
++static void applyQtColors(KSharedConfigPtr kglobalcfg, QSettings &settings, QPalette &newPal)
++{
++    QStringList actcg, inactcg, discg;
++    /* export kde color settings */
++    int i;
++    for (i = 0; i < QPalette::NColorRoles; i++)
++        actcg << newPal.color(QPalette::Active, (QPalette::ColorRole)i).name();
++    for (i = 0; i < QPalette::NColorRoles; i++)
++        inactcg << newPal.color(QPalette::Inactive, (QPalette::ColorRole)i).name();
++    for (i = 0; i < QPalette::NColorRoles; i++)
++        discg << newPal.color(QPalette::Disabled, (QPalette::ColorRole)i).name();
++
++    settings.setValue(QStringLiteral("/qt/Palette/active"), actcg);
++    settings.setValue(QStringLiteral("/qt/Palette/inactive"), inactcg);
++    settings.setValue(QStringLiteral("/qt/Palette/disabled"), discg);
++
++    // export kwin's colors to qtrc for kstyle to use
++    KConfigGroup wmCfgGroup(kglobalcfg, u"WM"_s);
++
++    // active colors
++    QColor clr = newPal.color(QPalette::Active, QPalette::Window);
++    clr = wmCfgGroup.readEntry("activeBackground", clr);
++    settings.setValue(QStringLiteral("/qt/KWinPalette/activeBackground"), clr.name());
++    if (QPixmap::defaultDepth() > 8)
++        clr = clr.darker(110);
++    clr = wmCfgGroup.readEntry("activeBlend", clr);
++    settings.setValue(QStringLiteral("/qt/KWinPalette/activeBlend"), clr.name());
++    clr = newPal.color(QPalette::Active, QPalette::HighlightedText);
++    clr = wmCfgGroup.readEntry("activeForeground", clr);
++    settings.setValue(QStringLiteral("/qt/KWinPalette/activeForeground"), clr.name());
++    clr = newPal.color(QPalette::Active, QPalette::Window);
++    clr = wmCfgGroup.readEntry("frame", clr);
++    settings.setValue(QStringLiteral("/qt/KWinPalette/frame"), clr.name());
++    clr = wmCfgGroup.readEntry("activeTitleBtnBg", clr);
++    settings.setValue(QStringLiteral("/qt/KWinPalette/activeTitleBtnBg"), clr.name());
++
++    // inactive colors
++    clr = newPal.color(QPalette::Inactive, QPalette::Window);
++    clr = wmCfgGroup.readEntry("inactiveBackground", clr);
++    settings.setValue(QStringLiteral("/qt/KWinPalette/inactiveBackground"), clr.name());
++    if (QPixmap::defaultDepth() > 8)
++        clr = clr.darker(110);
++    clr = wmCfgGroup.readEntry("inactiveBlend", clr);
++    settings.setValue(QStringLiteral("/qt/KWinPalette/inactiveBlend"), clr.name());
++    clr = newPal.color(QPalette::Inactive, QPalette::Window).darker();
++    clr = wmCfgGroup.readEntry("inactiveForeground", clr);
++    settings.setValue(QStringLiteral("/qt/KWinPalette/inactiveForeground"), clr.name());
++    clr = newPal.color(QPalette::Inactive, QPalette::Window);
++    clr = wmCfgGroup.readEntry("inactiveFrame", clr);
++    settings.setValue(QStringLiteral("/qt/KWinPalette/inactiveFrame"), clr.name());
++    clr = wmCfgGroup.readEntry("inactiveTitleBtnBg", clr);
++    settings.setValue(QStringLiteral("/qt/KWinPalette/inactiveTitleBtnBg"), clr.name());
++
++    KConfigGroup kdeCfgGroup(kglobalcfg, u"KDE"_s);
++    settings.setValue(QStringLiteral("/qt/KDE/contrast"), kdeCfgGroup.readEntry("contrast", 7));
++}
++
++// -----------------------------------------------------------------------------
++
++static void applyQtSettings(KSharedConfigPtr kglobalcfg, QSettings &settings)
++{
++    /* export font settings */
++
++    // NOTE keep this in sync with kfontsettingsdata in plasma-integration (cf. also Bug 378262)
++    QFont defaultFont(QStringLiteral("Noto Sans"), 10, -1);
++    defaultFont.setStyleHint(QFont::SansSerif);
++
++    const KConfigGroup configGroup(KSharedConfig::openConfig(), u"General"_s);
++    const QString fontInfo = configGroup.readEntry(QStringLiteral("font"), QString());
++    if (!fontInfo.isEmpty()) {
++        defaultFont.fromString(fontInfo);
++    }
++
++    settings.setValue(QStringLiteral("/qt/font"), defaultFont.toString());
++
++    /* export effects settings */
++    KConfigGroup kdeCfgGroup(kglobalcfg, u"General"_s);
++    bool effectsEnabled = kdeCfgGroup.readEntry("EffectsEnabled", false);
++    bool fadeMenus = kdeCfgGroup.readEntry("EffectFadeMenu", false);
++    bool fadeTooltips = kdeCfgGroup.readEntry("EffectFadeTooltip", false);
++    bool animateCombobox = kdeCfgGroup.readEntry("EffectAnimateCombo", false);
++
++    QStringList guieffects;
++    if (effectsEnabled) {
++        guieffects << QStringLiteral("general");
++        if (fadeMenus)
++            guieffects << QStringLiteral("fademenu");
++        if (animateCombobox)
++            guieffects << QStringLiteral("animatecombo");
++        if (fadeTooltips)
++            guieffects << QStringLiteral("fadetooltip");
++    } else
++        guieffects << QStringLiteral("none");
++
++    settings.setValue(QStringLiteral("/qt/GUIEffects"), guieffects);
++}
++
++// -----------------------------------------------------------------------------
++
++static void copyFile(QFile &tmp, QString const &filename, bool)
++{
++    QFile f(filename);
++    if (f.open(QIODevice::ReadOnly)) {
++        QByteArray buf(8192, ' ');
++        while (!f.atEnd()) {
++            int read = f.read(buf.data(), buf.size());
++            if (read > 0)
++                tmp.write(buf.data(), read);
++        }
++    }
++}
++
++// -----------------------------------------------------------------------------
++
++static void createGtkrc(const QPalette &cg, bool exportGtkTheme, const QString &gtkTheme, int version)
++{
++    Q_UNUSED(cg);
++    // lukas: why does it create in ~/.kde/share/config ???
++    // pfeiffer: so that we don't overwrite the user's gtkrc.
++    // it is found via the GTK_RC_FILES environment variable.
++    QSaveFile saveFile(writableGtkrc(version));
++    if (!saveFile.open(QIODevice::WriteOnly))
++        return;
++
++    QTextStream t(&saveFile);
++    t << i18n(
++        "# created by KDE Plasma, %1\n"
++        "#\n",
++        QDateTime::currentDateTime().toString());
++
++    if (2 == version) { // we should maybe check for MacOS settings here
++        using Qt::endl;
++        t << endl;
++        t << "gtk-alternative-button-order = 1" << endl;
++        t << endl;
++    }
++
++    if (exportGtkTheme) {
++        QString gtkStyle;
++        if (QString::compare(gtkTheme, QLatin1String("oxygen"), Qt::CaseInsensitive) == 0)
++            gtkStyle = QStringLiteral("oxygen-gtk");
++        else
++            gtkStyle = gtkTheme;
++
++        bool exist_gtkrc = false;
++        QByteArray gtkrc = getenv(gtkEnvVar(version));
++        QStringList listGtkrc = QFile::decodeName(gtkrc).split(QLatin1Char(':'));
++        if (listGtkrc.contains(saveFile.fileName()))
++            listGtkrc.removeAll(saveFile.fileName());
++        listGtkrc.append(QDir::homePath() + userGtkrc(version));
++        listGtkrc.append(QDir::homePath() + "/.gtkrc-2.0-kde"_L1);
++        listGtkrc.append(QDir::homePath() + "/.gtkrc-2.0-kde4"_L1);
++        listGtkrc.removeAll(QString());
++        listGtkrc.removeDuplicates();
++        for (int i = 0; i < listGtkrc.size(); ++i) {
++            if ((exist_gtkrc = QFile::exists(listGtkrc.at(i))))
++                break;
++        }
++
++        if (!exist_gtkrc) {
++            QString gtk2ThemeFilename;
++            gtk2ThemeFilename = QStringLiteral("%1/.themes/%2/gtk-2.0/gtkrc").arg(QDir::homePath(), gtkStyle);
++            if (!QFile::exists(gtk2ThemeFilename)) {
++                QStringList gtk2ThemePath;
++                gtk2ThemeFilename.clear();
++                QByteArray xdgDataDirs = getenv("XDG_DATA_DIRS");
++                gtk2ThemePath.append(QDir::homePath() + "/.local"_L1);
++                gtk2ThemePath.append(QFile::decodeName(xdgDataDirs).split(QLatin1Char(':')));
++                gtk2ThemePath.removeDuplicates();
++                for (int i = 0; i < gtk2ThemePath.size(); ++i) {
++                    gtk2ThemeFilename = QStringLiteral("%1/themes/%2/gtk-2.0/gtkrc").arg(gtk2ThemePath.at(i), gtkStyle);
++                    if (QFile::exists(gtk2ThemeFilename))
++                        break;
++                    else
++                        gtk2ThemeFilename.clear();
++                }
++            }
++
++            if (!gtk2ThemeFilename.isEmpty()) {
++                t << "include \"" << gtk2ThemeFilename << "\"" << Qt::endl;
++                t << Qt::endl;
++                t << "gtk-theme-name=\"" << gtkStyle << "\"" << Qt::endl;
++                t << Qt::endl;
++            }
++        }
++    }
++
++    saveFile.commit();
++}
++
++// -----------------------------------------------------------------------------
++
++int xftDpi()
++{
++    KConfig cfg(QStringLiteral("kcmfonts"));
++    int dpi = 0;
++
++    if (KWindowSystem::isPlatformWayland()) {
++        KConfig cfg(QStringLiteral("kwinrc"));
++        KConfigGroup xwaylandGroup = cfg.group(QStringLiteral("Xwayland"));
++        qreal scale = xwaylandGroup.readEntry("Scale", 1.0);
++        dpi = scale * 96;
++    } else {
++        KConfigGroup fontsCfg(&cfg, u"General"_s);
++        dpi = fontsCfg.readEntry(QStringLiteral("forceFontDPI"), 96);
++    }
++
++    return dpi;
++}
++
++void runRdb(unsigned int flags)
++{
++    // Obtain the application palette that is about to be set.
++    bool exportQtColors = flags & KRdbExportQtColors;
++    bool exportQtSettings = flags & KRdbExportQtSettings;
++    bool exportXftSettings = flags & KRdbExportXftSettings;
++    bool exportGtkTheme = flags & KRdbExportGtkTheme;
++
++    KSharedConfigPtr kglobalcfg = KSharedConfig::openConfig(QStringLiteral("kdeglobals"));
++    KConfigGroup kglobals(kglobalcfg, u"KDE"_s);
++    QPalette newPal = KColorScheme::createApplicationPalette(kglobalcfg);
++
++    QTemporaryFile tmpFile;
++    if (!tmpFile.open()) {
++        qDebug() << "Couldn't open temp file";
++        exit(0);
++    }
++
++    KConfigGroup generalCfgGroup(kglobalcfg, u"General"_s);
++
++    QString gtkTheme;
++    if (kglobals.hasKey("widgetStyle"))
++        gtkTheme = kglobals.readEntry("widgetStyle");
++    else
++        gtkTheme = QStringLiteral("oxygen");
++
++    createGtkrc(newPal, exportGtkTheme, gtkTheme, 1);
++    createGtkrc(newPal, exportGtkTheme, gtkTheme, 2);
++
++    // Merge ~/.Xresources or fallback to ~/.Xdefaults
++    QString homeDir = QDir::homePath();
++    QString xResources = homeDir + "/.Xresources"_L1;
++
++    // very primitive support for ~/.Xresources by appending it
++    if (QFile::exists(xResources))
++        copyFile(tmpFile, xResources, true);
++    else
++        copyFile(tmpFile, homeDir + "/.Xdefaults"_L1, true);
++
++    // Export the Xcursor theme & size settings
++    KConfigGroup mousecfg(KSharedConfig::openConfig(QStringLiteral("kcminputrc")), u"Mouse"_s);
++    QString theme = mousecfg.readEntry("cursorTheme", QStringLiteral("breeze_cursors"));
++    int cursorSize = mousecfg.readEntry("cursorSize", 24);
++
++    if (KWindowSystem::isPlatformWayland()) {
++        KConfig kwinConfig(QStringLiteral("kwinrc"));
++        KConfigGroup xwaylandGroup(&kwinConfig, u"Xwayland"_s);
++        cursorSize *= xwaylandGroup.readEntry("Scale", 1.0);
++    }
++
++    QString contents;
++    contents += "Xcursor.theme: "_L1 + theme + u'\n';
++    contents += "Xcursor.size: "_L1 + QString::number(cursorSize) + u'\n';
++
++    if (exportXftSettings) {
++        contents += QLatin1String("Xft.antialias: ");
++        if (generalCfgGroup.readEntry("XftAntialias", true))
++            contents += QLatin1String("1\n");
++        else
++            contents += QLatin1String("0\n");
++
++        QString hintStyle = generalCfgGroup.readEntry("XftHintStyle", "hintslight");
++        contents += QLatin1String("Xft.hinting: ");
++        if (hintStyle.isEmpty())
++            contents += QLatin1String("-1\n");
++        else {
++            if (hintStyle != QLatin1String("hintnone"))
++                contents += QLatin1String("1\n");
++            else
++                contents += QLatin1String("0\n");
++            contents += "Xft.hintstyle: "_L1 + hintStyle + u'\n';
++        }
++
++        QString subPixel = generalCfgGroup.readEntry("XftSubPixel", "rgb");
++        if (!subPixel.isEmpty())
++            contents += "Xft.rgba: "_L1 + subPixel + u'\n';
++
++        int dpi = xftDpi();
++        if (dpi > 0)
++            contents += "Xft.dpi: "_L1 + QString::number(dpi) + u'\n';
++        else {
++            KProcess queryProc;
++            queryProc << QStringLiteral("xrdb") << QStringLiteral("-query");
++            queryProc.setOutputChannelMode(KProcess::OnlyStdoutChannel);
++            queryProc.start();
++            if (queryProc.waitForFinished()) {
++                QByteArray db = queryProc.readAllStandardOutput();
++                int idx1 = 0;
++                while (idx1 < db.size()) {
++                    int idx2 = db.indexOf('\n', idx1);
++                    if (idx2 == -1) {
++                        idx2 = db.size() - 1;
++                    }
++                    const auto entry = QByteArray::fromRawData(db.constData() + idx1, idx2 - idx1 + 1);
++                    if (entry.startsWith("Xft.dpi:")) {
++                        db.remove(idx1, entry.size());
++                    } else {
++                        idx1 = idx2 + 1;
++                    }
++                }
++
++                KProcess loadProc;
++                loadProc << QStringLiteral("xrdb") << QStringLiteral("-quiet") << QStringLiteral("-load") << QStringLiteral("-nocpp");
++                loadProc.start();
++                if (loadProc.waitForStarted()) {
++                    loadProc.write(db);
++                    loadProc.closeWriteChannel();
++                    loadProc.waitForFinished();
++                }
++            }
++        }
++    }
++
++    if (contents.length() > 0)
++        tmpFile.write(contents.toLatin1());
++
++    tmpFile.flush();
++
++    KProcess proc;
++#ifndef NDEBUG
++    proc << QStringLiteral("xrdb") << QStringLiteral("-merge") << tmpFile.fileName();
++#else
++    proc << u"xrdb"_s << u"-quiet"_s << u"-merge"_s << tmpFile.fileName();
++#endif
++    proc.execute();
++
++#if HAVE_X11
++    xcb_connection_t *connection = xcb_connect(nullptr, nullptr);
++    if (!xcb_connection_has_error(connection)) {
++        xcb_screen_t *screen = xcb_setup_roots_iterator(xcb_get_setup(connection)).data;
++
++        // Needed for applications that don't set their own cursor.
++        xcb_cursor_context_t *context = nullptr;
++        if (xcb_cursor_context_new(connection, screen, &context) < 0) {
++            qWarning() << "xcb_cursor_context_new() failed";
++        } else {
++            xcb_cursor_t cursor = xcb_cursor_load_cursor(context, "left_ptr");
++            auto cookie = xcb_change_window_attributes_checked(connection, screen->root, XCB_CW_CURSOR, &cursor);
++            if (auto error = xcb_request_check(connection, cookie)) {
++                qWarning() << "Failed to set root window cursor, error code:" << error->error_code;
++                free(error);
++            }
++            xcb_free_cursor(connection, cursor);
++            xcb_cursor_context_free(context);
++        }
++    } else {
++        qWarning() << "xcb_connect() failed";
++    }
++
++    xcb_disconnect(connection);
++#endif
++
++    applyGtkStyles(1);
++    applyGtkStyles(2);
++
++    /* Qt exports */
++    if (exportQtColors || exportQtSettings) {
++        auto *settings = new QSettings(QStringLiteral("Trolltech"));
++
++        if (exportQtColors)
++            applyQtColors(kglobalcfg, *settings, newPal); // For kcmcolors
++
++        if (exportQtSettings)
++            applyQtSettings(kglobalcfg, *settings); // For kcmstyle
++
++        delete settings;
++#if HAVE_X11
++        if (qApp->platformName() == QLatin1String("xcb")) {
++            // We let KIPC take care of ourselves, as we are in a KDE app with
++            // QApp::setDesktopSettingsAware(false);
++            // Instead of calling QApp::x11_apply_settings() directly, we instead
++            // modify the timestamp which propagates the settings changes onto
++            // Qt-only apps without adversely affecting ourselves.
++
++            // Cheat and use the current timestamp, since we just saved to qtrc.
++            QDateTime settingsstamp = QDateTime::currentDateTime();
++
++            static Atom qt_settings_timestamp = 0;
++            if (!qt_settings_timestamp) {
++                QString atomname(QStringLiteral("_QT_SETTINGS_TIMESTAMP_"));
++                atomname += QString::fromLocal8Bit(XDisplayName(nullptr)); // Use the $DISPLAY envvar.
++                qt_settings_timestamp = XInternAtom(QX11Info::display(), atomname.toLatin1().constData(), False);
++            }
++
++            QBuffer stamp;
++            QDataStream s(&stamp.buffer(), QIODevice::WriteOnly);
++            s << settingsstamp;
++            XChangeProperty(QX11Info::display(),
++                            QX11Info::appRootWindow(),
++                            qt_settings_timestamp,
++                            qt_settings_timestamp,
++                            8,
++                            PropModeReplace,
++                            (unsigned char *)stamp.buffer().data(),
++                            stamp.buffer().size());
++        }
++#endif
++    }
++}
+diff -ruN a/kcms/krdb/krdb.h b/kcms/krdb/krdb.h
+--- a/kcms/krdb/krdb.h	1970-01-01 01:00:00.000000000 +0100
++++ b/kcms/krdb/krdb.h	2026-09-08 12:57:37.000000000 +0200
+@@ -0,0 +1,21 @@
++/*
++    SPDX-FileCopyrightText: 2001 Waldo Bastian <bastian@kde.org>
++
++    SPDX-License-Identifier: GPL-2.0-only
++*/
++
++#pragma once
++
++#include "krdb_export.h"
++
++enum KRdbAction {
++    KRdbExportColors = 0x0001, // Export colors to non-(KDE/Qt) apps
++    KRdbExportQtColors = 0x0002, // Export KDE's colors to qtrc
++    KRdbExportQtSettings = 0x0004, // Export all possible qtrc settings, excluding colors
++    KRdbExportXftSettings = 0x0008, // Export KDE's Xft (anti-alias) settings
++    KRdbExportGtkTheme = 0x0010, // Export KDE's widget style to Gtk if possible
++};
++
++void KRDB_EXPORT runRdb(unsigned int flags);
++
++int KRDB_EXPORT xftDpi();
+diff -ruN a/kcms/style/CMakeLists.txt b/kcms/style/CMakeLists.txt
+--- a/kcms/style/CMakeLists.txt	2026-10-08 13:24:14.000000000 +0200
++++ b/kcms/style/CMakeLists.txt	2026-10-18 18:56:48.422993137 +0200
+@@ -53,6 +53,16 @@
+     KF6::ColorScheme
+     Union::Union
+ )
++if(HAVE_X11)
++    target_link_libraries(kcm_style PRIVATE krdb)
++endif()
+ 
+ install(FILES stylesettings.kcfg DESTINATION ${KDE_INSTALL_KCFGDIR})
+ install(FILES gtk_themes.knsrc DESTINATION ${KDE_INSTALL_KNSRCDIR})
++
++if(HAVE_X11)
++    add_custom_command(TARGET kcm_style POST_BUILD
++                       COMMAND ${CMAKE_COMMAND} -E create_symlink ../kcms/systemsettings/kcm_style.so kcm_style_init.so)
++
++    install(FILES ${CMAKE_CURRENT_BINARY_DIR}/kcm_style_init.so DESTINATION ${KDE_INSTALL_PLUGINDIR}/plasma/kcminit)
++endif()
+diff -ruN a/kcms/style/kcmstyle.cpp b/kcms/style/kcmstyle.cpp
+--- a/kcms/style/kcmstyle.cpp	2026-10-08 13:24:14.000000000 +0200
++++ b/kcms/style/kcmstyle.cpp	2026-10-18 18:56:48.437449094 +0200
+@@ -30,6 +30,12 @@
+ #include <Union/PackageHandler.h>
+ #include <Union/StyleRegistry.h>
+ 
++#include <config-X11.h>
++#if HAVE_X11
++#include "krdb.h"
++#include <KConfig>
++#endif
++
+ #include <QDBusPendingCallWatcher>
+ #include <QDBusPendingReply>
+ #include <QLibrary>
+@@ -48,6 +54,24 @@
+ 
+ using namespace Qt::StringLiterals;
+ 
++#if HAVE_X11
++extern "C" {
++Q_DECL_EXPORT void kcminit()
++{
++    uint flags = KRdbExportQtSettings | KRdbExportQtColors | KRdbExportXftSettings | KRdbExportGtkTheme;
++    KConfig _config(QStringLiteral("kcmdisplayrc"), KConfig::NoGlobals);
++    KConfigGroup config(&_config, QStringLiteral("X11"));
++
++    // This key is written by the "colors" module.
++    bool exportKDEColors = config.readEntry("exportKDEColors", true);
++    if (exportKDEColors) {
++        flags |= KRdbExportColors;
++    }
++    runRdb(flags);
++}
++}
++#endif
++
+ K_PLUGIN_FACTORY_WITH_JSON(KCMStyleFactory, "kcm_style.json", registerPlugin<KCMStyle>(); registerPlugin<StyleData>();)
+ 
+ KCMStyle::KCMStyle(QObject *parent, const KPluginMetaData &data)
+@@ -426,6 +450,20 @@
+ 
+     KQuickManagedConfigModule::save();
+ 
++#if HAVE_X11
++    // Export the changes we made to qtrc, and update all qt-only
++    // applications on the fly, ensuring that we still follow the user's
++    // export fonts/colors settings.
++    uint flags = KRdbExportQtSettings | KRdbExportGtkTheme;
++    KConfig _kconfig(QStringLiteral("kcmdisplayrc"), KConfig::NoGlobals);
++    KConfigGroup kconfig(&_kconfig, u"X11"_s);
++    bool exportKDEColors = kconfig.readEntry("exportKDEColors", true);
++    if (exportKDEColors) {
++        flags |= KRdbExportColors;
++    }
++    runRdb(flags);
++#endif
++
+     // Now allow KDE apps to reconfigure themselves.
+     if (newStyleLoaded) {
+         notifyKcmChange(GlobalChangeType::StyleChanged);
+diff -ruN a/krunner/CMakeLists.txt b/krunner/CMakeLists.txt
+--- a/krunner/CMakeLists.txt	2026-10-08 13:24:14.000000000 +0200
++++ b/krunner/CMakeLists.txt	2026-10-18 18:56:48.421163098 +0200
+@@ -1,6 +1,7 @@
+ set(krunner_SRCS
+     main.cpp
+     view.cpp
++    x11windowscreenrelativepositioner.cpp
+ )
+ 
+ set(krunner_dbusAppXML dbus/org.kde.krunner.App.xml)
+diff -ruN a/krunner/view.cpp b/krunner/view.cpp
+--- a/krunner/view.cpp	2026-10-08 13:24:14.000000000 +0200
++++ b/krunner/view.cpp	2026-10-18 18:56:48.435622193 +0200
+@@ -14,6 +14,7 @@
+ #include <QQmlContext>
+ #include <QQmlEngine>
+ #include <QQuickItem>
++#include <QCursor>
+ #include <QScreen>
+ 
+ #include <KAuthorized>
+@@ -23,6 +24,7 @@
+ #include <KService>
+ #include <KWindowEffects>
+ #include <KWindowSystem>
++#include <KX11Extras>
+ 
+ #include <PlasmaQuick/PlasmaQuick>
+ 
+@@ -31,6 +33,7 @@
+ #include <qnamespace.h>
+ 
+ #include "appadaptor.h"
++#include "x11windowscreenrelativepositioner.h"
+ 
+ KCONFIGGROUP_DECLARE_ENUM_QOBJECT(View, HistoryBehavior)
+ 
+@@ -41,6 +44,10 @@
+ {
+     KCrash::initialize();
+ 
++    if (KWindowSystem::isPlatformX11()) {
++        m_x11Positioner = new X11WindowScreenRelativePositioner(this);
++    }
++
+     // used only by screen readers
+     setTitle(i18n("KRunner"));
+ 
+@@ -151,12 +158,36 @@
+ 
+ void View::showEvent(QShowEvent *event)
+ {
++    if (KWindowSystem::isPlatformX11()) {
++        KX11Extras::setOnAllDesktops(winId(), true);
++    }
+     QQuickWindow::showEvent(event);
+     requestActivate();
++    if (KWindowSystem::isPlatformX11()) {
++        KX11Extras::forceActiveWindow(winId());
++    }
+ }
+ 
+ void View::positionOnScreen()
+ {
++    if (KWindowSystem::isPlatformX11()) {
++        const auto screens = QGuiApplication::screens();
++        const auto screenIt = std::ranges::find_if(screens, [](QScreen *screen) {
++            return screen->geometry().contains(QCursor::pos(screen));
++        });
++        setScreen(screenIt != screens.cend() ? *screenIt : QGuiApplication::primaryScreen());
++
++        m_x11Positioner->setAnchors(Qt::TopEdge);
++        m_x11Positioner->setMargins(margins());
++        if (m_floating) {
++            KX11Extras::setOnDesktop(winId(), KX11Extras::currentDesktop());
++        } else {
++            KX11Extras::setOnAllDesktops(winId(), true);
++        }
++        KX11Extras::setState(winId(), NET::SkipTaskbar | NET::SkipPager);
++        return;
++    }
++
+     const auto screens = QGuiApplication::screens();
+     if (m_floating) {
+         auto message = QDBusMessage::createMethodCall(u"org.kde.KWin"_s, u"/KWin"_s, u"org.kde.KWin"_s, u"activeOutputName"_s);
+@@ -187,6 +218,10 @@
+ 
+ void View::toggleDisplay()
+ {
++    if (isVisible() && !QGuiApplication::focusWindow() && KWindowSystem::isPlatformX11()) {
++        KX11Extras::forceActiveWindow(winId());
++        return;
++    }
+     if (isVisible()) {
+         setVisible(false);
+     } else {
+diff -ruN a/krunner/view.h b/krunner/view.h
+--- a/krunner/view.h	2026-10-08 13:24:14.000000000 +0200
++++ b/krunner/view.h	2026-10-18 18:56:48.424593005 +0200
+@@ -16,6 +16,8 @@
+ 
+ #include <PlasmaQuick/PlasmaWindow>
+ 
++class X11WindowScreenRelativePositioner;
++
+ using namespace Qt::StringLiterals;
+ 
+ class ViewPrivate;
+@@ -115,4 +117,5 @@
+     QStringList m_history;
+     HistoryBehavior m_historyBehavior = HistoryBehavior::CompletionSuggestion;
+     KActivities::Consumer m_consumer;
++    X11WindowScreenRelativePositioner *m_x11Positioner = nullptr;
+ };
+diff -ruN a/krunner/x11windowscreenrelativepositioner.cpp b/krunner/x11windowscreenrelativepositioner.cpp
+--- a/krunner/x11windowscreenrelativepositioner.cpp	1970-01-01 01:00:00.000000000 +0100
++++ b/krunner/x11windowscreenrelativepositioner.cpp	2026-09-08 12:57:37.000000000 +0200
+@@ -0,0 +1,136 @@
++/*
++    SPDX-FileCopyrightText: 2023 David Edmundson <davidedmundson@kde.org>
++
++    SPDX-License-Identifier: LGPL-2.0-or-later
++*/
++
++#include "x11windowscreenrelativepositioner.h"
++
++#include <QScreen>
++
++#include <KWindowSystem>
++
++X11WindowScreenRelativePositioner::X11WindowScreenRelativePositioner(QWindow *window)
++    : QObject(window)
++    , m_window(window)
++{
++    if (!KWindowSystem::isPlatformX11()) {
++        qCritical("X11WindowScreenRelativePositioner should only be used on X11 windows");
++    }
++
++    m_window->installEventFilter(this);
++    connect(m_window, &QWindow::screenChanged, this, &X11WindowScreenRelativePositioner::handleScreenChanged);
++
++    handleScreenChanged();
++}
++
++void X11WindowScreenRelativePositioner::setAnchors(Qt::Edges anchors)
++{
++    if (m_anchors == anchors) {
++        return;
++    }
++
++    m_anchors = anchors;
++    Q_EMIT anchorsChanged();
++    polish();
++}
++
++void X11WindowScreenRelativePositioner::setMargins(const QMargins &margins)
++{
++    if (m_margins == margins) {
++        return;
++    }
++    m_margins = margins;
++    Q_EMIT marginsChanged();
++    polish();
++}
++
++bool X11WindowScreenRelativePositioner::eventFilter(QObject *watched, QEvent *event)
++{
++    if (watched != m_window) {
++        return false;
++    }
++    switch (event->type()) {
++    case QEvent::UpdateRequest:
++        updatePolish();
++        break;
++    case QEvent::Resize:
++    case QEvent::Expose:
++        polish();
++        break;
++    default:
++        break;
++    }
++    return false;
++}
++
++void X11WindowScreenRelativePositioner::polish()
++{
++    m_needsRepositioning = true;
++    m_window->requestUpdate();
++}
++
++void X11WindowScreenRelativePositioner::updatePolish()
++{
++    if (m_needsRepositioning) {
++        reposition();
++        m_needsRepositioning = false;
++    }
++}
++
++void X11WindowScreenRelativePositioner::reposition()
++{
++    QScreen *screen = m_window->screen();
++
++    QRect screenRect = screen->availableGeometry();
++    screenRect = screenRect.marginsRemoved(m_margins);
++
++    QRect targetRect;
++    // Y
++    if (m_anchors.testFlags({Qt::TopEdge, Qt::BottomEdge})) {
++        targetRect.setTop(screenRect.top());
++        targetRect.setBottom(screenRect.bottom());
++    } else {
++        targetRect.setHeight(m_window->height());
++        if (m_anchors.testFlag(Qt::TopEdge)) {
++            targetRect.moveTop(screenRect.top());
++        } else if (m_anchors.testFlag(Qt::BottomEdge)) {
++            targetRect.moveBottom(screenRect.bottom());
++        } else {
++            targetRect.moveCenter(QPoint(0, screenRect.center().y()));
++        }
++    }
++
++    // X
++    if (m_anchors.testFlags({Qt::LeftEdge, Qt::RightEdge})) {
++        targetRect.setLeft(screenRect.left());
++        targetRect.setRight(screenRect.right());
++    } else {
++        targetRect.setWidth(m_window->width());
++        if (m_anchors.testFlag(Qt::LeftEdge)) {
++            targetRect.moveLeft(screenRect.left());
++        } else if (m_anchors.testFlag(Qt::RightEdge)) {
++            targetRect.moveRight(screenRect.right());
++        } else {
++            targetRect.moveCenter(QPoint(screenRect.center().x(), targetRect.center().y()));
++        }
++    }
++
++    m_window->setGeometry(targetRect);
++}
++
++void X11WindowScreenRelativePositioner::handleScreenChanged()
++{
++    QScreen *newScreen = m_window->screen();
++    if (newScreen == m_screen) {
++        return;
++    }
++    if (m_screen) {
++        disconnect(m_screen, nullptr, this, nullptr);
++    }
++    m_screen = newScreen;
++    connect(newScreen, &QScreen::availableGeometryChanged, this, &X11WindowScreenRelativePositioner::polish);
++    polish();
++}
++
++#include "moc_x11windowscreenrelativepositioner.cpp"
+diff -ruN a/krunner/x11windowscreenrelativepositioner.h b/krunner/x11windowscreenrelativepositioner.h
+--- a/krunner/x11windowscreenrelativepositioner.h	1970-01-01 01:00:00.000000000 +0100
++++ b/krunner/x11windowscreenrelativepositioner.h	2026-09-08 12:57:37.000000000 +0200
+@@ -0,0 +1,59 @@
++/*
++    SPDX-FileCopyrightText: 2023 David Edmundson <davidedmundson@kde.org>
++
++    SPDX-License-Identifier: LGPL-2.0-or-later
++*/
++
++#ifndef X11WINDOWSCREENRELATIVEPOSITIONER_H
++#define X11WINDOWSCREENRELATIVEPOSITIONER_H
++
++#include <QMargins>
++#include <QObject>
++#include <QPointer>
++#include <QWindow>
++
++/**
++ * This class positions a window relative to screen edges, keeping the position
++ * in sync with screen and window size changes.
++ *
++ * Position changes will apply just before the next frame
++ *
++ */
++class X11WindowScreenRelativePositioner : public QObject
++{
++    Q_OBJECT
++public:
++    /**
++     * Construct a new X11WindowScreenRelativePositioner for the window
++     * The created object is parented to the window
++     */
++    explicit X11WindowScreenRelativePositioner(QWindow *window);
++
++    /**
++     * @brief setAnchors
++     * @param anchors
++     */
++    void setAnchors(Qt::Edges anchors);
++    void setMargins(const QMargins &margins);
++
++    bool eventFilter(QObject *watched, QEvent *event) override;
++
++Q_SIGNALS:
++    void anchorsChanged();
++    void marginsChanged();
++
++private:
++    void polish();
++    void updatePolish();
++    void reposition();
++    void handleScreenChanged();
++
++    Qt::Edges m_anchors;
++    QMargins m_margins;
++
++    bool m_needsRepositioning;
++    QWindow *m_window;
++    QPointer<QScreen> m_screen;
++};
++
++#endif // X11WINDOWSCREENRELATIVEPOSITIONER_H
+diff -ruN a/ksmserver/CMakeLists.txt b/ksmserver/CMakeLists.txt
+--- a/ksmserver/CMakeLists.txt	2026-10-08 13:24:14.000000000 +0200
++++ b/ksmserver/CMakeLists.txt	2026-10-18 18:57:00.367588811 +0200
+@@ -46,6 +46,7 @@
+     X11::X11
+     X11::SM
+     X11::ICE
++    XCB::XCB
+ )
+ 
+ install(TARGETS ksmserver ${KDE_INSTALL_TARGETS_DEFAULT_ARGS})
+diff -ruN a/ksmserver/main.cpp b/ksmserver/main.cpp
+--- a/ksmserver/main.cpp	2026-10-08 13:24:14.000000000 +0200
++++ b/ksmserver/main.cpp	2026-10-18 18:57:00.373296865 +0200
+@@ -29,6 +29,13 @@
+ #include <QCommandLineParser>
+ #include <QCoreApplication>
+ #include <QFile>
++#include <QSocketNotifier>
++
++#include <KSelectionOwner>
++
++#include <memory>
++
++#include <xcb/xcb.h>
+ 
+ void IoErrorHandler(IceConn iceConn)
+ {
+@@ -139,6 +146,36 @@
+ 
+     auto server = new KSMServer(flags);
+ 
++    // startplasma-x11's kcheckrunning looks up the _KDE_RUNNING selection.
++    // ksmserver is a QCoreApplication shared with the Wayland session, so it must
++    // not force the xcb QPA. On X11, claim the selection on a private connection
++    // and pump that connection's events into KSelectionOwner.
++    std::unique_ptr<KSelectionOwner> kdeRunning;
++    xcb_connection_t *selectionConn = nullptr;
++    std::unique_ptr<QSocketNotifier> selectionNotifier;
++    if (qEnvironmentVariable("XDG_SESSION_TYPE") != QLatin1String("wayland")) {
++        selectionConn = xcb_connect(nullptr, nullptr);
++        const xcb_setup_t *setup = selectionConn ? xcb_get_setup(selectionConn) : nullptr;
++        xcb_screen_t *screen = setup ? xcb_setup_roots_iterator(setup).data : nullptr;
++        if (selectionConn && !xcb_connection_has_error(selectionConn) && screen) {
++            kdeRunning = std::make_unique<KSelectionOwner>("_KDE_RUNNING", selectionConn, screen->root);
++            kdeRunning->claim(false);
++            xcb_flush(selectionConn);
++            selectionNotifier = std::make_unique<QSocketNotifier>(xcb_get_file_descriptor(selectionConn), QSocketNotifier::Read);
++            const auto drain = [selectionConn, owner = kdeRunning.get()] {
++                while (xcb_generic_event_t *event = xcb_poll_for_event(selectionConn)) {
++                    owner->filterEvent(event);
++                    free(event);
++                }
++            };
++            QObject::connect(selectionNotifier.get(), &QSocketNotifier::activated, server, drain);
++            drain();
++        } else if (selectionConn) {
++            xcb_disconnect(selectionConn);
++            selectionConn = nullptr;
++        }
++    }
++
+     IceSetIOErrorHandler(IoErrorHandler);
+ 
+     KConfigGroup config(KSharedConfig::openConfig(), QStringLiteral("General"));
+@@ -163,6 +200,11 @@
+     KDBusService service(KDBusService::Unique);
+ 
+     int ret = a->exec();
++    selectionNotifier.reset();
++    kdeRunning.reset();
++    if (selectionConn) {
++        xcb_disconnect(selectionConn);
++    }
+     delete a;
+     return ret;
+ }
+diff -ruN a/libklookandfeel/CMakeLists.txt b/libklookandfeel/CMakeLists.txt
+--- a/libklookandfeel/CMakeLists.txt	2026-10-08 13:24:14.000000000 +0200
++++ b/libklookandfeel/CMakeLists.txt	2026-10-18 18:58:58.454919779 +0200
+@@ -42,6 +42,9 @@
+         KF6::IconThemes
+         KF6::KIOGui
+ )
++if(HAVE_X11)
++    target_link_libraries(klookandfeel PRIVATE krdb)
++endif()
+ 
+ target_include_directories(klookandfeel
+     PUBLIC
+diff -ruN a/libklookandfeel/klookandfeelmanager.cpp b/libklookandfeel/klookandfeelmanager.cpp
+--- a/libklookandfeel/klookandfeelmanager.cpp	2026-10-08 13:24:14.000000000 +0200
++++ b/libklookandfeel/klookandfeelmanager.cpp	2026-10-18 18:58:58.461823609 +0200
+@@ -12,6 +12,10 @@
+ #include "klookandfeelmanager.h"
+ #include "../kcms/colors/colorsapplicator.h"
+ #include "../kcms/kcms-common_p.h"
++#include <config-X11.h>
++#if HAVE_X11
++#include "krdb.h"
++#endif
+ #include <KIO/CommandLauncherJob>
+ #include <KIconLoader>
+ #include <KPackage/PackageLoader>
+@@ -552,6 +556,11 @@
+         if (m_mode == Mode::Defaults) {
+             return;
+         }
++
++#if HAVE_X11
++        // Push the newly applied scheme to xrdb so X11 clients pick up colors and Xft settings.
++        runRdb(KRdbExportQtColors | KRdbExportGtkTheme | KRdbExportColors | KRdbExportQtSettings | KRdbExportXftSettings);
++#endif
+     }
+     // Reload KWin if something changed, but only once.
+     if (itemsToApply & KWinSettings) {
+diff -ruN a/libtaskmanager/CMakeLists.txt b/libtaskmanager/CMakeLists.txt
+--- a/libtaskmanager/CMakeLists.txt	2026-10-08 13:24:14.000000000 +0200
++++ b/libtaskmanager/CMakeLists.txt	2026-10-18 18:55:54.482050295 +0200
+@@ -24,6 +24,15 @@
+     screencastingrequest.cpp screencastingrequest.h
+ )
+ 
++if (HAVE_X11)
++    set(taskmanager_LIB_SRCS
++        ${taskmanager_LIB_SRCS}
++        xstartuptasksmodel.cpp
++        xwindowsystemeventbatcher.cpp xwindowsystemeventbatcher.h
++        xwindowtasksmodel.cpp
++    )
++endif()
++
+ add_library(taskmanager ${taskmanager_LIB_SRCS})
+ add_library(PW::LibTaskManager ALIAS taskmanager)
+ 
+@@ -72,6 +81,10 @@
+         PW::KWorkspace
+ )
+ 
++if (HAVE_X11)
++    target_link_libraries(taskmanager PRIVATE KF6::IconThemes X11::X11)
++endif()
++
+ set_target_properties(taskmanager PROPERTIES
+                       VERSION ${PROJECT_VERSION}
+                       SOVERSION 6
+@@ -111,6 +124,14 @@
+     DESTINATION ${KDE_INSTALL_INCLUDEDIR}/taskmanager COMPONENT Devel
+ )
+ 
++if (HAVE_X11)
++    install(FILES
++        xstartuptasksmodel.h
++        xwindowtasksmodel.h
++        DESTINATION ${KDE_INSTALL_INCLUDEDIR}/taskmanager COMPONENT Devel
++    )
++endif()
++
+ ecm_finalize_qml_module(taskmanager)
+ 
+ write_basic_config_version_file(${CMAKE_CURRENT_BINARY_DIR}/LibTaskManagerConfigVersion.cmake VERSION "${PROJECT_VERSION}" COMPATIBILITY AnyNewerVersion)
+diff -ruN a/libtaskmanager/autotests/CMakeLists.txt b/libtaskmanager/autotests/CMakeLists.txt
+--- a/libtaskmanager/autotests/CMakeLists.txt	2026-10-08 13:24:14.000000000 +0200
++++ b/libtaskmanager/autotests/CMakeLists.txt	2026-10-18 18:55:54.472208281 +0200
+@@ -19,3 +19,8 @@
+ 
+ add_test(NAME tasksmodeltest COMMAND dbus-run-session kwin_wayland --virtual --exit-with-session=$<TARGET_FILE:tasksmodeltest>)
+ set_tests_properties(tasksmodeltest PROPERTIES ENVIRONMENT KWIN_WAYLAND_NO_PERMISSION_CHECKS=1)
++
++if (WITH_X11)
++    # Require QX11Info to set window state
++    ecm_add_test(xwindowtasksmodeltest.cpp LINK_LIBRARIES taskmanager Qt::Test Qt::GuiPrivate XCB::XCB Plasma::Activities KF6::Service KF6::IconThemes KF6::WindowSystem)
++endif()
+diff -ruN a/libtaskmanager/autotests/xwindowtasksmodeltest.cpp b/libtaskmanager/autotests/xwindowtasksmodeltest.cpp
+--- a/libtaskmanager/autotests/xwindowtasksmodeltest.cpp	1970-01-01 01:00:00.000000000 +0100
++++ b/libtaskmanager/autotests/xwindowtasksmodeltest.cpp	2026-10-18 18:50:05.859015609 +0200
+@@ -0,0 +1,528 @@
++/*
++    SPDX-FileCopyrightText: 2022 Fushan Wen <qydwhotmail@gmail.com>
++
++    SPDX-License-Identifier: LGPL-2.1-only OR LGPL-3.0-only OR LicenseRef-KDE-Accepted-LGPL
++*/
++
++#include <array>
++
++#include <private/qtx11extras_p.h>
++
++#include <KWindowInfo>
++#include <PlasmaActivities/Consumer>
++
++#include <xcb/xcb.h>
++#include <xcb/xproto.h>
++
++#include "common.h"
++#include "xwindowtasksmodel.h"
++
++using namespace TaskManager;
++using MimeDataMap = QMap<QString, QByteArray>;
++
++class XWindowTasksModelTest : public QObject
++{
++    Q_OBJECT
++
++private Q_SLOTS:
++    void initTestCase();
++    void cleanupTestCase();
++
++    void test_winIdFromMimeData_data();
++    void test_winIdFromMimeData();
++    void test_winIdsFromMimeData_data();
++    void test_winIdsFromMimeData();
++
++    void test_openCloseWindow();
++    void test_modelData();
++    void test_isMinimized();
++    void test_fullscreen();
++    void test_geometry();
++    void test_stackingOrder();
++    void test_lastActivated();
++    void test_modelDataFromDesktopFile();
++    void test_windowState();
++
++    void test_request();
++
++private:
++    WId m_WId = 12345;
++    QByteArray m_singleWId;
++    QByteArray m_threeWIds;
++    QByteArray m_negativeCountWIds;
++    QByteArray m_insufficientWIds;
++
++    XWindowTasksModel m_model;
++};
++
++void XWindowTasksModelTest::initTestCase()
++{
++    TestUtils::initTestCase();
++    if (!KWindowSystem::isPlatformX11()) {
++        QSKIP("Test is not running on X11.");
++    }
++
++    char *singleWIdData = new char[sizeof(WId)];
++    memcpy(singleWIdData, &m_WId, sizeof(WId));
++    m_singleWId = QByteArray(singleWIdData, sizeof(WId));
++    delete[] singleWIdData;
++
++    constexpr int count = 3;
++    char *threeWIdsData = new char[sizeof(int) + sizeof(WId) * count];
++    memcpy(threeWIdsData, &count, sizeof(int));
++    for (int i = 0; i < count; ++i) {
++        memcpy(threeWIdsData + sizeof(int) + sizeof(WId) * i, &m_WId, sizeof(WId));
++    }
++    m_threeWIds = QByteArray(threeWIdsData, sizeof(int) + sizeof(WId) * count);
++    delete[] threeWIdsData;
++
++    constexpr int negativeCount = -count;
++    char *negativeWIdsData = new char[sizeof(int) + sizeof(WId) * count];
++    memcpy(negativeWIdsData, &negativeCount, sizeof(int));
++    for (int i = 0; i < count; ++i) {
++        memcpy(negativeWIdsData + sizeof(int) + sizeof(WId) * i, &m_WId, sizeof(WId));
++    }
++    m_negativeCountWIds = QByteArray(negativeWIdsData, sizeof(int) + sizeof(WId) * count);
++    delete[] negativeWIdsData;
++
++    constexpr int insufficientCount = count - 1;
++    char *insufficientWIdsData = new char[sizeof(int) + sizeof(WId) * insufficientCount];
++    memcpy(insufficientWIdsData, &count, sizeof(int));
++    for (int i = 0; i < insufficientCount; ++i) {
++        memcpy(insufficientWIdsData + sizeof(int) + sizeof(WId) * i, &m_WId, sizeof(WId));
++    }
++    m_insufficientWIds = QByteArray(insufficientWIdsData, sizeof(int) + sizeof(WId) * insufficientCount);
++    delete[] insufficientWIdsData;
++
++    QGuiApplication::setQuitOnLastWindowClosed(false);
++
++    QStandardPaths::setTestModeEnabled(true);
++
++    const QString applicationDir = QStandardPaths::writableLocation(QStandardPaths::GenericDataLocation) + QDir::separator() + QStringLiteral("applications");
++    QDir dir;
++    if (!dir.exists(applicationDir)) {
++        dir.mkpath(applicationDir);
++    }
++}
++
++void XWindowTasksModelTest::cleanupTestCase()
++{
++    TestUtils::cleanupTestCase();
++}
++
++void XWindowTasksModelTest::test_winIdFromMimeData_data()
++{
++    QTest::addColumn<QString>("mimeType");
++    QTest::addColumn<QByteArray>("data");
++    QTest::addColumn<bool>("isOK");
++
++    QTest::newRow("Valid WId") << QStringLiteral("windowsystem/winid") // XWindowTasksModel::Private::mimeType()
++                               << m_singleWId << true;
++    QTest::newRow("Invalid WId") << QStringLiteral("windowsystem/winid") << QByteArray("\x06") << false;
++    QTest::newRow("Invalid mimeType") << QStringLiteral("text/plain") << m_singleWId << false;
++}
++
++void XWindowTasksModelTest::test_winIdFromMimeData()
++{
++    QFETCH(QString, mimeType);
++    QFETCH(QByteArray, data);
++    QFETCH(bool, isOK);
++
++    QMimeData mimeData;
++    mimeData.setData(mimeType, data);
++    qDebug() << data << "data size:" << data.size();
++
++    bool ok = !isOK;
++    WId result = XWindowTasksModel::winIdFromMimeData(&mimeData, &ok);
++    QCOMPARE(ok, isOK);
++    if (isOK) {
++        QCOMPARE(result, m_WId);
++    }
++}
++
++void XWindowTasksModelTest::test_winIdsFromMimeData_data()
++{
++    QTest::addColumn<MimeDataMap>("mimeDataMap");
++    QTest::addColumn<bool>("isOK");
++    QTest::addColumn<int>("count");
++
++    // if (!mimeData->hasFormat(Private::groupMimeType()))
++    MimeDataMap data1;
++    data1.insert(QStringLiteral("windowsystem/winid"), m_singleWId);
++    QTest::newRow("Single WId") << data1 << true << data1.size();
++
++    MimeDataMap data2;
++    data2.insert(QStringLiteral("windowsystem/winid"), QByteArray("\x06"));
++    QTest::newRow("Invalid WId") << data2 << false << 0;
++
++    MimeDataMap data3;
++    data3.insert(QStringLiteral("windowsystem/multiple-winids"), m_threeWIds);
++    QTest::newRow("Three WIds") << data3 << true << 3;
++
++    // if ((unsigned int)data.size() < sizeof(int) + sizeof(WId))
++    MimeDataMap data4;
++    data4.insert(QStringLiteral("windowsystem/multiple-winids"), QByteArray("\x06"));
++    data4.insert(QStringLiteral("windowsystem/winid"), m_singleWId);
++    QTest::newRow("Invalid WIds") << data4 << false << 0;
++
++    // count < 1
++    MimeDataMap data5;
++    data5.insert(QStringLiteral("windowsystem/multiple-winids"), m_negativeCountWIds);
++    QTest::newRow("Negative count WIds") << data5 << false << 0;
++
++    // (unsigned int)data.size() < sizeof(int) + sizeof(WId) * count
++    MimeDataMap data6;
++    data6.insert(QStringLiteral("windowsystem/multiple-winids"), m_insufficientWIds);
++    QTest::newRow("Insufficient count WIds") << data6 << false << 0;
++}
++
++void XWindowTasksModelTest::test_winIdsFromMimeData()
++{
++    QFETCH(MimeDataMap, mimeDataMap);
++    QFETCH(bool, isOK);
++    QFETCH(int, count);
++
++    QMimeData mimeData;
++    for (auto it = mimeDataMap.cbegin(); it != mimeDataMap.cend(); it = std::next(it)) {
++        mimeData.setData(it.key(), it.value());
++    }
++
++    bool ok = !isOK;
++    auto results = XWindowTasksModel::winIdsFromMimeData(&mimeData, &ok);
++    QCOMPARE(ok, isOK);
++    QCOMPARE(results.size(), count);
++    if (count > 0) {
++        const bool verified = std::all_of(results.cbegin(), results.cend(), [this](WId id) {
++            return id == m_WId;
++        });
++        QVERIFY(verified);
++    }
++}
++
++void XWindowTasksModelTest::test_openCloseWindow()
++{
++    TestUtils::testOpenCloseWindow(m_model);
++}
++
++void XWindowTasksModelTest::test_modelData()
++{
++    const QString title = QStringLiteral("__testwindow__%1").arg(QDateTime::currentDateTime().toString());
++    QModelIndex index;
++    auto window = TestUtils::createSingleWindow(m_model, title, index);
++
++    // See XWindowTasksModel::data for available roles
++    { // BEGIN Icon
++        QSignalSpy dataChangedSpy(&m_model, &XWindowTasksModel::dataChanged);
++        qDebug() << "Start testing Qt::DecorationRole";
++        const QIcon oldWindowIcon = index.data(Qt::DecorationRole).value<QIcon>(); // X11 icon
++        QVERIFY(!oldWindowIcon.isNull());
++        window->setIcon(QIcon(QFINDTESTDATA("data/windows/samplewidgetwindow.png")));
++        QTRY_VERIFY(std::any_of(dataChangedSpy.cbegin(), dataChangedSpy.cend(), [](const QVariantList &content) {
++            return content.at(2).value<QList<int>>().contains(static_cast<int>(qToUnderlying(Qt::DecorationRole)));
++        })); // Cached
++
++        const QIcon newWindowIcon = index.data(Qt::DecorationRole).value<QIcon>();
++        QVERIFY(!newWindowIcon.isNull());
++        QVERIFY(oldWindowIcon.pixmap(KIconLoader::SizeLarge).toImage().pixelColor(KIconLoader::SizeLarge / 2, KIconLoader::SizeLarge / 2)
++                != newWindowIcon.pixmap(KIconLoader::SizeLarge).toImage().pixelColor(KIconLoader::SizeLarge / 2, KIconLoader::SizeLarge / 2));
++
++        dataChangedSpy.clear();
++        window->setIcon(QIcon());
++        QVERIFY(!dataChangedSpy.empty() || dataChangedSpy.wait());
++        QTRY_VERIFY(std::any_of(dataChangedSpy.cbegin(), dataChangedSpy.cend(), [](const QVariantList &content) {
++            return content.at(2).value<QList<int>>().contains(static_cast<int>(qToUnderlying(Qt::DecorationRole)));
++        }));
++    } // END Icon
++
++    const NET::Properties windowInfoFlags =
++        NET::WMState | NET::XAWMState | NET::WMDesktop | NET::WMVisibleName | NET::WMGeometry | NET::WMFrameExtents | NET::WMWindowType | NET::WMPid;
++    const NET::Properties2 windowInfoFlags2 = NET::WM2DesktopFileName | NET::WM2Activities | NET::WM2WindowClass | NET::WM2AllowedActions
++        | NET::WM2AppMenuObjectPath | NET::WM2AppMenuServiceName | NET::WM2GTKApplicationId;
++    KWindowInfo info(window->winId(), windowInfoFlags, windowInfoFlags2);
++
++    QTRY_COMPARE(index.data(AbstractTasksModel::AppId).toString(), QString::fromLocal8Bit(info.windowClassClass()));
++    QTRY_COMPARE(index.data(AbstractTasksModel::AppName).toString(), QString::fromLocal8Bit(info.windowClassClass()));
++    QTRY_COMPARE(index.data(AbstractTasksModel::GenericName).toString(), QString());
++    QTRY_VERIFY(index.data(AbstractTasksModel::LauncherUrl).toUrl().toLocalFile().endsWith(QString::fromLocal8Bit(info.windowClassClass())));
++    QTRY_VERIFY(index.data(AbstractTasksModel::LauncherUrlWithoutIcon).toUrl().toLocalFile().endsWith(QString::fromLocal8Bit(info.windowClassClass())));
++    QTRY_COMPARE(index.data(AbstractTasksModel::WinIdList).toList().size(), 1);
++    QTRY_COMPARE(index.data(AbstractTasksModel::MimeType).toString(), QStringLiteral("windowsystem/winid"));
++
++    {
++        QMimeData mimeData;
++        mimeData.setData(index.data(AbstractTasksModel::MimeType).toString(), index.data(AbstractTasksModel::MimeData).toByteArray());
++        bool ok = false;
++        XWindowTasksModel::winIdFromMimeData(&mimeData, &ok);
++        QVERIFY(ok);
++    }
++
++    QTRY_VERIFY(index.data(AbstractTasksModel::IsWindow).toBool());
++    QTRY_VERIFY(index.data(AbstractTasksModel::IsActive).toBool());
++
++    QTRY_VERIFY(index.data(AbstractTasksModel::IsClosable).toBool());
++    QTRY_VERIFY(index.data(AbstractTasksModel::IsMovable).toBool());
++    QTRY_VERIFY(index.data(AbstractTasksModel::IsResizable).toBool());
++    QTRY_VERIFY(index.data(AbstractTasksModel::IsMaximizable).toBool());
++    QTRY_VERIFY(!index.data(AbstractTasksModel::IsMaximized).toBool());
++    QTRY_VERIFY(index.data(AbstractTasksModel::IsMinimizable).toBool());
++    QTRY_VERIFY(!index.data(AbstractTasksModel::IsKeepAbove).toBool());
++    QTRY_VERIFY(!index.data(AbstractTasksModel::IsKeepBelow).toBool());
++    QTRY_VERIFY(index.data(AbstractTasksModel::IsFullScreenable).toBool());
++    QTRY_VERIFY(!index.data(AbstractTasksModel::IsFullScreen).toBool());
++    QTRY_VERIFY(index.data(AbstractTasksModel::IsVirtualDesktopsChangeable).toBool());
++    QTRY_VERIFY(!index.data(AbstractTasksModel::IsOnAllVirtualDesktops).toBool());
++
++    // Due to window decoration, the size of a window can't be determined accurately
++    const QRect screenGeometry = index.data(AbstractTasksModel::ScreenGeometry).toRect();
++    QVERIFY(screenGeometry.width() > 0 && screenGeometry.height() > 0);
++
++    KActivities::Consumer activityConsumer;
++    qDebug() << "Start testing AbstractTasksModel::Activities. Current activity number:" << activityConsumer.activities().size();
++    if (activityConsumer.activities().size() > 0) {
++        QCOMPARE(index.data(AbstractTasksModel::Activities).toStringList(), info.activities());
++    } else {
++        // In CI the window manager is openbox, so there could be no running activity.
++        QCOMPARE(index.data(AbstractTasksModel::Activities).toStringList().size(), 0);
++    }
++
++    QTRY_VERIFY(!index.data(AbstractTasksModel::IsDemandingAttention).toBool());
++    QTRY_VERIFY(!index.data(AbstractTasksModel::SkipTaskbar).toBool());
++    QTRY_VERIFY(!index.data(AbstractTasksModel::SkipPager).toBool());
++    QTRY_COMPARE(index.data(AbstractTasksModel::AppPid).toInt(), info.pid());
++
++    QVERIFY(index.data(AbstractTasksModel::CanLaunchNewInstance).toBool());
++}
++
++void XWindowTasksModelTest::test_isMinimized()
++{
++    const QString title = QStringLiteral("__testwindow__%1").arg(QDateTime::currentDateTime().toString());
++    QModelIndex index;
++    auto window = TestUtils::createSingleWindow(m_model, title, index);
++
++    QTRY_VERIFY(!index.data(AbstractTasksModel::IsMinimized).toBool());
++    QTRY_VERIFY(!index.data(AbstractTasksModel::IsHidden).toBool());
++
++    // Minimize the window
++    QSignalSpy dataChangedSpy(&m_model, &XWindowTasksModel::dataChanged);
++    window->showMinimized();
++    dataChangedSpy.wait();
++    // There can be more than one dataChanged signal being emitted due to caching
++    QTRY_VERIFY(std::any_of(dataChangedSpy.cbegin(), dataChangedSpy.cend(), [](const QVariantList &list) {
++        return list.at(2).value<QList<int>>().contains(AbstractTasksModel::IsMinimized);
++    }));
++    // The model doesn't notify data change stored under IsHidden role
++    QTRY_VERIFY(std::none_of(dataChangedSpy.cbegin(), dataChangedSpy.cend(), [](const QVariantList &list) {
++        return list.at(2).value<QList<int>>().contains(AbstractTasksModel::IsHidden);
++    }));
++    QTRY_VERIFY(std::any_of(dataChangedSpy.cbegin(), dataChangedSpy.cend(), [](const QVariantList &list) {
++        return list.at(2).value<QList<int>>().contains(AbstractTasksModel::IsActive);
++    }));
++    QTRY_VERIFY(index.data(AbstractTasksModel::IsMinimized).toBool());
++    QTRY_VERIFY(index.data(AbstractTasksModel::IsHidden).toBool());
++    QTRY_VERIFY(!index.data(AbstractTasksModel::IsActive).toBool());
++
++    // Restore the window
++    dataChangedSpy.clear();
++    window->showNormal();
++    window->raise();
++    window->requestActivate();
++    dataChangedSpy.wait();
++    QTRY_VERIFY(std::any_of(dataChangedSpy.cbegin(), dataChangedSpy.cend(), [](const QVariantList &list) {
++        return list.at(2).value<QList<int>>().contains(AbstractTasksModel::IsMinimized);
++    }));
++    QVERIFY(std::none_of(dataChangedSpy.cbegin(), dataChangedSpy.cend(), [](const QVariantList &list) {
++        return list.at(2).value<QList<int>>().contains(AbstractTasksModel::IsHidden);
++    }));
++    QTRY_VERIFY(std::any_of(dataChangedSpy.cbegin(), dataChangedSpy.cend(), [](const QVariantList &list) {
++        return list.at(2).value<QList<int>>().contains(AbstractTasksModel::IsActive);
++    }));
++    QTRY_VERIFY(!index.data(AbstractTasksModel::IsMinimized).toBool());
++    QTRY_VERIFY(!index.data(AbstractTasksModel::IsHidden).toBool());
++    QTRY_VERIFY(index.data(AbstractTasksModel::IsActive).toBool());
++}
++
++void XWindowTasksModelTest::test_fullscreen()
++{
++    TestUtils::testFullscreen(m_model);
++}
++
++void XWindowTasksModelTest::test_geometry()
++{
++    TestUtils::testGeometry(m_model);
++}
++
++void XWindowTasksModelTest::test_stackingOrder()
++{
++    TestUtils::testStackingOrder(m_model);
++}
++
++void XWindowTasksModelTest::test_lastActivated()
++// Re-activate the window to update the last activated time
++{
++    const QString title = QStringLiteral("__testwindow__%1").arg(QDateTime::currentDateTime().toString());
++    QModelIndex index;
++    auto window = TestUtils::createSingleWindow(m_model, title, index);
++
++    QSignalSpy dataChangedSpy(&m_model, &XWindowTasksModel::dataChanged);
++    window->showMinimized();
++    dataChangedSpy.wait();
++    QTRY_VERIFY(std::any_of(dataChangedSpy.cbegin(), dataChangedSpy.cend(), [](const QVariantList &list) {
++        return list.at(2).value<QList<int>>().contains(AbstractTasksModel::IsMinimized);
++    }));
++    QTRY_VERIFY(index.data(AbstractTasksModel::IsMinimized).toBool());
++
++    window->showNormal();
++    window->raise();
++    window->requestActivate();
++    const QDateTime lastActivatedDateTime = QDateTime::currentDateTime();
++    dataChangedSpy.wait();
++    // There can be more than one dataChanged signal being emitted due to caching
++    QTRY_VERIFY(!index.data(AbstractTasksModel::IsMinimized).toBool());
++    // The model doesn't notify data change stored under LastActivated role
++    QTRY_VERIFY(std::none_of(dataChangedSpy.cbegin(), dataChangedSpy.cend(), [](const QVariantList &list) {
++        return list.at(2).value<QList<int>>().contains(AbstractTasksModel::LastActivated);
++    }));
++    // Wait for LastActivated to be updated by the window manager
++    QTRY_VERIFY(!index.data(AbstractTasksModel::LastActivated).toDateTime().isNull());
++    qDebug() << lastActivatedDateTime.toMSecsSinceEpoch() << index.data(AbstractTasksModel::LastActivated).toDateTime().toMSecsSinceEpoch();
++    QVERIFY(std::abs(lastActivatedDateTime.toMSecsSinceEpoch() - index.data(AbstractTasksModel::LastActivated).toDateTime().toMSecsSinceEpoch()) < 1000);
++}
++
++void XWindowTasksModelTest::test_modelDataFromDesktopFile()
++{
++    TestUtils::testModelDataFromDesktopFile(m_model);
++}
++
++void XWindowTasksModelTest::test_windowState()
++{
++    QSignalSpy rowsInsertedSpy(&m_model, &XWindowTasksModel::rowsInserted);
++
++    const QString title = QStringLiteral("__testwindow__%1").arg(QDateTime::currentDateTime().toString());
++    QModelIndex index;
++    auto window = TestUtils::createSingleWindow(m_model, title, index);
++
++    QSignalSpy dataChangedSpy(&m_model, &XWindowTasksModel::dataChanged);
++
++    // NETWinInfo only allows a window manager set window states
++    std::array<std::string, 11> actions{
++        "_NET_WM_ACTION_MOVE",
++        "_NET_WM_ACTION_RESIZE",
++        "_NET_WM_ACTION_MINIMIZE",
++        "_NET_WM_ACTION_SHADE",
++        "_NET_WM_ACTION_STICK",
++        "_NET_WM_ACTION_MAXIMIZE_VERT",
++        "_NET_WM_ACTION_MAXIMIZE_HORZ",
++        "_NET_WM_ACTION_FULLSCREEN",
++        "_NET_WM_ACTION_CHANGE_DESKTOP",
++        "_NET_WM_ACTION_CLOSE",
++        "_NET_WM_ALLOWED_ACTIONS",
++    };
++    xcb_atom_t atoms[11];
++    {
++        xcb_intern_atom_cookie_t cookies[11];
++        for (std::size_t i = 0; i < actions.size(); ++i) {
++            cookies[i] = xcb_intern_atom(QX11Info::connection(), false, actions[i].size(), actions[i].c_str());
++        }
++        // Get the replies
++        for (std::size_t i = 0; i < actions.size(); ++i) {
++            xcb_intern_atom_reply_t *reply = xcb_intern_atom_reply(QX11Info::connection(), cookies[i], nullptr);
++            if (!reply) {
++                continue;
++            }
++            atoms[i] = reply->atom;
++            free(reply);
++        }
++        qDebug() << "XCB atom cached";
++    }
++
++    auto setAllowedActionsAndVerify = [&](AbstractTasksModel::AdditionalRoles role, NET::Actions allowedActions, bool &success) {
++        qDebug() << "Start testing" << role;
++        success = false;
++        dataChangedSpy.clear();
++        QVERIFY(index.data(role).toBool());
++
++        uint32_t data[50];
++        int count = 0;
++        if (allowedActions & NET::ActionMove) {
++            data[count++] = atoms[0];
++        }
++        if (allowedActions & NET::ActionResize) {
++            data[count++] = atoms[1];
++        }
++        if (allowedActions & NET::ActionMinimize) {
++            data[count++] = atoms[2];
++        }
++        if (allowedActions & NET::ActionShade) {
++            data[count++] = atoms[3];
++        }
++        if (allowedActions & NET::ActionStick) {
++            data[count++] = atoms[4];
++        }
++        if (allowedActions & NET::ActionMaxVert) {
++            data[count++] = atoms[5];
++        }
++        if (allowedActions & NET::ActionMaxHoriz) {
++            data[count++] = atoms[6];
++        }
++        if (allowedActions & NET::ActionFullScreen) {
++            data[count++] = atoms[7];
++        }
++        if (allowedActions & NET::ActionChangeDesktop) {
++            data[count++] = atoms[8];
++        }
++        if (allowedActions & NET::ActionClose) {
++            data[count++] = atoms[9];
++        }
++
++        xcb_change_property(QX11Info::connection(), XCB_PROP_MODE_REPLACE, window->winId(), atoms[10], XCB_ATOM_ATOM, 32, count, (const void *)data);
++        xcb_flush(QX11Info::connection());
++        QCoreApplication::processEvents();
++
++        QTRY_VERIFY(std::any_of(dataChangedSpy.cbegin(), dataChangedSpy.cend(), [role](const QVariantList &list) {
++            return list.at(2).value<QList<int>>().contains(role);
++        }));
++        QVERIFY(!index.data(role).toBool());
++        success = true;
++    };
++
++    bool success = false;
++    const auto fullFlags = NET::ActionMove | NET::ActionResize | NET::ActionMinimize | NET::ActionShade | NET::ActionStick | NET::ActionMaxVert
++        | NET::ActionMaxHoriz | NET::ActionFullScreen | NET::ActionChangeDesktop | NET::ActionClose;
++
++    // Make the window not movable
++    setAllowedActionsAndVerify(AbstractTasksModel::IsMovable, fullFlags & (~NET::ActionMove), success);
++    QVERIFY(success);
++
++    // Make the window not resizable
++    setAllowedActionsAndVerify(AbstractTasksModel::IsResizable, fullFlags & (~NET::ActionResize), success);
++    QVERIFY(success);
++
++    // Make the window not maximizable
++    setAllowedActionsAndVerify(AbstractTasksModel::IsMaximizable, fullFlags & (~NET::ActionMax), success);
++    QVERIFY(success);
++
++    // Make the window not minimizable
++    setAllowedActionsAndVerify(AbstractTasksModel::IsMinimizable, fullFlags & (~NET::ActionMinimize), success);
++    QVERIFY(success);
++
++    // Make the window not fullscreenable
++    setAllowedActionsAndVerify(AbstractTasksModel::IsFullScreenable, fullFlags & (~NET::ActionFullScreen), success);
++    QVERIFY(success);
++
++    // Make the window not able to change virtual desktop
++    setAllowedActionsAndVerify(AbstractTasksModel::IsVirtualDesktopsChangeable, fullFlags & (~NET::ActionChangeDesktop), success);
++    QVERIFY(success);
++
++    // Make the window not closable
++    setAllowedActionsAndVerify(AbstractTasksModel::IsClosable, fullFlags & (~NET::ActionClose), success);
++    QVERIFY(success);
++}
++
++void XWindowTasksModelTest::test_request()
++{
++    TestUtils::testRequest(m_model);
++}
++
++QTEST_MAIN(XWindowTasksModelTest)
++
++#include "xwindowtasksmodeltest.moc"
+diff -ruN a/libtaskmanager/startuptasksmodel.cpp b/libtaskmanager/startuptasksmodel.cpp
+--- a/libtaskmanager/startuptasksmodel.cpp	2026-10-08 13:24:14.000000000 +0200
++++ b/libtaskmanager/startuptasksmodel.cpp	2026-10-18 18:55:54.475640771 +0200
+@@ -10,6 +10,9 @@
+ #include <config-X11.h>
+ 
+ #include "waylandstartuptasksmodel.h"
++#if HAVE_X11
++#include "xstartuptasksmodel.h"
++#endif
+ 
+ #include <KWindowSystem>
+ 
+@@ -50,10 +53,16 @@
+ 
+ void StartupTasksModel::Private::initSourceTasksModel()
+ {
+-    if (!sourceTasksModel) {
++    if (!sourceTasksModel && KWindowSystem::isPlatformWayland()) {
+         sourceTasksModel = new WaylandStartupTasksModel();
+     }
+ 
++#if HAVE_X11
++    if (!sourceTasksModel && KWindowSystem::isPlatformX11()) {
++        sourceTasksModel = new XStartupTasksModel();
++    }
++#endif
++
+     q->setSourceModel(sourceTasksModel);
+ }
+ 
+diff -ruN a/libtaskmanager/taskfilterproxymodel.cpp b/libtaskmanager/taskfilterproxymodel.cpp
+--- a/libtaskmanager/taskfilterproxymodel.cpp	2026-10-08 13:24:14.000000000 +0200
++++ b/libtaskmanager/taskfilterproxymodel.cpp	2026-10-18 18:56:13.285591452 +0200
+@@ -11,10 +11,16 @@
+ 
+ #include "launchertasksmodel_p.h"
+ 
++#include "config-X11.h"
++
+ #include <QGuiApplication>
+ #include <QScreen>
+ #include <memory>
+ 
++#if HAVE_X11
++#include <KWindowSystem>
++#endif
++
+ namespace TaskManager
+ {
+ class Q_DECL_HIDDEN TaskFilterProxyModel::Private
+@@ -454,6 +460,19 @@
+         QRect windowGeometry = sourceIdx.data(AbstractTasksModel::Geometry).toRect();
+ 
+         QRect regionGeometry = d->regionGeometry;
++#if HAVE_X11
++        if (static const bool isX11 = KWindowSystem::isPlatformX11(); isX11 && windowGeometry.isValid()) {
++            // On X11, in regionGeometry, the original point of the topLeft position belongs to the device coordinate system
++            // but the size belongs to the logical coordinate system (which means the reported size is already divided by DPR)
++            // Converting regionGeometry to device coordinate system is better than converting windowGeometry to logical
++            // coordinate system because the window may span multiple screens, while the region is always on one screen.
++            const double devicePixelRatio = qGuiApp->devicePixelRatio();
++            const QPoint screenTopLeft = d->screenGeometry.topLeft();
++            const QPoint regionTopLeft =
++                screenTopLeft + QPoint(regionGeometry.x() - screenTopLeft.x(), regionGeometry.y() - screenTopLeft.y()) * devicePixelRatio;
++            regionGeometry = QRect(regionTopLeft, regionGeometry.size() * devicePixelRatio);
++        }
++#endif
+         switch (d->filterByRegion) {
+         case RegionFilterMode::Mode::Inside: {
+             if (!regionGeometry.contains(windowGeometry)) {
+diff -ruN a/libtaskmanager/virtualdesktopinfo.cpp b/libtaskmanager/virtualdesktopinfo.cpp
+--- a/libtaskmanager/virtualdesktopinfo.cpp	2026-10-08 13:24:14.000000000 +0200
++++ b/libtaskmanager/virtualdesktopinfo.cpp	2026-10-18 18:56:13.288835570 +0200
+@@ -22,6 +22,12 @@
+ #include <QWaylandClientExtension>
+ #include <algorithm>
+ 
++#include <config-X11.h>
++
++#if HAVE_X11
++#include <netwm.h>
++#endif
++
+ namespace X11Info
+ {
+ [[nodiscard]] inline auto connection()
+@@ -206,6 +212,151 @@
+     }
+ };
+ 
++#if HAVE_X11
++class Q_DECL_HIDDEN VirtualDesktopInfo::XWindowPrivate : public VirtualDesktopInfo::Private
++{
++    Q_OBJECT
++public:
++    XWindowPrivate();
++
++    void init() override;
++    QVariant currentDesktop() const override;
++    QVariant currentDesktopByScreenName(const QString &screeName) const override;
++    int numberOfDesktops() const override;
++    QVariantList desktopIds() const override;
++    QStringList desktopNames() const override;
++    quint32 position(const QVariant &desktop) const override;
++    int desktopLayoutRows() const override;
++    void requestActivate(const QVariant &desktop) override;
++    void requestActivateOnScreen(const QVariant &desktop, const QString &screenName) override;
++    void requestCreateDesktop(quint32 position) override;
++    void requestRemoveDesktop(quint32 position) override;
++};
++
++VirtualDesktopInfo::XWindowPrivate::XWindowPrivate()
++    : VirtualDesktopInfo::Private()
++{
++    init();
++}
++
++void VirtualDesktopInfo::XWindowPrivate::init()
++{
++    connect(KX11Extras::self(), &KX11Extras::currentDesktopChanged, this, [this]() {
++        for (auto screen : qGuiApp->screens()) {
++            Q_EMIT currentDesktopForScreenChanged(screen->name());
++        }
++
++        Q_EMIT currentDesktopChanged();
++    });
++
++    connect(KX11Extras::self(), &KX11Extras::numberOfDesktopsChanged, this, &VirtualDesktopInfo::XWindowPrivate::numberOfDesktopsChanged);
++
++    connect(KX11Extras::self(), &KX11Extras::desktopNamesChanged, this, &VirtualDesktopInfo::XWindowPrivate::desktopNamesChanged);
++
++    QDBusConnection dbus = QDBusConnection::sessionBus();
++    dbus.connect(QString(),
++                 QStringLiteral("/VirtualDesktopManager"),
++                 QStringLiteral("org.kde.KWin.VirtualDesktopManager"),
++                 QStringLiteral("rowsChanged"),
++                 this,
++                 SIGNAL(desktopLayoutRowsChanged()));
++}
++
++QVariant VirtualDesktopInfo::XWindowPrivate::currentDesktop() const
++{
++    return KX11Extras::currentDesktop();
++}
++
++QVariant VirtualDesktopInfo::XWindowPrivate::currentDesktopByScreenName(const QString &) const
++{
++    // Per-screen virtual desktops are not supported on X11.
++    return currentDesktop();
++}
++
++int VirtualDesktopInfo::XWindowPrivate::numberOfDesktops() const
++{
++    return KX11Extras::numberOfDesktops();
++}
++
++QVariantList VirtualDesktopInfo::XWindowPrivate::desktopIds() const
++{
++    QVariantList ids;
++
++    for (int i = 1; i <= KX11Extras::numberOfDesktops(); ++i) {
++        ids << i;
++    }
++
++    return ids;
++}
++
++QStringList VirtualDesktopInfo::XWindowPrivate::desktopNames() const
++{
++    QStringList names;
++
++    // Virtual desktop numbers start at 1.
++    for (int i = 1; i <= KX11Extras::numberOfDesktops(); ++i) {
++        names << KX11Extras::desktopName(i);
++    }
++
++    return names;
++}
++
++quint32 VirtualDesktopInfo::XWindowPrivate::position(const QVariant &desktop) const
++{
++    bool ok = false;
++
++    const quint32 desktopNumber = desktop.toUInt(&ok);
++
++    if (!ok) {
++        return -1;
++    }
++
++    return desktopNumber;
++}
++
++int VirtualDesktopInfo::XWindowPrivate::desktopLayoutRows() const
++{
++    const NETRootInfo info(X11Info::connection(), NET::NumberOfDesktops | NET::DesktopNames, NET::WM2DesktopLayout);
++    return info.desktopLayoutColumnsRows().height();
++}
++
++void VirtualDesktopInfo::XWindowPrivate::requestActivate(const QVariant &desktop)
++{
++    bool ok = false;
++    const int desktopNumber = desktop.toInt(&ok);
++
++    // Virtual desktop numbers start at 1.
++    if (ok && desktopNumber > 0 && desktopNumber <= KX11Extras::numberOfDesktops()) {
++        KX11Extras::setCurrentDesktop(desktopNumber);
++    }
++}
++
++void VirtualDesktopInfo::XWindowPrivate::requestActivateOnScreen(const QVariant &desktop, const QString &)
++{
++    // Per-screen virtual desktops are not supported on X11.
++    requestActivate(desktop);
++}
++
++void VirtualDesktopInfo::XWindowPrivate::requestCreateDesktop(quint32 position)
++{
++    Q_UNUSED(position)
++
++    NETRootInfo info(X11Info::connection(), NET::NumberOfDesktops);
++    info.setNumberOfDesktops(info.numberOfDesktops() + 1);
++}
++
++void VirtualDesktopInfo::XWindowPrivate::requestRemoveDesktop(quint32 position)
++{
++    Q_UNUSED(position)
++
++    NETRootInfo info(X11Info::connection(), NET::NumberOfDesktops);
++
++    if (info.numberOfDesktops() > 1) {
++        info.setNumberOfDesktops(info.numberOfDesktops() - 1);
++    }
++}
++#endif // HAVE_X11
++
+ class Q_DECL_HIDDEN VirtualDesktopInfo::WaylandPrivate : public VirtualDesktopInfo::Private
+ {
+     Q_OBJECT
+@@ -470,7 +621,14 @@
+     : QObject(parent)
+ {
+     if (!d) {
+-        d = new VirtualDesktopInfo::WaylandPrivate;
++#if HAVE_X11
++        if (KWindowSystem::isPlatformX11()) {
++            d = new VirtualDesktopInfo::XWindowPrivate;
++        } else
++#endif
++        {
++            d = new VirtualDesktopInfo::WaylandPrivate;
++        }
+     } else {
+         ++d->refCount;
+     }
+diff -ruN a/libtaskmanager/windowtasksmodel.cpp b/libtaskmanager/windowtasksmodel.cpp
+--- a/libtaskmanager/windowtasksmodel.cpp	2026-10-08 13:24:14.000000000 +0200
++++ b/libtaskmanager/windowtasksmodel.cpp	2026-10-18 18:55:54.475640771 +0200
+@@ -9,6 +9,9 @@
+ #include <config-X11.h>
+ 
+ #include "waylandtasksmodel.h"
++#if HAVE_X11
++#include "xwindowtasksmodel.h"
++#endif
+ 
+ #include <KWindowSystem>
+ 
+@@ -49,10 +52,16 @@
+ 
+ void WindowTasksModel::Private::initSourceTasksModel()
+ {
+-    if (!sourceTasksModel) {
++    if (!sourceTasksModel && KWindowSystem::isPlatformWayland()) {
+         sourceTasksModel = new WaylandTasksModel();
+     }
+ 
++#if HAVE_X11
++    if (!sourceTasksModel && KWindowSystem::isPlatformX11()) {
++        sourceTasksModel = new XWindowTasksModel();
++    }
++#endif
++
+     q->setSourceModel(sourceTasksModel);
+ }
+ 
+diff -ruN a/libtaskmanager/xstartuptasksmodel.cpp b/libtaskmanager/xstartuptasksmodel.cpp
+--- a/libtaskmanager/xstartuptasksmodel.cpp	1970-01-01 01:00:00.000000000 +0100
++++ b/libtaskmanager/xstartuptasksmodel.cpp	2026-09-08 12:57:37.000000000 +0200
+@@ -0,0 +1,271 @@
++/*
++    SPDX-FileCopyrightText: 2016 Eike Hein <hein@kde.org>
++
++    SPDX-License-Identifier: LGPL-2.1-only OR LGPL-3.0-only OR LicenseRef-KDE-Accepted-LGPL
++*/
++
++#include "xstartuptasksmodel.h"
++
++#include <KApplicationTrader>
++#include <KConfig>
++#include <KConfigGroup>
++#include <KDirWatch>
++#include <KService>
++#include <KStartupInfo>
++
++#include <QIcon>
++#include <QTimer>
++#include <QUrl>
++
++using namespace Qt::StringLiterals;
++
++namespace TaskManager
++{
++class Q_DECL_HIDDEN XStartupTasksModel::Private
++{
++public:
++    Private(XStartupTasksModel *q);
++    KDirWatch *configWatcher = nullptr;
++    KStartupInfo *startupInfo = nullptr;
++    QList<KStartupInfoId> startups;
++    QHash<QByteArray, KStartupInfoData> startupData;
++    QHash<QByteArray, QUrl> launcherUrls;
++
++    void init();
++    void loadConfig();
++    QUrl launcherUrl(const KStartupInfoData &data);
++
++private:
++    XStartupTasksModel *const q;
++};
++
++XStartupTasksModel::Private::Private(XStartupTasksModel *q)
++    : q(q)
++{
++}
++
++void XStartupTasksModel::Private::init()
++{
++    configWatcher = new KDirWatch(q);
++    configWatcher->addFile(QStandardPaths::writableLocation(QStandardPaths::GenericConfigLocation) + QLatin1String("/klaunchrc"));
++
++    QObject::connect(configWatcher, &KDirWatch::dirty, [this] {
++        loadConfig();
++    });
++    QObject::connect(configWatcher, &KDirWatch::created, [this] {
++        loadConfig();
++    });
++    QObject::connect(configWatcher, &KDirWatch::deleted, [this] {
++        loadConfig();
++    });
++
++    loadConfig();
++}
++
++void XStartupTasksModel::Private::loadConfig()
++{
++    const KConfig _c(u"klaunchrc"_s);
++    KConfigGroup c(&_c, u"FeedbackStyle"_s);
++
++    if (!c.readEntry("TaskbarButton", true)) {
++        delete std::exchange(startupInfo, nullptr);
++
++        q->beginResetModel();
++        startups.clear();
++        startupData.clear();
++        q->endResetModel();
++
++        return;
++    }
++
++    if (!startupInfo) {
++        startupInfo = new KStartupInfo(KStartupInfo::CleanOnCantDetect, q);
++
++        QObject::connect(startupInfo, &KStartupInfo::gotNewStartup, q, [this](const KStartupInfoId &id, const KStartupInfoData &data) {
++            if (startups.contains(id)) {
++                return;
++            }
++
++            const QString appId = data.applicationId();
++            const QString bin = data.bin();
++
++            for (const KStartupInfoData &known : std::as_const(startupData)) {
++                // Reject if we already have a startup notification for this app.
++                if (known.applicationId() == appId && known.bin() == bin) {
++                    return;
++                }
++            }
++
++            const int count = startups.count();
++            q->beginInsertRows(QModelIndex(), count, count);
++            startups.append(id);
++            startupData.insert(id.id(), data);
++            launcherUrls.insert(id.id(), launcherUrl(data));
++            q->endInsertRows();
++        });
++
++        QObject::connect(startupInfo, &KStartupInfo::gotRemoveStartup, q, [this](const KStartupInfoId &id) {
++            // The order in which startups are cancelled and corresponding
++            // windows appear is not reliable. Add some grace time to make
++            // an overlap more likely, giving a proxy some time to arbitrate
++            // between the two.
++            QTimer::singleShot(500, q, [this, id]() {
++                const int row = startups.indexOf(id);
++
++                if (row != -1) {
++                    q->beginRemoveRows(QModelIndex(), row, row);
++                    startups.removeAt(row);
++                    startupData.remove(id.id());
++                    launcherUrls.remove(id.id());
++                    q->endRemoveRows();
++                }
++            });
++        });
++
++        QObject::connect(startupInfo, &KStartupInfo::gotStartupChange, q, [this](const KStartupInfoId &id, const KStartupInfoData &data) {
++            const int row = startups.indexOf(id);
++            if (row != -1) {
++                startupData.insert(id.id(), data);
++                launcherUrls.insert(id.id(), launcherUrl(data));
++                QModelIndex idx = q->index(row);
++                Q_EMIT q->dataChanged(idx, idx);
++            }
++        });
++    }
++
++    c = KConfigGroup(&_c, u"TaskbarButtonSettings"_s);
++    startupInfo->setTimeout(c.readEntry("Timeout", 5));
++}
++
++QUrl XStartupTasksModel::Private::launcherUrl(const KStartupInfoData &data)
++{
++    QUrl launcherUrl;
++    KService::List services;
++
++    QString appId = data.applicationId();
++
++    // Try to match via desktop filename ...
++    if (!appId.isEmpty() && appId.endsWith(QLatin1String(".desktop"))) {
++        if (appId.startsWith(QLatin1Char('/'))) {
++            // Even if we have an absolute path, try resolving to a service first (Bug 385594)
++            KService::Ptr service = KService::serviceByDesktopPath(appId);
++            if (!service) { // No luck, just return it verbatim
++                launcherUrl = QUrl::fromLocalFile(appId);
++                return launcherUrl;
++            }
++
++            // Fall-through to menuId() handling below
++            services = {service};
++        } else {
++            // turn into KService desktop entry name
++            appId.chop(strlen(".desktop"));
++
++            services = KApplicationTrader::query([&appId](const KService::Ptr &service) {
++                return service->desktopEntryName().compare(appId, Qt::CaseInsensitive) == 0;
++            });
++        }
++    }
++
++    const QString wmClass = QString::fromLocal8Bit(data.WMClass());
++
++    // Try StartupWMClass.
++    if (services.empty() && !wmClass.isEmpty()) {
++        services = KApplicationTrader::query([&wmClass](const KService::Ptr &service) {
++            return service->property<QString>(QStringLiteral("StartupWMClass")).compare(wmClass, Qt::CaseInsensitive) == 0;
++        });
++    }
++
++    const QString name = data.findName();
++
++    // Try via name ...
++    if (services.empty() && !name.isEmpty()) {
++        services = KApplicationTrader::query([&name](const KService::Ptr &service) {
++            return service->name().compare(name, Qt::CaseInsensitive) == 0;
++        });
++    }
++
++    if (!services.empty()) {
++        const QString &menuId = services.at(0)->menuId();
++
++        // applications: URLs are used to refer to applications by their KService::menuId
++        // (i.e. .desktop file name) rather than the absolute path to a .desktop file.
++        if (!menuId.isEmpty()) {
++            return QUrl(QString(u"applications:" + menuId));
++        }
++
++        QString path = services.at(0)->entryPath();
++
++        if (path.isEmpty()) {
++            path = services.at(0)->exec();
++        }
++
++        if (!path.isEmpty()) {
++            launcherUrl = QUrl::fromLocalFile(path);
++        }
++    }
++
++    return launcherUrl;
++}
++
++XStartupTasksModel::XStartupTasksModel(QObject *parent)
++    : AbstractTasksModel(parent)
++    , d(new Private(this))
++{
++    d->init();
++}
++
++XStartupTasksModel::~XStartupTasksModel() = default;
++
++QVariant XStartupTasksModel::data(const QModelIndex &index, int role) const
++{
++    if (!index.isValid() || index.row() >= d->startups.count()) {
++        return {};
++    }
++
++    const QByteArray &id = d->startups.at(index.row()).id();
++
++    if (!d->startupData.contains(id)) {
++        return {};
++    }
++
++    const KStartupInfoData &data = d->startupData.value(id);
++
++    if (role == Qt::DisplayRole) {
++        return data.findName();
++    } else if (role == Qt::DecorationRole) {
++        return QIcon::fromTheme(data.findIcon(), QIcon::fromTheme(QLatin1String("unknown")));
++    } else if (role == AppId) {
++        QString idFromPath = QUrl::fromLocalFile(data.applicationId()).fileName();
++
++        if (idFromPath.endsWith(QLatin1String(".desktop"))) {
++            idFromPath = idFromPath.left(idFromPath.length() - 8);
++        }
++
++        return idFromPath;
++    } else if (role == AppName) {
++        return data.findName();
++    } else if (role == LauncherUrl || role == LauncherUrlWithoutIcon) {
++        return d->launcherUrls.value(id);
++    } else if (role == IsStartup) {
++        return true;
++    } else if (role == IsVirtualDesktopsChangeable) {
++        return false;
++    } else if (role == VirtualDesktops) {
++        return QVariantList() << QVariant(data.desktop());
++    } else if (role == IsOnAllVirtualDesktops) {
++        return (data.desktop() == 0);
++    } else if (role == CanLaunchNewInstance) {
++        return false;
++    }
++
++    return AbstractTasksModel::data(index, role);
++}
++
++int XStartupTasksModel::rowCount(const QModelIndex &parent) const
++{
++    return parent.isValid() ? 0 : d->startups.count();
++}
++
++} // namespace TaskManager
++
++#include "moc_xstartuptasksmodel.cpp"
+diff -ruN a/libtaskmanager/xstartuptasksmodel.h b/libtaskmanager/xstartuptasksmodel.h
+--- a/libtaskmanager/xstartuptasksmodel.h	1970-01-01 01:00:00.000000000 +0100
++++ b/libtaskmanager/xstartuptasksmodel.h	2026-09-08 12:57:37.000000000 +0200
+@@ -0,0 +1,31 @@
++/*
++    SPDX-FileCopyrightText: 2016 Eike Hein <hein@kde.org>
++
++    SPDX-License-Identifier: LGPL-2.1-only OR LGPL-3.0-only OR LicenseRef-KDE-Accepted-LGPL
++*/
++
++#pragma once
++
++#include <memory>
++
++#include "abstracttasksmodel.h"
++
++namespace TaskManager
++{
++class TASKMANAGER_EXPORT XStartupTasksModel : public AbstractTasksModel
++{
++    Q_OBJECT
++
++public:
++    explicit XStartupTasksModel(QObject *parent = nullptr);
++    ~XStartupTasksModel() override;
++
++    QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const override;
++    int rowCount(const QModelIndex &parent = QModelIndex()) const override;
++
++private:
++    class Private;
++    std::unique_ptr<Private> d;
++};
++
++} // namespace TaskManager
+diff -ruN a/libtaskmanager/xwindowsystemeventbatcher.cpp b/libtaskmanager/xwindowsystemeventbatcher.cpp
+--- a/libtaskmanager/xwindowsystemeventbatcher.cpp	1970-01-01 01:00:00.000000000 +0100
++++ b/libtaskmanager/xwindowsystemeventbatcher.cpp	2026-09-08 12:57:37.000000000 +0200
+@@ -0,0 +1,64 @@
++/*
++    SPDX-FileCopyrightText: 2017 David Edmundson <davidedmundson@kde.org>
++
++    SPDX-License-Identifier: LGPL-2.1-only OR LGPL-3.0-only OR LicenseRef-KDE-Accepted-LGPL
++*/
++
++#include "xwindowsystemeventbatcher.h"
++
++#include <QDebug>
++#include <QTimerEvent>
++
++#include <KX11Extras>
++
++#define BATCH_TIME 10
++
++static const NET::Properties s_cachableProperties = NET::WMName | NET::WMVisibleName | NET::WMIcon;
++static const NET::Properties2 s_cachableProperties2 = NET::WM2UserTime;
++
++XWindowSystemEventBatcher::XWindowSystemEventBatcher(QObject *parent)
++    : QObject(parent)
++{
++    connect(KX11Extras::self(), &KX11Extras::windowAdded, this, &XWindowSystemEventBatcher::windowAdded);
++
++    // remove our cache entries when we lose a window, otherwise we might fire change signals after a window is destroyed which wouldn't make sense
++    connect(KX11Extras::self(), &KX11Extras::windowRemoved, this, [this](WId wid) {
++        m_cache.remove(wid);
++        Q_EMIT windowRemoved(wid);
++    });
++
++    QObject::connect(KX11Extras::self(), &KX11Extras::windowChanged, this, [this](WId window, NET::Properties properties, NET::Properties2 properties2) {
++        // if properties contained only cacheable flags
++        if ((properties | s_cachableProperties) == s_cachableProperties && (properties2 | s_cachableProperties2) == s_cachableProperties2) {
++            m_cache[window].properties |= properties;
++            m_cache[window].properties2 |= properties2;
++            if (!m_timerId) {
++                m_timerId = startTimer(BATCH_TIME);
++            }
++        } else {
++            // submit all caches along with any real updates
++            auto it = m_cache.constFind(window);
++            if (it != m_cache.constEnd()) {
++                properties |= it->properties;
++                properties2 |= it->properties2;
++                m_cache.erase(it);
++            }
++            Q_EMIT windowChanged(window, properties, properties2);
++        }
++    });
++}
++
++void XWindowSystemEventBatcher::timerEvent(QTimerEvent *event)
++{
++    if (event->timerId() != m_timerId) {
++        return;
++    }
++    for (auto it = m_cache.constBegin(); it != m_cache.constEnd(); it++) {
++        Q_EMIT windowChanged(it.key(), it.value().properties, it.value().properties2);
++    };
++    m_cache.clear();
++    killTimer(m_timerId);
++    m_timerId = 0;
++}
++
++#include "moc_xwindowsystemeventbatcher.cpp"
+diff -ruN a/libtaskmanager/xwindowsystemeventbatcher.h b/libtaskmanager/xwindowsystemeventbatcher.h
+--- a/libtaskmanager/xwindowsystemeventbatcher.h	1970-01-01 01:00:00.000000000 +0100
++++ b/libtaskmanager/xwindowsystemeventbatcher.h	2026-09-08 12:57:37.000000000 +0200
+@@ -0,0 +1,38 @@
++/*
++    SPDX-FileCopyrightText: 2017 David Edmundson <davidedmundson@kde.org>
++
++    SPDX-License-Identifier: LGPL-2.1-only OR LGPL-3.0-only OR LicenseRef-KDE-Accepted-LGPL
++*/
++
++#pragma once
++
++#include <QObject>
++
++#include <KWindowSystem>
++#include <QHash>
++#include <netwm_def.h>
++
++/*
++ * Relay class for KWindowSystem events that batches updates
++ */
++class XWindowSystemEventBatcher : public QObject
++{
++    Q_OBJECT
++public:
++    XWindowSystemEventBatcher(QObject *parent);
++Q_SIGNALS:
++    void windowAdded(WId window);
++    void windowRemoved(WId window);
++    void windowChanged(WId window, NET::Properties properties, NET::Properties2 properties2);
++
++protected:
++    void timerEvent(QTimerEvent *event) override;
++
++private:
++    struct AllProps {
++        NET::Properties properties = {};
++        NET::Properties2 properties2 = {};
++    };
++    QHash<WId, AllProps> m_cache;
++    int m_timerId = 0;
++};
+diff -ruN a/libtaskmanager/xwindowtasksmodel.cpp b/libtaskmanager/xwindowtasksmodel.cpp
+--- a/libtaskmanager/xwindowtasksmodel.cpp	1970-01-01 01:00:00.000000000 +0100
++++ b/libtaskmanager/xwindowtasksmodel.cpp	2026-10-18 18:50:05.858918888 +0200
+@@ -0,0 +1,1129 @@
++/*
++    SPDX-FileCopyrightText: 2016 Eike Hein <hein@kde.org>
++    SPDX-FileCopyrightText: 2008 Aaron J. Seigo <aseigo@kde.org>
++
++    SPDX-License-Identifier: LGPL-2.1-only OR LGPL-3.0-only OR LicenseRef-KDE-Accepted-LGPL
++*/
++
++#include "xwindowtasksmodel.h"
++#include "tasktools.h"
++#include "xwindowsystemeventbatcher.h"
++
++#include <KDesktopFile>
++#include <KDirWatch>
++#include <KIconLoader>
++#include <KService>
++#include <KSharedConfig>
++#include <KSycoca>
++#include <KWindowInfo>
++#include <KX11Extras>
++
++#include <QBuffer>
++#include <QDateTime>
++#include <QDir>
++#include <QFile>
++#include <QGuiApplication>
++#include <QIcon>
++#include <QSet>
++#include <QTimer>
++#include <QUrlQuery>
++
++#include <chrono>
++
++#include <X11/Xlib.h>
++
++using namespace std::chrono_literals;
++
++namespace X11Info
++{
++[[nodiscard]] inline auto display()
++{
++    return qGuiApp->nativeInterface<QNativeInterface::QX11Application>()->display();
++}
++
++[[nodiscard]] inline auto connection()
++{
++    return qGuiApp->nativeInterface<QNativeInterface::QX11Application>()->connection();
++}
++
++[[nodiscard]] inline Window appRootWindow()
++{
++    return DefaultRootWindow(display());
++}
++}
++
++namespace TaskManager
++{
++static const NET::Properties windowInfoFlags =
++    NET::WMState | NET::XAWMState | NET::WMDesktop | NET::WMVisibleName | NET::WMGeometry | NET::WMFrameExtents | NET::WMWindowType | NET::WMPid;
++static const NET::Properties2 windowInfoFlags2 = NET::WM2DesktopFileName | NET::WM2Activities | NET::WM2WindowClass | NET::WM2AllowedActions
++    | NET::WM2AppMenuObjectPath | NET::WM2AppMenuServiceName | NET::WM2GTKApplicationId;
++
++class Q_DECL_HIDDEN XWindowTasksModel::Private
++{
++public:
++    Private(XWindowTasksModel *q);
++    ~Private();
++
++    QList<WId> windows;
++
++    // key=transient child, value=leader
++    QHash<WId, WId> transients;
++    // key=leader, values=transient children
++    QMultiHash<WId, WId> transientsDemandingAttention;
++
++    QHash<WId, KWindowInfo *> windowInfoCache;
++    QHash<WId, AppData> appDataCache;
++    QHash<WId, QRect> delegateGeometries;
++    QSet<WId> usingFallbackIcon;
++    QHash<WId, QDateTime> lastActivated;
++    QList<WId> cachedStackingOrder;
++    WId activeWindow = -1;
++    QTimer sycocaChangeTimer;
++
++    void init();
++    void addWindow(WId window);
++    void removeWindow(WId window);
++    void windowChanged(WId window, NET::Properties properties, NET::Properties2 properties2);
++    void transientChanged(WId window, NET::Properties properties, NET::Properties2 properties2);
++    void dataChanged(WId window, const QList<int> &roles);
++
++    KWindowInfo *windowInfo(WId window);
++    const AppData &appData(WId window);
++    QString appMenuServiceName(WId window);
++    QString appMenuObjectPath(WId window);
++
++    QIcon icon(WId window);
++    static QString mimeType();
++    static QString groupMimeType();
++    QUrl windowUrl(WId window);
++    QUrl launcherUrl(WId window, bool encodeFallbackIcon = true);
++    bool demandsAttention(WId window);
++
++private:
++    XWindowTasksModel *const q;
++};
++
++XWindowTasksModel::Private::Private(XWindowTasksModel *q)
++    : q(q)
++{
++}
++
++XWindowTasksModel::Private::~Private()
++{
++    qDeleteAll(windowInfoCache);
++    windowInfoCache.clear();
++}
++
++void XWindowTasksModel::Private::init()
++{
++    auto clearCacheAndRefresh = [this] {
++        if (!windows.count()) {
++            return;
++        }
++
++        appDataCache.clear();
++
++        // Emit changes of all roles satisfied from app data cache.
++        Q_EMIT q->dataChanged(q->index(0, 0),
++                              q->index(windows.count() - 1, 0),
++                              QList<int>{Qt::DecorationRole,
++                                         AbstractTasksModel::AppId,
++                                         AbstractTasksModel::AppName,
++                                         AbstractTasksModel::GenericName,
++                                         AbstractTasksModel::LauncherUrl,
++                                         AbstractTasksModel::LauncherUrlWithoutIcon,
++                                         AbstractTasksModel::CanLaunchNewInstance,
++                                         AbstractTasksModel::SkipTaskbar});
++    };
++
++    cachedStackingOrder = KX11Extras::stackingOrder();
++
++    sycocaChangeTimer.setSingleShot(true);
++    sycocaChangeTimer.setInterval(100ms);
++
++    QObject::connect(&sycocaChangeTimer, &QTimer::timeout, q, clearCacheAndRefresh);
++
++    QObject::connect(KSycoca::self(), &KSycoca::databaseChanged, q, [this]() {
++        sycocaChangeTimer.start();
++    });
++
++    auto windowSystem = new XWindowSystemEventBatcher(q);
++
++    QObject::connect(windowSystem, &XWindowSystemEventBatcher::windowAdded, q, [this](WId window) {
++        addWindow(window);
++    });
++
++    QObject::connect(windowSystem, &XWindowSystemEventBatcher::windowRemoved, q, [this](WId window) {
++        removeWindow(window);
++    });
++
++    QObject::connect(windowSystem, &XWindowSystemEventBatcher::windowChanged, q, [this](WId window, NET::Properties properties, NET::Properties2 properties2) {
++        windowChanged(window, properties, properties2);
++    });
++
++    // Update IsActive for previously- and newly-active windows.
++    QObject::connect(KX11Extras::self(), &KX11Extras::activeWindowChanged, q, [this](WId window) {
++        const WId oldActiveWindow = activeWindow;
++
++        const auto leader = transients.value(window, XCB_WINDOW_NONE);
++        if (leader != XCB_WINDOW_NONE) {
++            window = leader;
++        }
++
++        activeWindow = window;
++        lastActivated[activeWindow] = QDateTime::currentDateTime();
++
++        int row = windows.indexOf(oldActiveWindow);
++
++        if (row != -1) {
++            dataChanged(oldActiveWindow, QList<int>{IsActive});
++        }
++
++        row = windows.indexOf(window);
++
++        if (row != -1) {
++            dataChanged(window, QList<int>{IsActive});
++        }
++    });
++
++    QObject::connect(KX11Extras::self(), &KX11Extras::stackingOrderChanged, q, [this]() {
++        // No need to do anything if the model is empty. This avoids calling q->dataChanged with an invalid QModelIndex.
++        if (q->rowCount() == 0) {
++            return;
++        }
++        cachedStackingOrder = KX11Extras::stackingOrder();
++        Q_ASSERT(q->hasIndex(0, 0));
++        Q_ASSERT(q->hasIndex(q->rowCount() - 1, 0));
++        Q_EMIT q->dataChanged(q->index(0, 0), q->index(q->rowCount() - 1, 0), QList<int>{StackingOrder});
++    });
++
++    activeWindow = KX11Extras::activeWindow();
++
++    // Add existing windows.
++    for (const auto ids = KX11Extras::windows(); const WId window : ids) {
++        addWindow(window);
++    }
++}
++
++void XWindowTasksModel::Private::addWindow(WId window)
++{
++    // Don't add window twice.
++    if (windows.contains(window)) {
++        return;
++    }
++
++    KWindowInfo info(window, NET::WMWindowType | NET::WMState | NET::WMName | NET::WMVisibleName, NET::WM2TransientFor);
++
++    NET::WindowType wType = info.windowType(NET::NormalMask | NET::DesktopMask | NET::DockMask | NET::ToolbarMask | NET::MenuMask | NET::DialogMask
++                                            | NET::OverrideMask | NET::TopMenuMask | NET::UtilityMask | NET::SplashMask | NET::NotificationMask);
++
++    const WId leader = info.transientFor();
++
++    // Handle transient.
++    if (leader > 0 && leader != window && leader != X11Info::appRootWindow() && !transients.contains(window) && windows.contains(leader)) {
++        transients.insert(window, leader);
++
++        // Update demands attention state for leader.
++        if (info.hasState(NET::DemandsAttention) && windows.contains(leader)) {
++            transientsDemandingAttention.insert(leader, window);
++            dataChanged(leader, QList<int>{IsDemandingAttention});
++        }
++
++        return;
++    }
++
++    // Ignore NET::Tool and other special window types; they are not considered tasks.
++    if (wType != NET::Normal && wType != NET::Override && wType != NET::Unknown && wType != NET::Dialog && wType != NET::Utility) {
++        return;
++    }
++
++    const int count = windows.count();
++    q->beginInsertRows(QModelIndex(), count, count);
++    windows.append(window);
++    q->endInsertRows();
++}
++
++void XWindowTasksModel::Private::removeWindow(WId window)
++{
++    const int row = windows.indexOf(window);
++
++    if (row != -1) {
++        q->beginRemoveRows(QModelIndex(), row, row);
++        windows.removeAt(row);
++        transientsDemandingAttention.remove(window);
++        delete windowInfoCache.take(window);
++        appDataCache.remove(window);
++        delegateGeometries.remove(window);
++        usingFallbackIcon.remove(window);
++        lastActivated.remove(window);
++        q->endRemoveRows();
++    } else { // Could be a transient.
++        // Removing a transient might change the demands attention state of the leader.
++        if (transients.remove(window)) {
++            const WId leader = transientsDemandingAttention.key(window, XCB_WINDOW_NONE);
++
++            if (leader != XCB_WINDOW_NONE) {
++                transientsDemandingAttention.remove(leader, window);
++                dataChanged(leader, QList<int>{IsDemandingAttention});
++            }
++        }
++    }
++
++    if (activeWindow == window) {
++        activeWindow = -1;
++    }
++}
++
++void XWindowTasksModel::Private::transientChanged(WId window, NET::Properties properties, NET::Properties2 properties2)
++{
++    // Changes to a transient's state might change demands attention state for leader.
++    if (properties & (NET::WMState | NET::XAWMState)) {
++        const KWindowInfo info(window, NET::WMState | NET::XAWMState, NET::WM2TransientFor);
++        const WId leader = info.transientFor();
++
++        if (!windows.contains(leader)) {
++            return;
++        }
++
++        if (info.hasState(NET::DemandsAttention)) {
++            if (!transientsDemandingAttention.values(leader).contains(window)) {
++                transientsDemandingAttention.insert(leader, window);
++                dataChanged(leader, QList<int>{IsDemandingAttention});
++            }
++        } else if (transientsDemandingAttention.remove(leader, window)) {
++            dataChanged(leader, QList<int>{IsDemandingAttention});
++        }
++        // Leader might have changed.
++    } else if (properties2 & NET::WM2TransientFor) {
++        const KWindowInfo info(window, NET::WMState | NET::XAWMState, NET::WM2TransientFor);
++
++        if (info.hasState(NET::DemandsAttention)) {
++            const WId oldLeader = transientsDemandingAttention.key(window, XCB_WINDOW_NONE);
++
++            if (oldLeader != XCB_WINDOW_NONE) {
++                const WId leader = info.transientFor();
++
++                if (leader != oldLeader) {
++                    transientsDemandingAttention.remove(oldLeader, window);
++                    transientsDemandingAttention.insert(leader, window);
++                    dataChanged(oldLeader, QList<int>{IsDemandingAttention});
++                    dataChanged(leader, QList<int>{IsDemandingAttention});
++                }
++            }
++        }
++    }
++}
++
++void XWindowTasksModel::Private::windowChanged(WId window, NET::Properties properties, NET::Properties2 properties2)
++{
++    if (transients.contains(window)) {
++        transientChanged(window, properties, properties2);
++        return;
++    }
++
++    bool wipeInfoCache = false;
++    bool wipeAppDataCache = false;
++    bool wipeAppDataIcon = false;
++    QList<int> changedRoles;
++
++    if (properties & (NET::WMPid) || properties2 & (NET::WM2DesktopFileName | NET::WM2WindowClass)) {
++        wipeInfoCache = true;
++        wipeAppDataCache = true;
++        changedRoles << Qt::DecorationRole << AppId << AppName << GenericName << LauncherUrl << AppPid << SkipTaskbar << CanLaunchNewInstance;
++    }
++
++    if (properties & (NET::WMName | NET::WMVisibleName)) {
++        changedRoles << Qt::DisplayRole;
++        wipeInfoCache = true;
++    }
++
++    if ((properties & NET::WMIcon) && usingFallbackIcon.contains(window)) {
++        wipeAppDataIcon = true;
++        if (!changedRoles.contains(Qt::DecorationRole)) {
++            changedRoles << Qt::DecorationRole;
++        }
++    }
++
++    // FIXME TODO: It might be worth keeping track of which windows were demanding
++    // attention (or not) to avoid emitting this role on every state change, as
++    // TaskGroupingProxyModel needs to check for group-ability when a change to it
++    // is announced and the queried state is false.
++    if (properties & (NET::WMState | NET::XAWMState)) {
++        wipeInfoCache = true;
++        changedRoles << IsFullScreen << IsMaximized << IsMinimized << IsKeepAbove << IsKeepBelow;
++        changedRoles << IsDemandingAttention << SkipTaskbar << SkipPager;
++    }
++
++    if (properties & NET::WMWindowType) {
++        wipeInfoCache = true;
++        changedRoles << SkipTaskbar;
++    }
++
++    if (properties2 & NET::WM2AllowedActions) {
++        wipeInfoCache = true;
++        changedRoles << IsClosable << IsMovable << IsResizable << IsMaximizable << IsMinimizable;
++        changedRoles << IsFullScreenable << IsVirtualDesktopsChangeable;
++    }
++
++    if (properties & NET::WMDesktop) {
++        wipeInfoCache = true;
++        changedRoles << VirtualDesktops << IsOnAllVirtualDesktops;
++    }
++
++    if (properties & NET::WMGeometry) {
++        wipeInfoCache = true;
++        changedRoles << Geometry << ScreenGeometry;
++    }
++
++    if (properties2 & NET::WM2Activities) {
++        wipeInfoCache = true;
++        changedRoles << Activities;
++    }
++
++    if (properties2 & NET::WM2AppMenuServiceName) {
++        wipeInfoCache = true;
++        changedRoles << ApplicationMenuServiceName;
++    }
++
++    if (properties2 & NET::WM2AppMenuObjectPath) {
++        wipeInfoCache = true;
++        changedRoles << ApplicationMenuObjectPath;
++    }
++
++    if (wipeInfoCache) {
++        delete windowInfoCache.take(window);
++    }
++
++    if (wipeAppDataCache) {
++        appDataCache.remove(window);
++        usingFallbackIcon.remove(window);
++    } else if (wipeAppDataIcon) {
++        // Only the icon changes
++        appDataCache[window].icon = QIcon();
++    }
++
++    if (!changedRoles.isEmpty()) {
++        dataChanged(window, changedRoles);
++    }
++}
++
++void XWindowTasksModel::Private::dataChanged(WId window, const QList<int> &roles)
++{
++    const int i = windows.indexOf(window);
++
++    if (i == -1) {
++        return;
++    }
++
++    QModelIndex idx = q->index(i);
++    Q_EMIT q->dataChanged(idx, idx, roles);
++}
++
++KWindowInfo *XWindowTasksModel::Private::windowInfo(WId window)
++{
++    const auto &it = windowInfoCache.constFind(window);
++
++    if (it != windowInfoCache.constEnd()) {
++        return *it;
++    }
++
++    auto *info = new KWindowInfo(window, windowInfoFlags, windowInfoFlags2);
++    windowInfoCache.insert(window, info);
++
++    return info;
++}
++
++const AppData &XWindowTasksModel::Private::appData(WId window)
++{
++    static_assert(!std::is_trivially_copy_assignable_v<AppData>);
++    if (auto it = appDataCache.constFind(window); it != appDataCache.constEnd()) {
++        return *it;
++    }
++
++    AppData data = appDataFromUrl(windowUrl(window));
++
++    // If we weren't able to derive a launcher URL from the window meta data,
++    // fall back to WM_CLASS Class string as app id. This helps with apps we
++    // can't map to an URL due to existing outside the regular system
++    // environment, e.g. wine clients.
++    if (data.id.isEmpty() && data.url.isEmpty()) {
++        data.id = QString::fromLocal8Bit(windowInfo(window)->windowClassClass());
++        return *appDataCache.emplace(window, std::move(data));
++    }
++
++    return *appDataCache.emplace(window, std::move(data));
++}
++
++QString XWindowTasksModel::Private::appMenuServiceName(WId window)
++{
++    const KWindowInfo *info = windowInfo(window);
++    return QString::fromUtf8(info->applicationMenuServiceName());
++}
++
++QString XWindowTasksModel::Private::appMenuObjectPath(WId window)
++{
++    const KWindowInfo *info = windowInfo(window);
++    return QString::fromUtf8(info->applicationMenuObjectPath());
++}
++
++QIcon XWindowTasksModel::Private::icon(WId window)
++{
++    const AppData &app = appData(window);
++
++    if (!app.icon.isNull()) {
++        return app.icon;
++    }
++
++    QIcon icon;
++
++    icon.addPixmap(KX11Extras::icon(window, KIconLoader::SizeSmall, KIconLoader::SizeSmall, false));
++    icon.addPixmap(KX11Extras::icon(window, KIconLoader::SizeSmallMedium, KIconLoader::SizeSmallMedium, false));
++    icon.addPixmap(KX11Extras::icon(window, KIconLoader::SizeMedium, KIconLoader::SizeMedium, false));
++    icon.addPixmap(KX11Extras::icon(window, KIconLoader::SizeLarge, KIconLoader::SizeLarge, false));
++
++    appDataCache[window].icon = icon;
++    usingFallbackIcon.insert(window);
++
++    return icon;
++}
++
++QString XWindowTasksModel::Private::mimeType()
++{
++    return QStringLiteral("windowsystem/winid");
++}
++
++QString XWindowTasksModel::Private::groupMimeType()
++{
++    return QStringLiteral("windowsystem/multiple-winids");
++}
++
++QUrl XWindowTasksModel::Private::windowUrl(WId window)
++{
++    const KWindowInfo *info = windowInfo(window);
++
++    QString desktopFile = QString::fromUtf8(info->desktopFileName());
++
++    if (desktopFile.isEmpty()) {
++        desktopFile = QString::fromUtf8(info->gtkApplicationId());
++    }
++
++    if (!desktopFile.isEmpty()) {
++        KService::Ptr service = KService::serviceByStorageId(desktopFile);
++
++        if (service) {
++            const QString &menuId = service->menuId();
++
++            // applications: URLs are used to refer to applications by their KService::menuId
++            // (i.e. .desktop file name) rather than the absolute path to a .desktop file.
++            if (!menuId.isEmpty()) {
++                return QUrl(QString(u"applications:" + menuId));
++            }
++
++            return QUrl::fromLocalFile(service->entryPath());
++        }
++
++        if (!desktopFile.endsWith(QLatin1String(".desktop"))) {
++            desktopFile.append(QLatin1String(".desktop"));
++        }
++
++        if (KDesktopFile::isDesktopFile(desktopFile) && QFile::exists(desktopFile)) {
++            return QUrl::fromLocalFile(desktopFile);
++        }
++    }
++
++    return windowUrlFromMetadata(QString::fromLocal8Bit(info->windowClassClass()), info->pid(), QString::fromLocal8Bit(info->windowClassName()));
++}
++
++QUrl XWindowTasksModel::Private::launcherUrl(WId window, bool encodeFallbackIcon)
++{
++    const AppData &data = appData(window);
++
++    QUrl url = data.url;
++    if (!encodeFallbackIcon || !data.icon.name().isEmpty()) {
++        return url;
++    }
++
++    // Forego adding the window icon pixmap if the URL is otherwise empty.
++    if (!url.isValid()) {
++        return {};
++    }
++
++    // Only serialize pixmap data if the window pixmap is actually being used.
++    // QIcon::name() used above only returns a themed icon name but nothing when
++    // the icon was created using an absolute path, as can be the case with, e.g.
++    // containerized apps.
++    if (!usingFallbackIcon.contains(window)) {
++        return url;
++    }
++
++    QPixmap pixmap;
++
++    if (!data.icon.isNull()) {
++        pixmap = data.icon.pixmap(KIconLoader::SizeLarge);
++    }
++
++    if (pixmap.isNull()) {
++        pixmap = KX11Extras::icon(window, KIconLoader::SizeLarge, KIconLoader::SizeLarge, false);
++    }
++
++    if (pixmap.isNull()) {
++        return data.url;
++    }
++    QUrlQuery uQuery(url);
++    QByteArray bytes;
++    QBuffer buffer(&bytes);
++    buffer.open(QIODevice::WriteOnly);
++    pixmap.save(&buffer, "PNG");
++    uQuery.addQueryItem(QStringLiteral("iconData"), QString::fromLatin1(bytes.toBase64(QByteArray::Base64UrlEncoding)));
++
++    url.setQuery(uQuery);
++
++    return url;
++}
++
++bool XWindowTasksModel::Private::demandsAttention(WId window)
++{
++    if (windows.contains(window)) {
++        return ((windowInfo(window)->hasState(NET::DemandsAttention)) || transientsDemandingAttention.contains(window));
++    }
++
++    return false;
++}
++
++XWindowTasksModel::XWindowTasksModel(QObject *parent)
++    : AbstractWindowTasksModel(parent)
++    , d(new Private(this))
++{
++    d->init();
++}
++
++XWindowTasksModel::~XWindowTasksModel() = default;
++
++QVariant XWindowTasksModel::data(const QModelIndex &index, int role) const
++{
++    if (!index.isValid() || index.row() >= d->windows.count()) {
++        return {};
++    }
++
++    const WId window = d->windows.at(index.row());
++
++    if (role == Qt::DisplayRole) {
++        return d->windowInfo(window)->visibleName();
++    } else if (role == Qt::DecorationRole) {
++        return d->icon(window);
++    } else if (role == AppId) {
++        return d->appData(window).id;
++    } else if (role == AppName) {
++        return d->appData(window).name;
++    } else if (role == GenericName) {
++        return d->appData(window).genericName;
++    } else if (role == LauncherUrl) {
++        return d->launcherUrl(window);
++    } else if (role == LauncherUrlWithoutIcon) {
++        return d->launcherUrl(window, false /* encodeFallbackIcon */);
++    } else if (role == WinIdList) {
++        return QVariantList() << window;
++    } else if (role == MimeType) {
++        return d->mimeType();
++    } else if (role == MimeData) {
++        return QByteArray(reinterpret_cast<const char *>(&window), sizeof(window));
++    } else if (role == IsWindow) {
++        return true;
++    } else if (role == IsActive) {
++        return (window == d->activeWindow);
++    } else if (role == IsClosable) {
++        return d->windowInfo(window)->actionSupported(NET::ActionClose);
++    } else if (role == IsMovable) {
++        return d->windowInfo(window)->actionSupported(NET::ActionMove);
++    } else if (role == IsResizable) {
++        return d->windowInfo(window)->actionSupported(NET::ActionResize);
++    } else if (role == IsMaximizable) {
++        return d->windowInfo(window)->actionSupported(NET::ActionMax);
++    } else if (role == IsMaximized) {
++        const KWindowInfo *info = d->windowInfo(window);
++        return info->hasState(NET::MaxHoriz) && info->hasState(NET::MaxVert);
++    } else if (role == IsMinimizable) {
++        return d->windowInfo(window)->actionSupported(NET::ActionMinimize);
++    } else if (role == IsMinimized) {
++        return d->windowInfo(window)->isMinimized();
++    } else if (role == IsHidden) {
++        return d->windowInfo(window)->hasState(NET::Hidden);
++    } else if (role == IsKeepAbove) {
++        return d->windowInfo(window)->hasState(NET::KeepAbove);
++    } else if (role == IsKeepBelow) {
++        return d->windowInfo(window)->hasState(NET::KeepBelow);
++    } else if (role == IsFullScreenable) {
++        return d->windowInfo(window)->actionSupported(NET::ActionFullScreen);
++    } else if (role == IsFullScreen) {
++        return d->windowInfo(window)->hasState(NET::FullScreen);
++    } else if (role == IsVirtualDesktopsChangeable) {
++        return d->windowInfo(window)->actionSupported(NET::ActionChangeDesktop);
++    } else if (role == VirtualDesktops) {
++        return QVariantList() << d->windowInfo(window)->desktop();
++    } else if (role == IsOnAllVirtualDesktops) {
++        return d->windowInfo(window)->onAllDesktops();
++    } else if (role == Geometry) {
++        // Both the topLeft position and the size belong to the non-scaled coordinate system
++        return d->windowInfo(window)->frameGeometry();
++    } else if (role == ScreenGeometry) {
++        // The topLeft position belongs to the non-scaled coordinate system
++        // The size belongs to the scaled coordinate system, which means the size is already divided by DPR
++        return screenGeometry(d->windowInfo(window)->frameGeometry().center());
++    } else if (role == Activities) {
++        return d->windowInfo(window)->activities();
++    } else if (role == IsDemandingAttention) {
++        return d->demandsAttention(window);
++    } else if (role == SkipTaskbar) {
++        const KWindowInfo *info = d->windowInfo(window);
++        // _NET_WM_WINDOW_TYPE_UTILITY type windows should not be on task bars,
++        // but they should be shown on pagers.
++        return (info->hasState(NET::SkipTaskbar) || info->windowType(NET::UtilityMask) == NET::Utility);
++    } else if (role == SkipPager) {
++        return d->windowInfo(window)->hasState(NET::SkipPager);
++    } else if (role == AppPid) {
++        return d->windowInfo(window)->pid();
++    } else if (role == StackingOrder) {
++        return d->cachedStackingOrder.indexOf(window);
++    } else if (role == LastActivated) {
++        if (d->lastActivated.contains(window)) {
++            return d->lastActivated.value(window);
++        }
++    } else if (role == ApplicationMenuObjectPath) {
++        return d->appMenuObjectPath(window);
++    } else if (role == ApplicationMenuServiceName) {
++        return d->appMenuServiceName(window);
++    } else if (role == CanLaunchNewInstance) {
++        return canLauchNewInstance(d->appData(window));
++    }
++
++    return AbstractTasksModel::data(index, role);
++}
++
++int XWindowTasksModel::rowCount(const QModelIndex &parent) const
++{
++    return parent.isValid() ? 0 : d->windows.count();
++}
++
++void XWindowTasksModel::requestActivate(const QModelIndex &index)
++{
++    if (!index.isValid() || index.model() != this || index.row() < 0 || index.row() >= d->windows.count()) {
++        return;
++    }
++
++    if (index.row() >= 0 && index.row() < d->windows.count()) {
++        WId window = d->windows.at(index.row());
++
++        // Pull forward any transient demanding attention.
++        if (d->transientsDemandingAttention.contains(window)) {
++            window = d->transientsDemandingAttention.value(window);
++            // Quote from legacy libtaskmanager:
++            // "this is a work around for (at least?) kwin where a shaded transient will prevent the main
++            // window from being brought forward unless the transient is actually pulled forward, most
++            // easily reproduced by opening a modal file open/save dialog on an app then shading the file
++            // dialog and trying to bring the window forward by clicking on it in a tasks widget
++            // TODO: do we need to check all the transients for shaded?"
++        } else if (!d->transients.isEmpty()) {
++            const auto transients = d->transients.keys(window);
++            for (const auto transient : std::as_const(transients)) {
++                KWindowInfo info(transient, NET::WMState, NET::WM2TransientFor);
++                if (info.valid(true) && info.hasState(NET::Shaded)) {
++                    window = transient;
++                    break;
++                }
++            }
++        }
++
++        KX11Extras::forceActiveWindow(window);
++    }
++}
++
++void XWindowTasksModel::requestNewInstance(const QModelIndex &index)
++{
++    if (!index.isValid() || index.model() != this || index.row() < 0 || index.row() >= d->windows.count()) {
++        return;
++    }
++
++    runApp(d->appData(d->windows.at(index.row())));
++}
++
++void XWindowTasksModel::requestOpenUrls(const QModelIndex &index, const QList<QUrl> &urls)
++{
++    if (!index.isValid() || index.model() != this || index.row() < 0 || index.row() >= d->windows.count() || urls.isEmpty()) {
++        return;
++    }
++
++    runApp(d->appData(d->windows.at(index.row())), urls);
++}
++
++void XWindowTasksModel::requestClose(const QModelIndex &index)
++{
++    if (!index.isValid() || index.model() != this || index.row() < 0 || index.row() >= d->windows.count()) {
++        return;
++    }
++
++    NETRootInfo ri(X11Info::connection(), NET::CloseWindow);
++    ri.closeWindowRequest(d->windows.at(index.row()));
++}
++
++void XWindowTasksModel::requestMove(const QModelIndex &index)
++{
++    if (!index.isValid() || index.model() != this || index.row() < 0 || index.row() >= d->windows.count()) {
++        return;
++    }
++
++    const WId window = d->windows.at(index.row());
++    const KWindowInfo *info = d->windowInfo(window);
++
++    bool onCurrent = info->isOnCurrentDesktop();
++
++    if (!onCurrent) {
++        KX11Extras::setCurrentDesktop(info->desktop());
++        KX11Extras::forceActiveWindow(window);
++    }
++
++    if (info->isMinimized()) {
++        KX11Extras::unminimizeWindow(window);
++    }
++
++    const QRect &geom = info->geometry();
++
++    NETRootInfo ri(X11Info::connection(), NET::WMMoveResize);
++    ri.moveResizeRequest(window, geom.center().x(), geom.center().y(), NET::Move, XCB_BUTTON_INDEX_ANY);
++}
++
++void XWindowTasksModel::requestResize(const QModelIndex &index)
++{
++    if (!index.isValid() || index.model() != this || index.row() < 0 || index.row() >= d->windows.count()) {
++        return;
++    }
++
++    const WId window = d->windows.at(index.row());
++    const KWindowInfo *info = d->windowInfo(window);
++
++    bool onCurrent = info->isOnCurrentDesktop();
++
++    if (!onCurrent) {
++        KX11Extras::setCurrentDesktop(info->desktop());
++        KX11Extras::forceActiveWindow(window);
++    }
++
++    if (info->isMinimized()) {
++        KX11Extras::unminimizeWindow(window);
++    }
++
++    const QRect &geom = info->geometry();
++
++    NETRootInfo ri(X11Info::connection(), NET::WMMoveResize);
++    ri.moveResizeRequest(window, geom.bottomRight().x(), geom.bottomRight().y(), NET::BottomRight, XCB_BUTTON_INDEX_ANY);
++}
++
++void XWindowTasksModel::requestToggleMinimized(const QModelIndex &index)
++{
++    if (!index.isValid() || index.model() != this || index.row() < 0 || index.row() >= d->windows.count()) {
++        return;
++    }
++
++    const WId window = d->windows.at(index.row());
++    const KWindowInfo *info = d->windowInfo(window);
++
++    if (index.data(AbstractTasksModel::IsHidden).toBool()) {
++        bool onCurrent = info->isOnCurrentDesktop();
++
++        // FIXME: Move logic up into proxy? (See also others.)
++        if (!onCurrent) {
++            KX11Extras::setCurrentDesktop(info->desktop());
++        }
++
++        KX11Extras::unminimizeWindow(window);
++
++        if (onCurrent) {
++            KX11Extras::forceActiveWindow(window);
++        }
++    } else {
++        KX11Extras::minimizeWindow(window);
++    }
++}
++
++void XWindowTasksModel::requestToggleMaximized(const QModelIndex &index)
++{
++    if (!index.isValid() || index.model() != this || index.row() < 0 || index.row() >= d->windows.count()) {
++        return;
++    }
++
++    const WId window = d->windows.at(index.row());
++    const KWindowInfo *info = d->windowInfo(window);
++    bool onCurrent = info->isOnCurrentDesktop();
++    bool restore = (info->hasState(NET::MaxHoriz) && info->hasState(NET::MaxVert));
++
++    // FIXME: Move logic up into proxy? (See also others.)
++    if (!onCurrent) {
++        KX11Extras::setCurrentDesktop(info->desktop());
++    }
++
++    if (info->isMinimized()) {
++        KX11Extras::unminimizeWindow(window);
++    }
++
++    NETWinInfo ni(X11Info::connection(), window, X11Info::appRootWindow(), NET::WMState, NET::Properties2());
++
++    if (restore) {
++        ni.setState(NET::States(), NET::Max);
++    } else {
++        ni.setState(NET::Max, NET::Max);
++    }
++
++    if (!onCurrent) {
++        KX11Extras::forceActiveWindow(window);
++    }
++}
++
++void XWindowTasksModel::requestToggleKeepAbove(const QModelIndex &index)
++{
++    if (!index.isValid() || index.model() != this || index.row() < 0 || index.row() >= d->windows.count()) {
++        return;
++    }
++
++    const WId window = d->windows.at(index.row());
++    const KWindowInfo *info = d->windowInfo(window);
++
++    NETWinInfo ni(X11Info::connection(), window, X11Info::appRootWindow(), NET::WMState, NET::Properties2());
++
++    if (info->hasState(NET::KeepAbove)) {
++        ni.setState(NET::States(), NET::KeepAbove);
++    } else {
++        ni.setState(NET::KeepAbove, NET::KeepAbove);
++    }
++}
++
++void XWindowTasksModel::requestToggleKeepBelow(const QModelIndex &index)
++{
++    if (!index.isValid() || index.model() != this || index.row() < 0 || index.row() >= d->windows.count()) {
++        return;
++    }
++
++    const WId window = d->windows.at(index.row());
++    const KWindowInfo *info = d->windowInfo(window);
++
++    NETWinInfo ni(X11Info::connection(), window, X11Info::appRootWindow(), NET::WMState, NET::Properties2());
++
++    if (info->hasState(NET::KeepBelow)) {
++        ni.setState(NET::States(), NET::KeepBelow);
++    } else {
++        ni.setState(NET::KeepBelow, NET::KeepBelow);
++    }
++}
++
++void XWindowTasksModel::requestToggleFullScreen(const QModelIndex &index)
++{
++    if (!index.isValid() || index.model() != this || index.row() < 0 || index.row() >= d->windows.count()) {
++        return;
++    }
++
++    const WId window = d->windows.at(index.row());
++    const KWindowInfo *info = d->windowInfo(window);
++
++    NETWinInfo ni(X11Info::connection(), window, X11Info::appRootWindow(), NET::WMState, NET::Properties2());
++
++    if (info->hasState(NET::FullScreen)) {
++        ni.setState(NET::States(), NET::FullScreen);
++    } else {
++        ni.setState(NET::FullScreen, NET::FullScreen);
++    }
++}
++
++void XWindowTasksModel::requestToggleNoBorder(const QModelIndex &index)
++{
++    Q_UNUSED(index);
++    // TODO
++}
++
++void XWindowTasksModel::requestToggleExcludeFromCapture(const QModelIndex &index)
++{
++    Q_UNUSED(index);
++}
++
++void XWindowTasksModel::requestVirtualDesktops(const QModelIndex &index, const QVariantList &desktops)
++{
++    if (!index.isValid() || index.model() != this || index.row() < 0 || index.row() >= d->windows.count()) {
++        return;
++    }
++
++    int desktop = 0;
++
++    if (!desktops.isEmpty()) {
++        bool ok = false;
++
++        desktop = desktops.first().toUInt(&ok);
++
++        if (!ok) {
++            return;
++        }
++    }
++
++    if (desktop > KX11Extras::numberOfDesktops()) {
++        return;
++    }
++
++    const WId window = d->windows.at(index.row());
++    const KWindowInfo *info = d->windowInfo(window);
++
++    if (desktop == 0) {
++        if (info->onAllDesktops()) {
++            KX11Extras::setOnDesktop(window, KX11Extras::currentDesktop());
++            KX11Extras::forceActiveWindow(window);
++        } else {
++            KX11Extras::setOnAllDesktops(window, true);
++        }
++
++        return;
++    }
++
++    KX11Extras::setOnDesktop(window, desktop);
++
++    if (desktop == KX11Extras::currentDesktop()) {
++        KX11Extras::forceActiveWindow(window);
++    }
++}
++
++void XWindowTasksModel::requestNewVirtualDesktop(const QModelIndex &index)
++{
++    if (!index.isValid() || index.model() != this || index.row() < 0 || index.row() >= d->windows.count()) {
++        return;
++    }
++
++    const WId window = d->windows.at(index.row());
++    const int desktop = KX11Extras::numberOfDesktops() + 1;
++
++    // FIXME Arbitrary limit of 20 copied from old code.
++    if (desktop > 20) {
++        return;
++    }
++
++    NETRootInfo ri(X11Info::connection(), NET::NumberOfDesktops);
++    ri.setNumberOfDesktops(desktop);
++
++    KX11Extras::setOnDesktop(window, desktop);
++}
++
++void XWindowTasksModel::requestActivities(const QModelIndex &index, const QStringList &activities)
++{
++    if (!index.isValid() || index.model() != this || index.row() < 0 || index.row() >= d->windows.count()) {
++        return;
++    }
++
++    const WId window = d->windows.at(index.row());
++
++    KX11Extras::setOnActivities(window, activities);
++}
++
++void XWindowTasksModel::requestPublishDelegateGeometry(const QModelIndex &index, const QRect &geometry, QObject *delegate)
++{
++    Q_UNUSED(delegate)
++
++    if (!index.isValid() || index.model() != this || index.row() < 0 || index.row() >= d->windows.count()) {
++        return;
++    }
++
++    const WId window = d->windows.at(index.row());
++
++    if (d->delegateGeometries.contains(window) && d->delegateGeometries.value(window) == geometry) {
++        return;
++    }
++
++    NETWinInfo ni(X11Info::connection(), window, X11Info::appRootWindow(), NET::Properties(), NET::Properties2());
++    NETRect rect;
++
++    if (geometry.isValid()) {
++        rect.pos.x = geometry.x();
++        rect.pos.y = geometry.y();
++        rect.size.width = geometry.width();
++        rect.size.height = geometry.height();
++
++        d->delegateGeometries.insert(window, geometry);
++    } else {
++        d->delegateGeometries.remove(window);
++    }
++
++    ni.setIconGeometry(rect);
++}
++
++WId XWindowTasksModel::winIdFromMimeData(const QMimeData *mimeData, bool *ok)
++{
++    Q_ASSERT(mimeData);
++
++    if (ok) {
++        *ok = false;
++    }
++
++    if (!mimeData->hasFormat(Private::mimeType())) {
++        return 0;
++    }
++
++    QByteArray data(mimeData->data(Private::mimeType()));
++    WId id;
++    if (data.size() != sizeof(WId)) {
++        return 0;
++    } else {
++        memcpy(&id, data.data(), sizeof(WId));
++    }
++
++    if (ok) {
++        *ok = true;
++    }
++
++    return id;
++}
++
++QList<WId> XWindowTasksModel::winIdsFromMimeData(const QMimeData *mimeData, bool *ok)
++{
++    Q_ASSERT(mimeData);
++    QList<WId> ids;
++
++    if (ok) {
++        *ok = false;
++    }
++
++    if (!mimeData->hasFormat(Private::groupMimeType())) {
++        // Try to extract single window id.
++        bool singularOk;
++        WId id = winIdFromMimeData(mimeData, &singularOk);
++
++        if (ok) {
++            *ok = singularOk;
++        }
++
++        if (singularOk) {
++            ids << id;
++        }
++
++        return ids;
++    }
++
++    QByteArray data(mimeData->data(Private::groupMimeType()));
++    if ((unsigned int)data.size() < sizeof(int) + sizeof(WId)) {
++        return ids;
++    }
++
++    int count = 0;
++    memcpy(&count, data.data(), sizeof(int));
++    if (count < 1 || (unsigned int)data.size() < sizeof(int) + sizeof(WId) * count) {
++        return ids;
++    }
++
++    WId id;
++    for (int i = 0; i < count; ++i) {
++        memcpy(&id, data.data() + sizeof(int) + sizeof(WId) * i, sizeof(WId));
++        ids << id;
++    }
++
++    if (ok) {
++        *ok = true;
++    }
++
++    return ids;
++}
++
++}
++
++#include "moc_xwindowtasksmodel.cpp"
+diff -ruN a/libtaskmanager/xwindowtasksmodel.h b/libtaskmanager/xwindowtasksmodel.h
+--- a/libtaskmanager/xwindowtasksmodel.h	1970-01-01 01:00:00.000000000 +0100
++++ b/libtaskmanager/xwindowtasksmodel.h	2026-10-18 18:50:05.858767787 +0200
+@@ -0,0 +1,244 @@
++/*
++    SPDX-FileCopyrightText: 2016 Eike Hein <hein@kde.org>
++
++    SPDX-License-Identifier: LGPL-2.1-only OR LGPL-3.0-only OR LicenseRef-KDE-Accepted-LGPL
++*/
++
++#pragma once
++
++#include "abstractwindowtasksmodel.h"
++
++#include "taskmanager_export.h"
++
++#include <QMimeData>
++#include <qwindowdefs.h>
++
++#include <memory>
++
++#include <netwm.h>
++
++namespace TaskManager
++{
++/**
++ * @short A tasks model for X Window System windows.
++ *
++ * This model presents tasks sourced from window data on the X Windows
++ * server the host process is connected to.
++ *
++ * For the purposes of presentation in a user interface and efficiency,
++ * certain types of windows (e.g. utility windows, or windows that are
++ * transients for an otherwise-included window) are omitted from the
++ * model.
++ *
++ * @see WindowTasksModel
++ *
++ * @author Eike Hein <hein@kde.org>
++ */
++
++class TASKMANAGER_EXPORT XWindowTasksModel : public AbstractWindowTasksModel
++{
++    Q_OBJECT
++
++public:
++    explicit XWindowTasksModel(QObject *parent = nullptr);
++    ~XWindowTasksModel() override;
++
++    QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const override;
++    int rowCount(const QModelIndex &parent = QModelIndex()) const override;
++
++    /**
++     * Request activation of the window at the given index.
++     *
++     * If the window has a transient demanding attention, it will be
++     * activated instead.
++     *
++     * If the window has a transient in shaded state, it will be
++     * activated instead.
++     *
++     * @param index An index in this window tasks model.
++     **/
++    void requestActivate(const QModelIndex &index) override;
++
++    /**
++     * Request an additional instance of the application owning the window
++     * at the given index. Success depends on whether a
++     * AbstractTasksModel::LauncherUrl could be derived from window metadata.
++     *
++     * @param index An index in this window tasks model.
++     **/
++    void requestNewInstance(const QModelIndex &index) override;
++
++    /**
++     * Runs the application backing the launcher at the given index with the given URLs.
++     * Success depends on whether a AbstractTasksModel::LauncherUrl could be
++     * derived from window metadata and a KService could be found from that.
++     *
++     * @param index An index in this launcher tasks model
++     * @param urls The URLs to be passed to the application
++     */
++    void requestOpenUrls(const QModelIndex &index, const QList<QUrl> &urls) override;
++
++    /**
++     * Request the window at the given index be closed.
++     *
++     * @param index An index in this window tasks model.
++     **/
++    void requestClose(const QModelIndex &index) override;
++
++    /**
++     * Request starting an interactive move for the window at the given index.
++     *
++     * If the window is not currently the active window, it will be activated.
++     *
++     * If the window is not on the current desktop, the current desktop will
++     * be set to the window's desktop.
++     * FIXME: Desktop logic should maybe move into proxy.
++     *
++     * @param index An index in this window tasks model.
++     **/
++    void requestMove(const QModelIndex &index) override;
++
++    /**
++     * Request starting an interactive resize for the window at the given index.
++     *
++     * If the window is not currently the active window, it will be activated.
++     *
++     * If the window is not on the current desktop, the current desktop will
++     * be set to the window's desktop.
++     * FIXME: Desktop logic should maybe move into proxy.
++     *
++     * @param index An index in this window tasks model.
++     **/
++    void requestResize(const QModelIndex &index) override;
++
++    /**
++     * Request toggling the minimized state of the window at the given index.
++     *
++     * If the window is not on the current desktop, the current desktop will
++     * be set to the window's desktop.
++     * FIXME: Desktop logic should maybe move into proxy.
++     *
++     * @param index An index in this window tasks model.
++     **/
++    void requestToggleMinimized(const QModelIndex &index) override;
++
++    /**
++     * Request toggling the maximized state of the task at the given index.
++     *
++     * If the window is not on the current desktop, the current desktop will
++     * be set to the window's desktop.
++     * FIXME: Desktop logic should maybe move into proxy.
++     *
++     * @param index An index in this window tasks model.
++     **/
++    void requestToggleMaximized(const QModelIndex &index) override;
++
++    /**
++     * Request toggling the keep-above state of the task at the given index.
++     *
++     * @param index An index in this window tasks model.
++     **/
++    void requestToggleKeepAbove(const QModelIndex &index) override;
++
++    /**
++     * Request toggling the keep-below state of the task at the given index.
++     *
++     * @param index An index in this window tasks model.
++     **/
++    void requestToggleKeepBelow(const QModelIndex &index) override;
++
++    /**
++     * Request toggling the fullscreen state of the task at the given index.
++     *
++     * @param index An index in this window tasks model.
++     **/
++    void requestToggleFullScreen(const QModelIndex &index) override;
++
++    /**
++     * Request toggling the no border state of the task at given index.
++     *
++     * This X11 implementation does nothing.
++     *
++     * @param index An index in this tasks model.
++     * @since 6.4
++     */
++    void requestToggleNoBorder(const QModelIndex &index) override;
++
++    /**
++     * Request toggling the excludeFromCapture state of the task at given index.
++     *
++     * This is not implemented for X11.
++     *
++     * @param index An index in this tasks model.
++     * @since 6.6
++     */
++    void requestToggleExcludeFromCapture(const QModelIndex &index) override;
++
++    /**
++     * Request entering the window at the given index on the specified virtual desktop.
++     * For compatibility across windowing systems the library supports, the desktops
++     * parameter is a list; however, on X11 a window can only be on one or all virtual
++     * desktops. Therefore, only the first list entry is actually used.
++     *
++     * An empty list has a special meaning: The window is entered on all virtual desktops
++     * in the session.
++     *
++     * The id 0 has a special meaning: The window is entered on all virtual desktops in
++     * the session.
++     *
++     * @param index An index in this window tasks model.
++     * @param desktops A list of virtual desktop ids (uint).
++     **/
++    void requestVirtualDesktops(const QModelIndex &index, const QVariantList &desktops) override;
++
++    /**
++     * Request entering the window at the given index on a new virtual desktop,
++     * which is created in response to this request.
++     *
++     * @param index An index in this window tasks model.
++     **/
++    void requestNewVirtualDesktop(const QModelIndex &index) override;
++
++    /**
++     * Request moving the task at the given index to the specified activities.
++     *
++     * This is meant for tasks that have an associated window, and may be
++     * a no-op when there is no window.
++     *     *
++     * @param index An index in this tasks model.
++     * @param activities The new list of activities.
++     **/
++    void requestActivities(const QModelIndex &index, const QStringList &activities) override;
++
++    /**
++     * Request informing the window manager of new geometry for a visual
++     * delegate for the window at the given index.
++     *
++     * @param index An index in this window tasks model.
++     * @param geometry Visual delegate geometry in screen coordinates.
++     * @param delegate The delegate. Unused in this implementation.
++     **/
++    void requestPublishDelegateGeometry(const QModelIndex &index, const QRect &geometry, QObject *delegate = nullptr) override;
++
++    /**
++     * Tries to extract a X11 window id from supplied mime data.
++     *
++     * @param mimeData Some mime data.
++     * @param @ok Set to true or false on success or failure.
++     */
++    static WId winIdFromMimeData(const QMimeData *mimeData, bool *ok = nullptr);
++
++    /**
++     * Tries to extract X11 window ids from supplied mime data.
++     *
++     * @param mimeData Some mime data.
++     * @param @ok Set to true or false on success or failure.
++     */
++    static QList<WId> winIdsFromMimeData(const QMimeData *mimeData, bool *ok = nullptr);
++
++private:
++    class Private;
++    std::unique_ptr<Private> d;
++};
++
++}
+diff -ruN a/login-sessions/CMakeLists.txt b/login-sessions/CMakeLists.txt
+--- a/login-sessions/CMakeLists.txt	2026-10-08 13:24:14.000000000 +0200
++++ b/login-sessions/CMakeLists.txt	2026-10-18 18:55:21.328188562 +0200
+@@ -6,7 +6,18 @@
+         DESTINATION ${KDE_INSTALL_DATADIR}/wayland-sessions
+ )
+ 
++if(WITH_X11_SESSION)
++    configure_file(plasmax11.desktop.cmake ${CMAKE_CURRENT_BINARY_DIR}/plasmax11.desktop)
++    install(FILES
++            ${CMAKE_CURRENT_BINARY_DIR}/plasmax11.desktop
++            DESTINATION ${KDE_INSTALL_DATADIR}/xsessions
++    )
++endif()
++
+ ## For Plasma developers
+ configure_file(startplasma-dev.sh.cmake ${CMAKE_CURRENT_BINARY_DIR}/startplasma-dev.sh)
++if(WITH_X11_SESSION)
++    configure_file(plasmax11-dev.desktop.cmake ${CMAKE_CURRENT_BINARY_DIR}/plasmax11-dev6.desktop)
++endif()
+ configure_file(plasmawayland-dev.desktop.cmake ${CMAKE_CURRENT_BINARY_DIR}/plasmawayland-dev6.desktop)
+ configure_file(install-sessions.sh.cmake ${CMAKE_CURRENT_BINARY_DIR}/install-sessions.sh)
+diff -ruN a/login-sessions/install-sessions.sh.cmake b/login-sessions/install-sessions.sh.cmake
+--- a/login-sessions/install-sessions.sh.cmake	2026-10-08 13:24:14.000000000 +0200
++++ b/login-sessions/install-sessions.sh.cmake	2026-10-18 18:55:21.330674579 +0200
+@@ -8,6 +8,9 @@
+ 
+ # Make built-from-source sessions appear in login screen
+ sudo install --mode=644 -D @CMAKE_CURRENT_BINARY_DIR@/plasmawayland-dev6.desktop --target-directory=/usr/local/share/wayland-sessions
++if [ -f "@CMAKE_CURRENT_BINARY_DIR@/plasmax11-dev6.desktop" ]; then
++  sudo install --mode=644 -D @CMAKE_CURRENT_BINARY_DIR@/plasmax11-dev6.desktop --target-directory=/usr/local/share/xsessions
++fi
+ install @CMAKE_BINARY_DIR@/prefix.sh @CMAKE_INSTALL_FULL_LIBEXECDIR@/plasma-dev-prefix.sh
+ install @CMAKE_CURRENT_BINARY_DIR@/startplasma-dev.sh @CMAKE_INSTALL_FULL_LIBEXECDIR@
+ 
+diff -ruN a/login-sessions/plasmax11-dev.desktop.cmake b/login-sessions/plasmax11-dev.desktop.cmake
+--- a/login-sessions/plasmax11-dev.desktop.cmake	1970-01-01 01:00:00.000000000 +0100
++++ b/login-sessions/plasmax11-dev.desktop.cmake	2026-09-08 12:57:37.000000000 +0200
+@@ -0,0 +1,121 @@
++[Desktop Entry]
++Type=XSession
++Exec=@CMAKE_INSTALL_FULL_LIBEXECDIR@/startplasma-dev.sh -x11
++DesktopNames=KDE
++Name=Plasma (Development, X11 ${CMAKE_INSTALL_FULL_BINDIR})
++Name[ar]=بلازما (تطوير, اكس11 ${CMAKE_INSTALL_FULL_BINDIR})
++Name[az]=Plasma (Tərtib mərhələsində olan X11 ${CMAKE_INSTALL_FULL_BINDIR})
++Name[be]=Plasma (Development, X11 ${CMAKE_INSTALL_FULL_BINDIR})
++Name[bg]=Plasma (Development, X11 ${CMAKE_INSTALL_FULL_BINDIR})
++Name[ca]=Plasma (Desenvolupament, X11 ${CMAKE_INSTALL_FULL_BINDIR})
++Name[ca@valencia]=Plasma (desenvolupament, X11 ${CMAKE_INSTALL_FULL_BINDIR})
++Name[cs]=Plasma (Development, X11 ${CMAKE_INSTALL_FULL_BINDIR})
++Name[da]=Plasma (udvikling, X11 ${CMAKE_INSTALL_FULL_BINDIR})
++Name[de]=Plasma (Development, X11 ${CMAKE_INSTALL_FULL_BINDIR})
++Name[el]=Plasma (Development, X11 ${CMAKE_INSTALL_FULL_BINDIR})
++Name[en_GB]=Plasma (Development, X11 ${CMAKE_INSTALL_FULL_BINDIR})
++Name[eo]=Plasma (Development, X11 ${CMAKE_INSTALL_FULL_BINDIR})
++Name[es]=Plasma (Desarrollo, X11 ${CMAKE_INSTALL_FULL_BINDIR})
++Name[et]=Plasma (arendus, X11 ${CMAKE_INSTALL_FULL_BINDIR})
++Name[eu]=Plasma (Garapena, X11 ${CMAKE_INSTALL_FULL_BINDIR})
++Name[fi]=Plasma (kehitys, X11 ${CMAKE_INSTALL_FULL_BINDIR})
++Name[fr]=Plasma (Développement, X11 ${CMAKE_INSTALL_FULL_BINDIR})
++Name[ga]=Plasma (Forbairt, X11 ${CMAKE_INSTALL_FULL_BINDIR})
++Name[gl]=Plasma (desenvolvemento, X11 ${CMAKE_INSTALL_FULL_BINDIR})
++Name[he]=פלזמה (פיתוח, X11 ${CMAKE_INSTALL_FULL_BINDIR})
++Name[hi]=प्लाज़्मा (विकास, एक्स ११ ${CMAKE_INSTALL_FULL_BINDIR})
++Name[hu]=Plasma (Fejlesztői verzió, X11 ${CMAKE_INSTALL_FULL_BINDIR})
++Name[ia]=Plasma (Disveloppamento, X11 ${CMAKE_INSTALL_FULL_BINDIR})
++Name[id]=Plasma (Development, X11 ${CMAKE_INSTALL_FULL_BINDIR})
++Name[is]=Plasma (Þróunarútgáfa, X11 ${CMAKE_INSTALL_FULL_BINDIR})
++Name[it]=Plasma (Sviluppo, X11 ${CMAKE_INSTALL_FULL_BINDIR})
++Name[ja]=Plasma (Development, X11 ${CMAKE_INSTALL_FULL_BINDIR})
++Name[ka]=Plasma (Development, X11 ${CMAKE_INSTALL_FULL_BINDIR})
++Name[ko]=Plasma(개발, X11 ${CMAKE_INSTALL_FULL_BINDIR})
++Name[lt]=Plasma (Plėtojimas, X11 ${CMAKE_INSTALL_FULL_BINDIR})
++Name[lv]=„Plasma“ (izstrāde, X11 ${CMAKE_INSTALL_FULL_BINDIR})
++Name[ml]=പ്ലാസ്മ (വികസനം, X11 ${CMAKE_INSTALL_FULL_BINDIR})
++Name[nb]=Plasma (utvikling, X11 ${CMAKE_INSTALL_FULL_BINDIR})
++Name[nl]=Plasma (Ontwikkeling, X11 ${CMAKE_INSTALL_FULL_BINDIR})
++Name[nn]=Plasma (utvikling, X11 ${CMAKE_INSTALL_FULL_BINDIR})
++Name[pa]=ਪਲਾਜ਼ਮਾ (ਡਿਵੈਲਪਮੈਂਟ, X11 ${CMAKE_INSTALL_FULL_BINDIR})
++Name[pl]=Plazma (Rozwój , X11 ${CMAKE_INSTALL_FULL_BINDIR})
++Name[pt]=Plasma (Desenvolvimento, X11 ${CMAKE_INSTALL_FULL_BINDIR})
++Name[pt_BR]=Plasma (Desenvolvimento, X11 ${CMAKE_INSTALL_FULL_BINDIR})
++Name[ro]=Plasma (Dezvoltare, X11 ${CMAKE_INSTALL_FULL_BINDIR})
++Name[ru]=Plasma (разрабатываемая версия, X11 ${CMAKE_INSTALL_FULL_BINDIR})
++Name[sa]=प्लाज्मा (विकास, X११ ${CMAKE_INSTALL_FULL_BINDIR})
++Name[sk]=Plasma (Development, X11 ${CMAKE_INSTALL_FULL_BINDIR})
++Name[sl]=Plasma (Razvoj, X11 ${CMAKE_INSTALL_FULL_BINDIR})
++Name[sv]=Plasma (utveckling, X11 ${CMAKE_INSTALL_FULL_BINDIR})
++Name[ta]=பிளாஸ்மா (Development, X11 ${CMAKE_INSTALL_FULL_BINDIR})
++Name[th]=Plasma (Development, X11 ${CMAKE_INSTALL_FULL_BINDIR})
++Name[tr]=Plasma (Geliştirme, X11 ${CMAKE_INSTALL_FULL_BINDIR})
++Name[ug]=Plasma (ئىجادىيەت نەشرى، X11 ${CMAKE_INSTALL_FULL_BINDIR})
++Name[uk]=Плазма (Розробка, X11 ${CMAKE_INSTALL_FULL_BINDIR})
++Name[vi]=Plasma (Phát triển, X11 ${CMAKE_INSTALL_FULL_BINDIR})
++Name[zh_CN]=Plasma (Development, X11 ${CMAKE_INSTALL_FULL_BINDIR})
++Name[zh_TW]=Plasma (開發版本，X11 ${CMAKE_INSTALL_FULL_BINDIR})
++Comment=Plasma by KDE
++Comment[ar]=بلازما كِيدِي
++Comment[az]=KDE Plasma
++Comment[be]=Plasma KDE
++Comment[bg]=Plasma от KDE
++Comment[bs]=Plazma od strane KDe
++Comment[ca]=Plasma, creat per la comunitat KDE
++Comment[ca@valencia]=Plasma, creat per la comunitat KDE
++Comment[cs]=Plasma z KDE
++Comment[da]=Plasma fra KDE
++Comment[de]=Plasma von KDE
++Comment[el]=Plasma από το KDE
++Comment[en_GB]=Plasma by KDE
++Comment[eo]=Plasma de KDE
++Comment[es]=Plasma, por KDE
++Comment[et]=KDE Plasma
++Comment[eu]=KDEren Plasma
++Comment[fi]=Plasma KDE:ltä
++Comment[fr]=Plasma, par KDE
++Comment[ga]=Plasma le KDE
++Comment[gl]=Plasma, de KDE.
++Comment[he]=פלזמה מבית KDE
++Comment[hi]=केडीइ द्वारा प्लाज़्मा
++Comment[hsb]=Plasma wot KDE
++Comment[hu]=Plasma a KDE-től
++Comment[ia]=Plasma per KDE
++Comment[id]=Plasma oleh KDE
++Comment[is]=Plasma frá KDE
++Comment[it]=Plasma di KDE
++Comment[ja]=Plasma by KDE
++Comment[ka]=Plasma, KDE-სგან
++Comment[ko]=KDE Plasma
++Comment[lt]=Plasma pagal KDE
++Comment[lv]=„Plasma“ no KDE
++Comment[ml]=കെഡിഇയുടെ പ്ലാസ്മ
++Comment[nb]=Plasma fra KDE
++Comment[nds]=Plasma vun KDE
++Comment[nl]=Plasma door KDE
++Comment[nn]=Plasma frå KDE
++Comment[pa]=KDE ਵਲੋਂ ਪਲਾਜ਼ਮਾ
++Comment[pl]=Plazma dzięki KDE
++Comment[pt]=Plasma do KDE
++Comment[pt_BR]=Plasma pela KDE
++Comment[ro]=Plasma, de către KDE
++Comment[ru]=KDE Plasma
++Comment[sa]=KDE इत्यस्मात् प्लाज्मा
++Comment[sk]=Plasma od KDE
++Comment[sl]=KDE Plasma
++Comment[sr]=Плазма од КДЕ‑а
++Comment[sr@ijekavian]=Плазма од КДЕ‑а
++Comment[sr@ijekavianlatin]=Plasma od KDE‑a
++Comment[sr@latin]=Plasma od KDE‑a
++Comment[sv]=Plasma av KDE
++Comment[ta]=கே.டீ.யீ. வழங்கும் பிளாஸ்மா
++Comment[tg]=Plasma аз ҷониби KDE
++Comment[th]=Plasma โดย KDE
++Comment[tr]=KDE Plasma
++Comment[ug]=KDE Plasma
++Comment[uk]=Плазма KDE
++Comment[vi]=Plasma, do KDE
++Comment[zh_CN]=KDE Plasma
++Comment[zh_TW]=Plasma by KDE
++X-KDE-PluginInfo-Version=${PROJECT_VERSION}
+diff -ruN a/login-sessions/plasmax11.desktop.cmake b/login-sessions/plasmax11.desktop.cmake
+--- a/login-sessions/plasmax11.desktop.cmake	1970-01-01 01:00:00.000000000 +0100
++++ b/login-sessions/plasmax11.desktop.cmake	2026-09-08 12:57:37.000000000 +0200
+@@ -0,0 +1,123 @@
++[Desktop Entry]
++Type=XSession
++Exec=${CMAKE_INSTALL_FULL_BINDIR}/startplasma-x11
++TryExec=${CMAKE_INSTALL_FULL_BINDIR}/startplasma-x11
++DesktopNames=KDE
++Name=Plasma (X11)
++Name[ar]=بلازما (اكس11)
++Name[ast]=Plasma (X11)
++Name[az]=Plasma (X11)
++Name[be]=Plasma (X11)
++Name[bg]=Plasma (X11)
++Name[ca]=Plasma (X11)
++Name[ca@valencia]=Plasma (X11)
++Name[cs]=Plasma (X11)
++Name[da]=Plasma (X11)
++Name[de]=Plasma (X11)
++Name[el]=Plasma (X11)
++Name[en_GB]=Plasma (X11)
++Name[eo]=Plasma (X11)
++Name[es]=Plasma (X11)
++Name[eu]=Plasma (X11)
++Name[fi]=Plasma (X11)
++Name[fr]=Plasma (X11)
++Name[ga]=Plasma (X11)
++Name[gl]=Plasma (X11)
++Name[he]=פלזמה (X11)
++Name[hi]=प्लाज़्मा (एक्स ११)
++Name[hu]=Plasma (X11)
++Name[ia]=Plasma (X11)
++Name[id]=Plasma (X11)
++Name[is]=Plasma (X11)
++Name[it]=Plasma (X11)
++Name[ja]=Plasma (X11)
++Name[ka]=Plasma (X11)
++Name[ko]=Plasma(X11)
++Name[lt]=Plasma (X11)
++Name[lv]=Plasma (X11)
++Name[ml]=പ്ലാസ്മ (X11)
++Name[nb]=Plasma (X11)
++Name[nl]=Plasma (X11)
++Name[nn]=Plasma (X11)
++Name[pa]=ਪਲਾਜ਼ਮਾ (X11)
++Name[pl]=Plazma (X11)
++Name[pt]=Plasma (X11)
++Name[pt_BR]=Plasma (X11)
++Name[ro]=Plasma (X11)
++Name[ru]=Plasma (X11)
++Name[sa]=प्लाज्मा (X११)
++Name[sk]=Plasma (X11)
++Name[sl]=Plasma (X11)
++Name[sv]=Plasma (X11)
++Name[ta]=பிளாஸ்மா (X11)
++Name[tg]=Плазма (X11)
++Name[th]=Plasma (X11)
++Name[tr]=Plasma (X11)
++Name[ug]=Plasma (X11)
++Name[uk]=Плазма (X11)
++Name[vi]=Plasma (X11)
++Name[zh_CN]=Plasma (X11)
++Name[zh_TW]=Plasma (X11)
++Comment=Plasma by KDE
++Comment[ar]=بلازما كِيدِي
++Comment[az]=KDE Plasma
++Comment[be]=Plasma KDE
++Comment[bg]=Plasma от KDE
++Comment[bs]=Plazma od strane KDe
++Comment[ca]=Plasma, creat per la comunitat KDE
++Comment[ca@valencia]=Plasma, creat per la comunitat KDE
++Comment[cs]=Plasma z KDE
++Comment[da]=Plasma fra KDE
++Comment[de]=Plasma von KDE
++Comment[el]=Plasma από το KDE
++Comment[en_GB]=Plasma by KDE
++Comment[eo]=Plasma de KDE
++Comment[es]=Plasma, por KDE
++Comment[et]=KDE Plasma
++Comment[eu]=KDEren Plasma
++Comment[fi]=Plasma KDE:ltä
++Comment[fr]=Plasma, par KDE
++Comment[ga]=Plasma le KDE
++Comment[gl]=Plasma, de KDE.
++Comment[he]=פלזמה מבית KDE
++Comment[hi]=केडीइ द्वारा प्लाज़्मा
++Comment[hsb]=Plasma wot KDE
++Comment[hu]=Plasma a KDE-től
++Comment[ia]=Plasma per KDE
++Comment[id]=Plasma oleh KDE
++Comment[is]=Plasma frá KDE
++Comment[it]=Plasma di KDE
++Comment[ja]=Plasma by KDE
++Comment[ka]=Plasma, KDE-სგან
++Comment[ko]=KDE Plasma
++Comment[lt]=Plasma pagal KDE
++Comment[lv]=„Plasma“ no KDE
++Comment[ml]=കെഡിഇയുടെ പ്ലാസ്മ
++Comment[nb]=Plasma fra KDE
++Comment[nds]=Plasma vun KDE
++Comment[nl]=Plasma door KDE
++Comment[nn]=Plasma frå KDE
++Comment[pa]=KDE ਵਲੋਂ ਪਲਾਜ਼ਮਾ
++Comment[pl]=Plazma dzięki KDE
++Comment[pt]=Plasma do KDE
++Comment[pt_BR]=Plasma pela KDE
++Comment[ro]=Plasma, de către KDE
++Comment[ru]=KDE Plasma
++Comment[sa]=KDE इत्यस्मात् प्लाज्मा
++Comment[sk]=Plasma od KDE
++Comment[sl]=KDE Plasma
++Comment[sr]=Плазма од КДЕ‑а
++Comment[sr@ijekavian]=Плазма од КДЕ‑а
++Comment[sr@ijekavianlatin]=Plasma od KDE‑a
++Comment[sr@latin]=Plasma od KDE‑a
++Comment[sv]=Plasma av KDE
++Comment[ta]=கே.டீ.யீ. வழங்கும் பிளாஸ்மா
++Comment[tg]=Plasma аз ҷониби KDE
++Comment[th]=Plasma โดย KDE
++Comment[tr]=KDE Plasma
++Comment[ug]=KDE Plasma
++Comment[uk]=Плазма KDE
++Comment[vi]=Plasma, do KDE
++Comment[zh_CN]=KDE Plasma
++Comment[zh_TW]=Plasma by KDE
++X-KDE-PluginInfo-Version=${PROJECT_VERSION}
+diff -ruN a/startkde/CMakeLists.txt b/startkde/CMakeLists.txt
+--- a/startkde/CMakeLists.txt	2026-10-08 13:24:15.000000000 +0200
++++ b/startkde/CMakeLists.txt	2026-10-18 18:55:21.341125279 +0200
+@@ -1,4 +1,7 @@
+ add_subdirectory(plasmaautostart)
++if (WITH_X11_SESSION)
++    add_subdirectory(kcminit)
++endif()
+ add_subdirectory(waitforname)
+ add_subdirectory(startup-sound)
+ 
+@@ -32,6 +35,30 @@
+     MUTATORS
+ )
+ 
++# Compile startplasma.cpp a second time without its Wayland main().
++# X11::X11 stays on this target only (kcheckrunning).
++if (WITH_X11_SESSION)
++    add_executable(startplasma-x11 startplasma.cpp ${startplasma_SRCS} startplasma-x11.cpp kcheckrunning/kcheckrunning.cpp)
++    target_compile_definitions(startplasma-x11 PRIVATE STARTPLASMA_X11_ENTRY)
++    target_link_libraries(startplasma-x11 PRIVATE
++        Qt::Core
++        Qt::DBus
++        KF6::ConfigGui
++        KF6::DBusAddons
++        KF6::Notifications
++        KF6::Package
++        PW::KLookAndFeel
++        PW::KWorkspace
++        KNightTime
++        X11::X11
++    )
++    kconfig_target_kcfg_file(startplasma-x11
++        FILE ${CMAKE_SOURCE_DIR}/kcms/lookandfeel/lookandfeelsettings.kcfg
++        CLASS_NAME LookAndFeelSettings
++        MUTATORS
++    )
++endif()
++
+ add_subdirectory(plasma-session)
+ add_subdirectory(plasma-shutdown)
+ add_subdirectory(plasma-setup-xwayland)
+@@ -47,5 +74,8 @@
+ configure_file(config-startplasma.h.cmake ${CMAKE_CURRENT_BINARY_DIR}/config-startplasma.h)
+ 
+ install(TARGETS startplasma-wayland ${KDE_INSTALL_TARGETS_DEFAULT_ARGS})
++if (WITH_X11_SESSION)
++    install(TARGETS startplasma-x11 ${KDE_INSTALL_TARGETS_DEFAULT_ARGS})
++endif()
+ install(PROGRAMS plasma-sourceenv.sh DESTINATION ${KDE_INSTALL_LIBEXECDIR})
+ install(PROGRAMS plasma-dbus-run-session-if-needed DESTINATION ${KDE_INSTALL_LIBEXECDIR})
+diff -ruN a/startkde/config-startplasma.h.cmake b/startkde/config-startplasma.h.cmake
+--- a/startkde/config-startplasma.h.cmake	2026-10-08 13:24:15.000000000 +0200
++++ b/startkde/config-startplasma.h.cmake	2026-10-18 18:55:21.328188562 +0200
+@@ -8,3 +8,4 @@
+ #define KWIN_BIN "${KWIN_BIN}"
+ 
+ #cmakedefine01 WITH_X11
++#cmakedefine01 WITH_X11_SESSION
+diff -ruN a/startkde/kcheckrunning/kcheckrunning.cpp b/startkde/kcheckrunning/kcheckrunning.cpp
+--- a/startkde/kcheckrunning/kcheckrunning.cpp	1970-01-01 01:00:00.000000000 +0100
++++ b/startkde/kcheckrunning/kcheckrunning.cpp	2026-09-08 12:57:37.000000000 +0200
+@@ -0,0 +1,21 @@
++/*
++    SPDX-FileCopyrightText: 2005 Lubos Lunak <l.lunak@kde.org>
++
++    SPDX-License-Identifier: LGPL-2.0-or-later
++*/
++
++#include "kcheckrunning.h"
++#include <X11/Xlib.h>
++
++/*
++ Return 0 when KDE is running, 1 when KDE is not running but it is possible
++ to connect to X, 2 when it's not possible to connect to X.
++*/
++CheckRunningState kCheckRunning()
++{
++    Display *dpy = XOpenDisplay(nullptr);
++    if (dpy == nullptr)
++        return NoX11;
++    Atom atom = XInternAtom(dpy, "_KDE_RUNNING", False);
++    return XGetSelectionOwner(dpy, atom) != None ? PlasmaRunning : NoPlasmaRunning;
++}
+diff -ruN a/startkde/kcheckrunning/kcheckrunning.h b/startkde/kcheckrunning/kcheckrunning.h
+--- a/startkde/kcheckrunning/kcheckrunning.h	1970-01-01 01:00:00.000000000 +0100
++++ b/startkde/kcheckrunning/kcheckrunning.h	2026-09-08 12:57:37.000000000 +0200
+@@ -0,0 +1,15 @@
++/*
++    SPDX-FileCopyrightText: 2019 Aleix Pol Gonzalez <aleixpol@kde.org>
++
++    SPDX-License-Identifier: LGPL-2.0-or-later
++*/
++
++#pragma once
++
++enum CheckRunningState {
++    PlasmaRunning,
++    NoPlasmaRunning,
++    NoX11,
++};
++
++CheckRunningState kCheckRunning();
+diff -ruN a/startkde/kcminit/CMakeLists.txt b/startkde/kcminit/CMakeLists.txt
+--- a/startkde/kcminit/CMakeLists.txt	1970-01-01 01:00:00.000000000 +0100
++++ b/startkde/kcminit/CMakeLists.txt	2026-09-08 12:57:37.000000000 +0200
+@@ -0,0 +1,26 @@
++add_executable(kcminit main.cpp)
++target_link_libraries(kcminit
++    Qt::Core
++    Qt::Gui
++    Qt::DBus
++    KF6::CoreAddons
++    KF6::Service
++    KF6::I18n
++    KF6::ConfigCore
++    PW::KWorkspace
++)
++install(TARGETS kcminit ${KDE_INSTALL_TARGETS_DEFAULT_ARGS})
++
++ecm_qt_declare_logging_category(kcminit HEADER debug.h IDENTIFIER KCMINIT CATEGORY_NAME org.kde.kcminit)
++
++add_custom_command(TARGET kcminit POST_BUILD
++                   COMMAND ${CMAKE_COMMAND} -E create_symlink kcminit kcminit_startup)
++install(FILES ${CMAKE_CURRENT_BINARY_DIR}/kcminit_startup DESTINATION ${KDE_INSTALL_BINDIR})
++
++ecm_install_configured_files(
++    INPUT
++        plasma-kcminit-phase1.service.in
++        plasma-kcminit.service.in
++    DESTINATION
++        ${KDE_INSTALL_SYSTEMDUSERUNITDIR}
++)
+diff -ruN a/startkde/kcminit/Messages.sh b/startkde/kcminit/Messages.sh
+--- a/startkde/kcminit/Messages.sh	1970-01-01 01:00:00.000000000 +0100
++++ b/startkde/kcminit/Messages.sh	2026-09-08 12:57:37.000000000 +0200
+@@ -0,0 +1,2 @@
++#! /usr/bin/env bash
++$XGETTEXT *.cpp -o $podir/kcminit.pot
+diff -ruN a/startkde/kcminit/main.cpp b/startkde/kcminit/main.cpp
+--- a/startkde/kcminit/main.cpp	1970-01-01 01:00:00.000000000 +0100
++++ b/startkde/kcminit/main.cpp	2026-09-08 12:57:37.000000000 +0200
+@@ -0,0 +1,188 @@
++/*
++    SPDX-FileCopyrightText: 1999 Matthias Hoelzer-Kluepfel <hoelzer@kde.org>
++
++    SPDX-License-Identifier: GPL-2.0-or-later
++*/
++
++#include <config-workspace.h>
++
++#include "main.h"
++
++#include "debug.h"
++
++#include <unistd.h>
++
++#include <KFileUtils>
++#include <QDBusConnection>
++#include <QDBusMessage>
++#include <QDBusPendingCall>
++#include <QFile>
++#include <QGuiApplication>
++#include <QLibrary>
++#include <QPluginLoader>
++#include <QTimer>
++
++#include <KAboutData>
++#include <KConfig>
++#include <KConfigGroup>
++#include <KLocalizedString>
++
++static int ready[2];
++static bool startup = false;
++
++static void sendReady()
++{
++    if (ready[1] == -1)
++        return;
++    char c = 0;
++    write(ready[1], &c, 1);
++    close(ready[1]);
++    ready[1] = -1;
++}
++
++static void waitForReady()
++{
++    char c = 1;
++    close(ready[1]);
++    read(ready[0], &c, 1);
++    close(ready[0]);
++}
++
++bool KCMInit::runModule(const KPluginMetaData &data)
++{
++    QString path = QPluginLoader(data.fileName()).fileName();
++
++    // get the kcminit_ function
++    QFunctionPointer init = QLibrary::resolve(path, "kcminit");
++    if (!init) {
++        qCWarning(KCMINIT) << "Module" << data.fileName() << "does not actually have a kcminit function";
++        return false;
++    }
++
++    // initialize the module
++    qCDebug(KCMINIT) << "Initializing " << data.fileName();
++    init();
++    return true;
++}
++
++void KCMInit::runModules(int phase)
++{
++    for (const KPluginMetaData &data : std::as_const(m_list)) {
++        // see ksmserver's README for the description of the phases
++        int libphase = data.value(u"X-KDE-Init-Phase", 1);
++
++        if (libphase > 1) {
++            libphase = 1;
++        }
++
++        if (phase != -1 && libphase != phase)
++            continue;
++
++        // try to load the library
++        if (!m_alreadyInitialized.contains(data.pluginId())) {
++            runModule(data);
++            m_alreadyInitialized.append(data.pluginId());
++        }
++    }
++}
++
++KCMInit::KCMInit(const QCommandLineParser &args)
++{
++    if (args.isSet(QStringLiteral("list"))) {
++        m_list = KPluginMetaData::findPlugins(QStringLiteral("plasma/kcminit"));
++        for (const KPluginMetaData &data : std::as_const(m_list)) {
++            printf("%s\n", QFile::encodeName(data.fileName()).data());
++        }
++        return;
++    }
++
++    const auto positionalArguments = args.positionalArguments();
++    if (!positionalArguments.isEmpty()) {
++        for (const auto &arg : positionalArguments) {
++            KPluginMetaData data(arg);
++            if (!data.isValid()) {
++                data = KPluginMetaData::findPluginById(QStringLiteral("plasma/kcminit"), arg);
++            }
++
++            if (data.isValid()) {
++                m_list << data.fileName();
++            } else {
++                qCWarning(KCMINIT) << "Could not find" << arg;
++            }
++        }
++    } else {
++        m_list = KPluginMetaData::findPlugins(QStringLiteral("plasma/kcminit"));
++    }
++
++    if (startup) {
++        runModules(0);
++        // Tell KSplash that KCMInit has started
++        QDBusMessage ksplashProgressMessage = QDBusMessage::createMethodCall(QStringLiteral("org.kde.KSplash"),
++                                                                             QStringLiteral("/KSplash"),
++                                                                             QStringLiteral("org.kde.KSplash"),
++                                                                             QStringLiteral("setStage"));
++        ksplashProgressMessage.setArguments(QList<QVariant>() << QStringLiteral("kcminit"));
++        QDBusConnection::sessionBus().asyncCall(ksplashProgressMessage);
++
++        sendReady();
++        QTimer::singleShot(300 * 1000, qApp, &QCoreApplication::quit); // just in case
++
++        QDBusConnection::sessionBus().registerObject(QStringLiteral("/kcminit"), this, QDBusConnection::ExportScriptableContents);
++        QDBusConnection::sessionBus().registerService(QStringLiteral("org.kde.kcminit"));
++
++        qApp->exec(); // wait for runPhase1()
++    } else
++        runModules(-1); // all phases
++}
++
++KCMInit::~KCMInit()
++{
++    sendReady();
++}
++
++void KCMInit::runPhase1()
++{
++    runModules(1);
++    qApp->exit(0);
++}
++
++int main(int argc, char *argv[])
++{
++    // plasma-session startup waits for kcminit to finish running phase 0 kcms
++    // (theoretically that is only important kcms that need to be started very
++    // early in the login process), the rest is delayed, so fork and make parent
++    // return after the initial phase
++    pipe(ready);
++    if (fork() != 0) {
++        waitForReady();
++        return 0;
++    }
++    close(ready[0]);
++
++    const QString executableName = QString::fromUtf8(argv[0]);
++    startup = executableName.endsWith(QLatin1String("kcminit_startup")); // started from startkde?
++
++    QCoreApplication::setAttribute(Qt::AA_DisableSessionManager);
++    QGuiApplication::setDesktopSettingsAware(false);
++    QGuiApplication app(argc, argv); // gui is needed for several modules
++    KLocalizedString::setApplicationDomain(QByteArrayLiteral("kcminit"));
++    KAboutData about(QStringLiteral("kcminit"),
++                     i18n("KCMInit"),
++                     QString(),
++                     i18n("KCMInit - runs startup initialization for Control Modules."),
++                     KAboutLicense::GPL);
++    KAboutData::setApplicationData(about);
++
++    QCommandLineParser parser;
++    about.setupCommandLine(&parser);
++    parser.addOption(QCommandLineOption(QStringList() << QStringLiteral("list"), i18n("List modules that are run at startup")));
++    parser.addPositionalArgument(QStringLiteral("module"), i18n("Configuration module to run"));
++
++    parser.process(app);
++    about.processCommandLine(&parser);
++
++    KCMInit kcminit(parser);
++    return 0;
++}
++
++#include "moc_main.cpp"
+diff -ruN a/startkde/kcminit/main.h b/startkde/kcminit/main.h
+--- a/startkde/kcminit/main.h	1970-01-01 01:00:00.000000000 +0100
++++ b/startkde/kcminit/main.h	2026-09-08 12:57:37.000000000 +0200
+@@ -0,0 +1,28 @@
++/*
++    SPDX-FileCopyrightText: 1999 Matthias Hoelzer-Kluepfel <hoelzer@kde.org>
++
++    SPDX-License-Identifier: GPL-2.0-or-later
++*/
++
++#pragma once
++
++#include <KPluginMetaData>
++#include <QCommandLineParser>
++
++class KCMInit : public QObject
++{
++    Q_OBJECT
++    Q_CLASSINFO("D-Bus Interface", "org.kde.KCMInit")
++public Q_SLOTS: // dbus
++    Q_SCRIPTABLE void runPhase1();
++
++public:
++    explicit KCMInit(const QCommandLineParser &args);
++    ~KCMInit() override;
++
++private:
++    bool runModule(const KPluginMetaData &data);
++    void runModules(int phase);
++    QList<KPluginMetaData> m_list;
++    QStringList m_alreadyInitialized;
++};
+diff -ruN a/startkde/kcminit/plasma-kcminit-phase1.service.in b/startkde/kcminit/plasma-kcminit-phase1.service.in
+--- a/startkde/kcminit/plasma-kcminit-phase1.service.in	1970-01-01 01:00:00.000000000 +0100
++++ b/startkde/kcminit/plasma-kcminit-phase1.service.in	2026-09-08 12:57:37.000000000 +0200
+@@ -0,0 +1,10 @@
++[Unit]
++Description=KDE Configuration Module Initialization (Phase 1)
++Requires=plasma-kcminit.service
++After=plasma-kcminit.service plasma-kded6.service
++PartOf=graphical-session.target
++
++[Service]
++Type=oneshot
++ExecStart=@QtBinariesDir@/qdbus org.kde.kcminit /kcminit org.kde.KCMInit.runPhase1
++Slice=session.slice
+diff -ruN a/startkde/kcminit/plasma-kcminit.service.in b/startkde/kcminit/plasma-kcminit.service.in
+--- a/startkde/kcminit/plasma-kcminit.service.in	1970-01-01 01:00:00.000000000 +0100
++++ b/startkde/kcminit/plasma-kcminit.service.in	2026-09-08 12:57:37.000000000 +0200
+@@ -0,0 +1,13 @@
++[Unit]
++Description=KDE Config Module Initialization
++PartOf=graphical-session.target
++After=plasma-kwin_wayland.service
++
++[Service]
++ExecStart=@CMAKE_INSTALL_FULL_BINDIR@/kcminit_startup
++Restart=no
++Type=forking
++Slice=session.slice
++
++[Install]
++Alias=plasma-workspace.service
+diff -ruN a/startkde/plasma-session/CMakeLists.txt b/startkde/plasma-session/CMakeLists.txt
+--- a/startkde/plasma-session/CMakeLists.txt	2026-10-08 13:24:15.000000000 +0200
++++ b/startkde/plasma-session/CMakeLists.txt	2026-10-18 18:55:39.789109798 +0200
+@@ -15,6 +15,13 @@
+ 
+ qt_add_dbus_adaptor( plasma_session_SRCS org.kde.Startup.xml startup.h Startup)
+ 
++if (WITH_X11_SESSION)
++    set(kcminit_adaptor ${CMAKE_SOURCE_DIR}/startkde/kcminit/main.h)
++    set(kcminit_xml ${CMAKE_CURRENT_BINARY_DIR}/org.kde.KCMinit.xml)
++    qt_generate_dbus_interface(${kcminit_adaptor} ${kcminit_xml})
++    qt_add_dbus_interface(plasma_session_SRCS ${kcminit_xml} kcminit_interface)
++endif()
++
+ qt_add_dbus_interface( plasma_session_SRCS ../../ksmserver/org.kde.KSMServerInterface.xml ksmserver_interface )
+ 
+ add_executable(plasma_session ${plasma_session_SRCS})
+@@ -25,6 +32,9 @@
+     KF6::KIOGui
+     PlasmaAutostart
+ )
++if (WITH_X11_SESSION)
++    target_link_libraries(plasma_session Qt::DBus)
++endif()
+ 
+ install(TARGETS plasma_session ${KDE_INSTALL_TARGETS_DEFAULT_ARGS})
+ 
+diff -ruN a/startkde/plasma-session/startup.cpp b/startkde/plasma-session/startup.cpp
+--- a/startkde/plasma-session/startup.cpp	2026-10-08 13:24:15.000000000 +0200
++++ b/startkde/plasma-session/startup.cpp	2026-10-18 18:55:54.476884275 +0200
+@@ -41,6 +41,11 @@
+ #include "../config-startplasma.h"
+ #include "startplasma.h"
+ 
++#if WITH_X11_SESSION
++#include "kcminit_interface.h"
++#include <QCoreApplication>
++#endif
++
+ class Phase : public KCompositeJob
+ {
+     Q_OBJECT
+@@ -74,16 +79,26 @@
+ {
+     Q_OBJECT
+ public:
+-    StartupPhase0(const AutoStart &autostart, QObject *parent)
++    StartupPhase0(const AutoStart &autostart, QObject *parent, bool runKCMInit = false)
+         : Phase(autostart, parent)
++        , m_runKCMInit(runKCMInit)
+     {
+     }
+     void start() override
+     {
+         qCDebug(PLASMA_SESSION) << "Phase 0";
+         addSubjob(new AutoStartAppsJob(m_autostart, 0));
++        // kcminit phase 1 applies X resources. Wayland does not run it.
++#if WITH_X11_SESSION
++        if (m_runKCMInit) {
++            addSubjob(new KCMInitJob());
++        }
++#endif
+         addSubjob(new SleepJob());
+     }
++
++private:
++    bool m_runKCMInit = false;
+ };
+ 
+ class StartupPhase1 : public Phase
+@@ -139,7 +154,31 @@
+ 
+     const AutoStart autostart;
+ 
+-    {
++    const bool waylandSession = qEnvironmentVariable("XDG_SESSION_TYPE") == QLatin1String("wayland");
++
++    KJob *x11WindowManagerJob = nullptr;
++    KJob *kcmInitStartupJob = nullptr;
++    if (!waylandSession) {
++#if WITH_X11_SESSION
++        kcmInitStartupJob = new StartProcessJob(QStringLiteral("kcminit_startup"), {});
++        QString windowManager;
++        if (qEnvironmentVariableIsSet("KDEWM")) {
++            windowManager = qEnvironmentVariable("KDEWM");
++        }
++        if (windowManager.isEmpty()) {
++            windowManager = QStringLiteral(KWIN_BIN);
++        }
++
++        if (windowManager == QLatin1String(KWIN_BIN)) {
++            x11WindowManagerJob = new StartServiceJob(windowManager, {}, QStringLiteral("org.kde.KWin"));
++        } else {
++            // $KDEWM is not started as a dbus service.
++            x11WindowManagerJob = new StartServiceJob(windowManager, {}, {});
++        }
++#else
++        qCWarning(PLASMA_SESSION) << "X11 session requested but plasma-workspace was built without WITH_X11_SESSION";
++#endif
++    } else {
+         // This must block until started as it sets the WAYLAND_DISPLAY/DISPLAY env variables needed for the rest of the boot
+         // fortunately it's very fast as it's just starting a wrapper
+         StartServiceJob kwinWaylandJob(QStringLiteral("kwin_wayland_wrapper"), {QStringLiteral("--xwayland")}, QStringLiteral("org.kde.KWinWrapper"));
+@@ -156,10 +195,13 @@
+     KJob *phase1 = nullptr;
+     m_lock.reset(new QEventLoopLocker);
+ 
+-    const QList<KJob *> sequence = {
++    // Null jobs are skipped below, so the Wayland sequence stays kded6, ksmserver, phases.
++    QList<KJob *> sequence = {
++        kcmInitStartupJob,
+         new StartServiceJob(QStringLiteral("kded6"), {}, QStringLiteral("org.kde.kded6"), {}),
++        x11WindowManagerJob,
+         new StartServiceJob(QStringLiteral("ksmserver"), QCoreApplication::instance()->arguments().mid(1), QStringLiteral("org.kde.ksmserver")),
+-        new StartupPhase0(autostart, this),
++        new StartupPhase0(autostart, this, !waylandSession),
+         phase1 = new StartupPhase1(autostart, this),
+         new RestoreSessionJob(),
+         new StartupPhase2(autostart, this),
+@@ -176,7 +218,12 @@
+     }
+ 
+     connect(sequence.last(), &KJob::finished, this, &Startup::finishStartup);
+-    sequence.first()->start();
++    for (KJob *job : sequence) {
++        if (job) {
++            job->start();
++            break;
++        }
++    }
+ 
+     // app will be closed when all KJobs finish thanks to the QEventLoopLocker in each KJob
+ }
+@@ -208,6 +255,36 @@
+ 
+ Startup *Startup::s_self = nullptr;
+ 
++#if WITH_X11_SESSION
++KCMInitJob::KCMInitJob()
++    : KJob()
++{
++}
++
++void KCMInitJob::start()
++{
++    org::kde::KCMInit kcminit(QStringLiteral("org.kde.kcminit"), QStringLiteral("/kcminit"), QDBusConnection::sessionBus());
++    kcminit.setTimeout(10 * 1000);
++
++    QDBusPendingReply<void> pending = kcminit.runPhase1();
++    auto *watcher = new QDBusPendingCallWatcher(pending, this);
++    connect(watcher, &QDBusPendingCallWatcher::finished, this, [this]() {
++        emitResult();
++    });
++    connect(watcher, &QDBusPendingCallWatcher::finished, watcher, &QObject::deleteLater);
++}
++#else
++KCMInitJob::KCMInitJob()
++    : KJob()
++{
++}
++
++void KCMInitJob::start()
++{
++    emitResult();
++}
++#endif
++
+ RestoreSessionJob::RestoreSessionJob()
+     : KJob()
+ {
+diff -ruN a/startkde/plasma-session/startup.h b/startkde/plasma-session/startup.h
+--- a/startkde/plasma-session/startup.h	2026-10-08 13:24:15.000000000 +0200
++++ b/startkde/plasma-session/startup.h	2026-10-18 18:55:39.785903701 +0200
+@@ -51,6 +51,14 @@
+     void start() override;
+ };
+ 
++class KCMInitJob : public KJob
++{
++    Q_OBJECT
++public:
++    KCMInitJob();
++    void start() override;
++};
++
+ class AutoStartAppsJob : public KJob
+ {
+     Q_OBJECT
+diff -ruN a/startkde/startplasma-x11.cpp b/startkde/startplasma-x11.cpp
+--- a/startkde/startplasma-x11.cpp	1970-01-01 01:00:00.000000000 +0100
++++ b/startkde/startplasma-x11.cpp	2026-10-18 18:55:21.330674579 +0200
+@@ -0,0 +1,105 @@
++/*
++    SPDX-FileCopyrightText: 2019 Aleix Pol Gonzalez <aleixpol@kde.org>
++
++    SPDX-License-Identifier: LGPL-2.0-or-later
++*/
++
++#include "startplasma.h"
++
++#include "kcheckrunning/kcheckrunning.h"
++
++#include <QCoreApplication>
++#include <QProcess>
++#include <QTextStream>
++#include <memory>
++
++#include <KConfig>
++#include <KConfigGroup>
++#include <signal.h>
++#include <unistd.h>
++
++void sighupHandler(int)
++{
++    out << "GOT SIGHUP\n";
++}
++
++int main(int argc, char **argv)
++{
++    // When the X server dies we get a HUP signal from xinit. We must ignore it
++    // because we still need to do some cleanup.
++    signal(SIGHUP, sighupHandler);
++    qputenv("QT_NO_XDG_DESKTOP_PORTAL", QByteArrayView("1"));
++
++    QCoreApplication app(argc, argv);
++
++    // Check if a Plasma session already is running and whether it's possible to connect to X
++    switch (kCheckRunning()) {
++    case NoX11:
++        out << "$DISPLAY is not set or cannot connect to the X server.\n";
++        return 1;
++    case PlasmaRunning:
++        messageBox(QStringLiteral("Plasma seems to be already running on this display.\n"));
++        return 1;
++    case NoPlasmaRunning:
++        break;
++    }
++
++    createConfigDirectory();
++    runStartupConfig();
++
++    // Do not sync any of this section with the wayland versions as there scale factors are
++    // sent properly over wl_output
++
++    {
++        KConfig cfg(QStringLiteral("kdeglobals"));
++
++        KConfigGroup kscreenGroup = cfg.group(QStringLiteral("KScreen"));
++        const auto screenScaleFactors = kscreenGroup.readEntry("ScreenScaleFactors", QByteArray());
++        if (!screenScaleFactors.isEmpty()) {
++            qputenv("QT_SCREEN_SCALE_FACTORS", screenScaleFactors);
++        }
++    }
++
++    setupCursor(false);
++
++    runEnvironmentScripts();
++
++    out << "startkde: Starting up...\n";
++
++    setupPlasmaEnvironment();
++    // Wayland's main() forces XDG_SESSION_TYPE=wayland. Do the same for X11 so
++    // plasma-session takes the X11 branch even if the variable was inherited.
++    qputenv("XDG_SESSION_TYPE", "x11");
++
++    std::unique_ptr<QProcess, KillBeforeDeleter> ksplash(setupKSplash());
++    Q_UNUSED(ksplash)
++
++    qunsetenv("QT_NO_XDG_DESKTOP_PORTAL");
++    auto oldSystemdEnvironment = getSystemdEnvironment();
++    if (!syncDBusEnvironment()) {
++        // Startup error
++        messageBox(QStringLiteral("Could not sync environment to dbus.\n"));
++        return 1;
++    }
++
++    // We import systemd environment after we sync the dbus environment here.
++    // Otherwise it may leads to some unwanted order of applying environment
++    // variables (e.g. LANG and LC_*)
++    importSystemdEnvrionment();
++
++    if (!startPlasmaSession(false))
++        return 1;
++
++    // Anything after here is logout
++    // It is not called after shutdown/restart
++    waitForKonqi();
++
++    out << "startkde: Shutting down...\n";
++
++    stopSystemdSession();
++    cleanupPlasmaEnvironment(oldSystemdEnvironment);
++
++    out << "startkde: Done.\n";
++
++    return 0;
++}
+diff -ruN a/startkde/startplasma.cpp b/startkde/startplasma.cpp
+--- a/startkde/startplasma.cpp	2026-10-08 13:24:15.000000000 +0200
++++ b/startkde/startplasma.cpp	2026-10-18 19:00:38.599740168 +0200
+@@ -223,6 +223,7 @@
+     }
+ }
+ 
++#ifndef STARTPLASMA_X11_ENTRY
+ static void setupWorkarounds()
+ {
+ #if WITH_X11
+@@ -231,6 +232,7 @@
+     qputenv("_JAVA_AWT_WM_NONREPARENTING", "1");
+ #endif
+ }
++#endif
+ 
+ void setupCursor(bool wayland)
+ {
+@@ -690,7 +692,7 @@
+     QDBusConnection::sessionBus().call(message);
+ }
+ 
+-bool startPlasmaSession()
++bool startPlasmaSession(bool wayland)
+ {
+     resetSystemdFailedUnits();
+     reloadSystemd();
+@@ -705,7 +707,11 @@
+ 
+     // We want to exit when both ksmserver and plasma-session-shutdown have finished
+     // This also closes if ksmserver crashes unexpectedly, as in those cases plasma-shutdown is not running
+-    serviceWatcher.addWatchedService(QStringLiteral("org.kde.KWinWrapper"));
++    if (wayland) {
++        serviceWatcher.addWatchedService(QStringLiteral("org.kde.KWinWrapper"));
++    } else {
++        serviceWatcher.addWatchedService(QStringLiteral("org.kde.ksmserver"));
++    }
+     serviceWatcher.addWatchedService(QStringLiteral("org.kde.Shutdown"));
+     serviceWatcher.setWatchMode(QDBusServiceWatcher::WatchForUnregistration);
+ 
+@@ -739,18 +745,22 @@
+         startPlasmaSession->start(QStringLiteral(CMAKE_INSTALL_FULL_BINDIR "/plasma_session"));
+     } else {
+         qCDebug(PLASMA_STARTUP) << "Using systemd boot";
++        const QString platform = wayland ? QStringLiteral("wayland") : QStringLiteral("x11");
+         auto msg = QDBusMessage::createMethodCall(QStringLiteral("org.freedesktop.systemd1"),
+                                                   QStringLiteral("/org/freedesktop/systemd1"),
+                                                   QStringLiteral("org.freedesktop.systemd1.Manager"),
+                                                   QStringLiteral("StartUnit"));
+-        msg << QStringLiteral("plasma-workspace-wayland.target") << QStringLiteral("fail");
++        msg << QStringLiteral("plasma-workspace-%1.target").arg(platform) << QStringLiteral("fail");
+         QDBusReply<QDBusObjectPath> reply = QDBusConnection::sessionBus().call(msg);
+         if (!reply.isValid()) {
+             qCWarning(PLASMA_STARTUP) << "Could not start systemd managed Plasma session:" << reply.error().name() << reply.error().message();
+             messageBox(QStringLiteral("startkde: Could not start Plasma session.\n"));
+             rc = false;
+         }
+-        startKSplashViaSystemd();
++        // X11 splash is started from startplasma-x11 via setupKSplash().
++        if (wayland) {
++            startKSplashViaSystemd();
++        }
+     }
+     if (rc) {
+         QObject::connect(QCoreApplication::instance(), &QCoreApplication::aboutToQuit, &e, &QEventLoop::quit);
+@@ -800,6 +810,7 @@
+     }
+ }
+ 
++#ifndef STARTPLASMA_X11_ENTRY
+ int main(int argc, char **argv)
+ {
+     QCoreApplication app(argc, argv);
+@@ -864,7 +875,7 @@
+     // variables (e.g. LANG and LC_*)
+     importSystemdEnvrionment();
+ 
+-    if (!startPlasmaSession()) {
++    if (!startPlasmaSession(true)) {
+         return 4;
+     }
+ 
+@@ -879,3 +890,4 @@
+ 
+     return 0;
+ }
++#endif
+diff -ruN a/startkde/startplasma.h b/startkde/startplasma.h
+--- a/startkde/startplasma.h	2026-10-08 13:24:15.000000000 +0200
++++ b/startkde/startplasma.h	2026-10-18 19:00:29.967643491 +0200
+@@ -8,6 +8,10 @@
+ 
+ #include "config-startplasma.h"
+ 
++#include <QProcess>
++#include <QStringList>
++#include <QTextStream>
++
+ #include <optional>
+ 
+ extern QTextStream out;
+@@ -30,7 +34,9 @@
+ void setupFontDpi();
+ QProcess *setupKSplash();
+ 
+-bool startPlasmaSession();
++// wayland=true keeps the 6.8 session (KWinWrapper / plasma-workspace-wayland.target).
++// X11 passes false (org.kde.ksmserver / plasma-workspace-x11.target).
++bool startPlasmaSession(bool wayland = true);
+ 
+ void stopSystemdSession();
+ void waitForKonqi();
+diff -ruN a/startkde/systemd/CMakeLists.txt b/startkde/systemd/CMakeLists.txt
+--- a/startkde/systemd/CMakeLists.txt	2026-10-08 13:24:15.000000000 +0200
++++ b/startkde/systemd/CMakeLists.txt	2026-10-18 18:55:21.328188562 +0200
+@@ -1,6 +1,9 @@
+ install(FILES plasma-core.target DESTINATION ${KDE_INSTALL_SYSTEMDUSERUNITDIR})
+ install(FILES plasma-workspace.target DESTINATION ${KDE_INSTALL_SYSTEMDUSERUNITDIR})
+ install(FILES plasma-workspace-wayland.target DESTINATION ${KDE_INSTALL_SYSTEMDUSERUNITDIR})
++if (WITH_X11_SESSION)
++    install(FILES plasma-workspace-x11.target DESTINATION ${KDE_INSTALL_SYSTEMDUSERUNITDIR})
++endif()
+ 
+ add_executable(kde-systemd-start-condition kde-systemd-start-condition.cpp)
+ target_link_libraries(kde-systemd-start-condition PUBLIC KF6::ConfigCore KF6::Service PlasmaAutostart)
+diff -ruN a/startkde/systemd/plasma-workspace-x11.target b/startkde/systemd/plasma-workspace-x11.target
+--- a/startkde/systemd/plasma-workspace-x11.target	1970-01-01 01:00:00.000000000 +0100
++++ b/startkde/systemd/plasma-workspace-x11.target	2026-09-08 12:57:37.000000000 +0200
+@@ -0,0 +1,4 @@
++[Unit]
++Wants=plasma-kwin_x11.service
++Requires=plasma-workspace.target
++BindsTo=plasma-ksmserver.service

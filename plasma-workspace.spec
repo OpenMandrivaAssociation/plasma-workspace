@@ -15,8 +15,8 @@
 %define libklipper %mklibname klipper
 
 Name: plasma-workspace
-Version: 6.7.5
-Release: %{?git:0.%{git}.}2
+Version: 6.8.0
+Release: %{?git:0.%{git}.}1
 %if 0%{?git:1}
 Source0:	https://invent.kde.org/plasma/plasma-workspace/-/archive/%{gitbranch}/plasma-workspace-%{gitbranchd}.tar.bz2#/plasma-workspace-%{git}.tar.bz2
 %else
@@ -34,8 +34,8 @@ BuildRequires: cmake(KF6CoreAddons)
 BuildRequires: cmake(KF6Crash)
 BuildRequires: cmake(KF6Solid)
 BuildRequires: cmake(KF6Parts)
-BuildRequires: cmake(PlasmaActivities)
-BuildRequires: cmake(PlasmaActivitiesStats)
+BuildRequires: cmake(PlasmaActivities) >= 6.8
+BuildRequires: cmake(PlasmaActivitiesStats) >= 6.8
 BuildRequires: cmake(KF6Auth)
 BuildRequires: cmake(KF6Notifications)
 BuildRequires: cmake(KF6ItemModels)
@@ -45,7 +45,7 @@ BuildRequires: cmake(KF6Declarative)
 BuildRequires: cmake(KF6XmlGui)
 BuildRequires: cmake(KF6FileMetaData)
 BuildRequires: cmake(Wayland) >= 5.90.0
-BuildRequires: cmake(KWayland) >= 5.90.0
+BuildRequires: cmake(KWayland) >= 6.8
 BuildRequires: cmake(KF6NetworkManagerQt)
 BuildRequires: cmake(KF6TextWidgets)
 BuildRequires: pkgconfig(libnm) >= 1.4.0
@@ -57,8 +57,8 @@ BuildRequires: cmake(Gettext)
 BuildRequires: cmake(ECM)
 BuildRequires: cmake(KF6KIO)
 BuildRequires: cmake(KF6Declarative)
-BuildRequires: cmake(Plasma) >= 5.90.0
-BuildRequires: cmake(PlasmaQuick) >= 5.90.0
+BuildRequires: cmake(Plasma) >= 6.8
+BuildRequires: cmake(PlasmaQuick) >= 6.8
 BuildRequires: cmake(KF6Config)
 BuildRequires: cmake(KF6Prison)
 BuildRequires: cmake(Phonon4Qt6)
@@ -68,10 +68,10 @@ BuildRequires: cmake(KF6Su)
 BuildRequires: cmake(KF6NewStuff)
 BuildRequires: cmake(KF6KCMUtils)
 BuildRequires: cmake(KF6IdleTime)
-BuildRequires: cmake(KF6Screen)
+BuildRequires: cmake(KF6Screen) >= 6.8
 BuildRequires: cmake(KF6Baloo)
 BuildRequires: cmake(KF6Prison)
-BuildRequires: cmake(KScreenLocker)
+BuildRequires: cmake(KScreenLocker) >= 6.8
 BuildRequires: cmake(KF6Holidays)
 BuildRequires: cmake(KF6Kirigami2)
 BuildRequires: cmake(KF6QuickCharts)
@@ -80,16 +80,17 @@ BuildRequires: cmake(Plasma5Support)
 BuildRequires: cmake(KExiv2Qt6)
 BuildRequires: cmake(KF6Svg)
 BuildRequires: cmake(KF6StatusNotifierItem)
-BuildRequires: cmake(KNightTime)
+BuildRequires: cmake(KNightTime) >= 6.8
+BuildRequires: cmake(Union) >= 6.8
 BuildRequires: cmake(VulkanHeaders)
 BuildRequires: %mklibname -d KF6IconWidgets
 BuildRequires: cmake(KF6KirigamiAddons)
 BuildRequires: cmake(KF6UserFeedback)
-BuildRequires: cmake(PlasmaWaylandProtocols)
+BuildRequires: cmake(PlasmaWaylandProtocols) >= 1.23
 BuildRequires: cmake(Qt6WaylandClient)
 BuildRequires: cmake(Qt6WaylandCompositor)
 BuildRequires: cmake(Qt6Positioning)
-BuildRequires: cmake(LayerShellQt)
+BuildRequires: cmake(LayerShellQt) >= 6.8
 BuildRequires: cmake(WaylandProtocols)
 BuildRequires: pkgconfig(xkbcommon)
 BuildRequires: pkgconfig(dbusmenu-qt6)
@@ -146,13 +147,13 @@ BuildRequires: pkgconfig(libudev)
 BuildRequires: spirv-tools
 BuildRequires: gettext
 # for DBus interfaces
-BuildRequires: plasma6-kwin-wayland >= 6.4.0
+BuildRequires: plasma6-kwin-wayland >= 6.8
 # Both Plasma 5 and Plasma 6 provide
 # cmake(KPipeWire), cmake(KSysGuard) and friends
-BuildRequires: cmake(KPipeWire) >= 5.27.80
+BuildRequires: cmake(KPipeWire) >= 6.8
 BuildRequires: kwin-devel
-BuildRequires: cmake(KWinDBusInterface) >= 5.27.80
-BuildRequires: cmake(KSysGuard) >= 5.27.80
+BuildRequires: cmake(KWinDBusInterface) >= 6.8
+BuildRequires: cmake(KSysGuard) >= 6.8
 BuildRequires: xdotool
 # needed for backgrounds and patch 2
 Requires: distro-release-theme
@@ -199,8 +200,8 @@ BuildOption: -DINSTALL_SDDM_WAYLAND_SESSION:BOOL=ON
 BuildOption: -DPLASMA_SYSTEMD_BOOT:BOOL=ON
 
 %patchlist
+plasma-workspace-6.8.0-keep-x11.patch
 plasma-workspace-set-QT_QPA_PLATFORM.patch
-plasma-workspace-wayland-egl-is-wayland.patch
 plasma-workspace-default-OM-wallpaper.patch
 # FIXME this needs to be redone properly (OM theme)
 # plasma-workspace-5.8.0-use-openmandriva-icon-and-background.patch
