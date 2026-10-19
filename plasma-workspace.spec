@@ -513,7 +513,12 @@ rm -rf %{buildroot}%{_builddir}
 %{_datadir}/applications/org.kde.baloorunner.desktop
 %{_datadir}/applications/org.kde.secretprompter.desktop
 %{_libdir}/libexec/plasma-startup-sound
+%{_libdir}/libexec/plasma-setup-xwayland
 %{_datadir}/xdg-desktop-portal/portals/plasmanotify.portal
+%{_libdir}/kconf_update_bin/plasma6.8-remove-action-menu-shortcut
+%{_datadir}/kconf_update/plasma6.8-remove-action-menu-shortcut.upd
+%{_qtdir}/qml/org/kde/plasma/private/accessibility
+%{_qtdir}/qml/org/kde/plasma/shell
 
 %files -n %{libname}
 %{_libdir}/libklookandfeel.so.*
@@ -527,6 +532,7 @@ rm -rf %{buildroot}%{_builddir}
 %{_qtdir}/qml/org/kde/plasma/workspace/keyboardlayout
 %{_qtdir}/qml/org/kde/plasma/workspace/osd
 %{_qtdir}/qml/org/kde/plasma/workspace/timezoneselector
+%{_qtdir}/qml/org/kde/plasma/workspace/loginlockscreen
 %{_qtdir}/qml/org/kde/plasma/private/battery
 %{_qtdir}/qml/org/kde/plasma/private/keyboardindicator
 
