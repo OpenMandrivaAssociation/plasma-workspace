@@ -1,0 +1,964 @@
+--- a/shell/CMakeLists.txt
++++ b/shell/CMakeLists.txt
+@@ -91,6 +91,7 @@
+ target_link_libraries(plasmashell_osd PRIVATE
+     Plasma::PlasmaQuick
+     Wayland::Client
++    KF6::WindowSystem
+ )
+ 
+ qt6_generate_wayland_protocol_client_sources(plasmashell
+@@ -148,6 +149,10 @@
+ target_include_directories(plasmashell PRIVATE "${CMAKE_BINARY_DIR}")
+ target_compile_definitions(plasmashell PRIVATE -DPROJECT_VERSION="${PROJECT_VERSION}")
+ 
++if(HAVE_X11)
++  target_link_libraries(plasmashell PRIVATE XCB::XCB XCB::RANDR)
++endif()
++
+ if(PROJECT_VERSION_PATCH GREATER_EQUAL 80 OR PROJECT_VERSION_MINOR GREATER_EQUAL 80)
+     target_link_libraries(plasmashell PRIVATE KF6::KIOGui)
+ endif()
+--- a/shell/autohidescreenedge.cpp
++++ b/shell/autohidescreenedge.cpp
+@@ -15,11 +15,16 @@
+ #include <KWindowSystem>
+ 
+ #include <QDebug>
++#include <QGuiApplication>
+ #include <QWindow>
+ #include <QtWaylandClient/QWaylandClientExtension>
+ #include <QtWaylandClient/QtWaylandClientVersion>
+ #include <qpa/qplatformwindow_p.h>
+ 
++#if HAVE_X11
++#include <xcb/xcb.h>
++#endif
++
+ class WaylandScreenEdgeManagerV1 : public QWaylandClientExtensionTemplate<WaylandScreenEdgeManagerV1>, public QtWayland::kde_screen_edge_manager_v1
+ {
+     Q_OBJECT
+@@ -170,6 +175,104 @@
+     m_edge.reset();
+ }
+ 
++#if HAVE_X11
++
++class X11AutoHideScreenEdge : public AutoHideScreenEdge
++{
++    Q_OBJECT
++
++public:
++    X11AutoHideScreenEdge(PanelView *view);
++    ~X11AutoHideScreenEdge() override;
++
++    void deactivate() override;
++    void activate() override;
++
++private:
++    xcb_atom_t m_atom = XCB_ATOM_NONE;
++};
++
++X11AutoHideScreenEdge::X11AutoHideScreenEdge(PanelView *view)
++    : AutoHideScreenEdge(view)
++{
++    auto *x11App = qGuiApp->nativeInterface<QNativeInterface::QX11Application>();
++    if (!x11App) {
++        return;
++    }
++    xcb_connection_t *connection = x11App->connection();
++
++    constexpr QByteArrayView atomName("_KDE_NET_WM_SCREEN_EDGE_SHOW");
++    xcb_intern_atom_cookie_t cookie = xcb_intern_atom_unchecked(connection, false, atomName.length(), atomName.constData());
++    xcb_intern_atom_reply_t *reply = xcb_intern_atom_reply(connection, cookie, nullptr);
++    if (reply) {
++        m_atom = reply->atom;
++        free(reply);
++    }
++}
++
++X11AutoHideScreenEdge::~X11AutoHideScreenEdge()
++{
++    if (!m_view) {
++        return;
++    }
++    deactivate();
++}
++
++void X11AutoHideScreenEdge::deactivate()
++{
++    if (m_atom == XCB_ATOM_NONE || !m_view) {
++        return;
++    }
++    auto *x11App = qGuiApp->nativeInterface<QNativeInterface::QX11Application>();
++    if (!x11App) {
++        return;
++    }
++    xcb_delete_property(x11App->connection(), m_view->winId(), m_atom);
++}
++
++void X11AutoHideScreenEdge::activate()
++{
++    if (m_atom == XCB_ATOM_NONE || !m_view) {
++        return;
++    }
++
++    uint32_t value = 0;
++
++    switch (m_view->location()) {
++    case Plasma::Types::TopEdge:
++        value = 0;
++        break;
++    case Plasma::Types::RightEdge:
++        value = 1;
++        break;
++    case Plasma::Types::BottomEdge:
++        value = 2;
++        break;
++    case Plasma::Types::LeftEdge:
++        value = 3;
++        break;
++    case Plasma::Types::Floating:
++    default:
++        value = 4;
++        break;
++    }
++
++    auto *x11App = qGuiApp->nativeInterface<QNativeInterface::QX11Application>();
++    if (!x11App) {
++        return;
++    }
++    xcb_change_property(x11App->connection(),
++                        XCB_PROP_MODE_REPLACE,
++                        m_view->winId(),
++                        m_atom,
++                        XCB_ATOM_CARDINAL,
++                        32,
++                        1,
++                        &value);
++}
++
++#endif
++
+ AutoHideScreenEdge::AutoHideScreenEdge(PanelView *view)
+     : QObject(view)
+     , m_view(view)
+@@ -178,6 +281,13 @@
+ 
+ AutoHideScreenEdge *AutoHideScreenEdge::create(PanelView *view)
+ {
++    if (KWindowSystem::isPlatformX11()) {
++#if HAVE_X11
++        return new X11AutoHideScreenEdge(view);
++#else
++        return new WaylandAutoHideScreenEdge(view);
++#endif
++    }
+     return new WaylandAutoHideScreenEdge(view);
+ }
+ 
+--- a/shell/autotests/CMakeLists.txt
++++ b/shell/autotests/CMakeLists.txt
+@@ -61,6 +61,10 @@
+                             SharedClientTest
+                                      )
+                target_link_libraries(${_testname} KF6::ConfigQml)
++               if(HAVE_X11)
++                   # panelview.cpp uses QtGui private QXcbWindow; autohidescreenedge.cpp calls xcb_*
++                   target_link_libraries(${_testname} Qt::GuiPrivate XCB::XCB)
++               endif()
+                if(QT_QTOPENGL_FOUND)
+                    target_link_libraries(${_testname} Qt::OpenGL)
+                endif()
+--- a/shell/config-plasma.h.cmake
++++ b/shell/config-plasma.h.cmake
+@@ -1 +1,2 @@
++#cmakedefine01 HAVE_X11
+ #cmakedefine01 USE_SCRIPTING
+--- a/shell/desktopview.cpp
++++ b/shell/desktopview.cpp
+@@ -24,6 +24,7 @@
+ #include <KAuthorized>
+ #include <KStartupInfo>
+ #include <KWaylandExtras>
++#include <KX11Extras>
+ #include <klocalizedstring.h>
+ #include <kwindowsystem.h>
+ #include <plasmaactivities/controller.h>
+@@ -43,13 +44,20 @@
+     setColor(Qt::black);
+     setFlags(Qt::Window | Qt::FramelessWindowHint);
+ 
+-    m_layerWindow = LayerShellQt::Window::get(this);
+-    m_layerWindow->setKeyboardInteractivity(LayerShellQt::Window::KeyboardInteractivityOnDemand);
+-    m_layerWindow->setExclusiveZone(-1);
+-    m_layerWindow->setLayer(LayerShellQt::Window::LayerBackground);
+-    m_layerWindow->setScope(QStringLiteral("desktop"));
+-    m_layerWindow->setCloseOnDismissed(false);
+-    m_layerWindow->setActivateOnShow(false);
++    if (KWindowSystem::isPlatformWayland()) {
++        m_layerWindow = LayerShellQt::Window::get(this);
++        m_layerWindow->setKeyboardInteractivity(LayerShellQt::Window::KeyboardInteractivityOnDemand);
++        m_layerWindow->setExclusiveZone(-1);
++        m_layerWindow->setLayer(LayerShellQt::Window::LayerBackground);
++        m_layerWindow->setScope(QStringLiteral("desktop"));
++        m_layerWindow->setCloseOnDismissed(false);
++        m_layerWindow->setActivateOnShow(false);
++    } else {
++        // Layer-shell is a no-op on X11. kwin_x11 only treats this as the
++        // desktop background when the window type is _NET_WM_WINDOW_TYPE_DESKTOP.
++        KX11Extras::setType(winId(), NET::Desktop);
++        KX11Extras::setState(winId(), NET::KeepBelow);
++    }
+ 
+     if (targetScreen) {
+         setScreenToFollow(targetScreen);
+@@ -89,6 +97,10 @@
+ void DesktopView::showEvent(QShowEvent *e)
+ {
+     QQuickWindow::showEvent(e);
++    if (KWindowSystem::isPlatformX11()) {
++        KX11Extras::setType(winId(), NET::Desktop);
++        KX11Extras::setState(winId(), NET::KeepBelow);
++    }
+     adaptToScreen();
+ }
+ 
+@@ -109,7 +121,9 @@
+         disconnect(m_screenToFollow.data(), &QScreen::geometryChanged, this, &DesktopView::screenGeometryChanged);
+     }
+     m_screenToFollow = screen;
+-    m_layerWindow->setScreen(screen);
++    if (m_layerWindow) {
++        m_layerWindow->setScreen(screen);
++    }
+ 
+     setScreen(screen);
+     connect(m_screenToFollow.data(), &QScreen::geometryChanged, this, &DesktopView::screenGeometryChanged);
+--- a/shell/osdwindow.cpp
++++ b/shell/osdwindow.cpp
+@@ -8,6 +8,9 @@
+ 
+ #include <PlasmaQuick/PlasmaShellWaylandIntegration>
+ 
++#include <KWindowSystem>
++#include <KX11Extras>
++
+ OsdWindow::OsdWindow()
+ {
+     PlasmaShellWaylandIntegration::get(this)->setRole(QtWayland::org_kde_plasma_surface::role_onscreendisplay);
+@@ -15,4 +18,9 @@
+ 
+     setFlag(Qt::WindowDoesNotAcceptFocus, true);
+     setFlag(Qt::WindowTransparentForInput, true);
++
++    if (KWindowSystem::isPlatformX11()) {
++        KX11Extras::setOnAllDesktops(winId(), true);
++        KX11Extras::setType(winId(), NET::OnScreenDisplay);
++    }
+ }
+--- a/shell/panelconfigview.cpp
++++ b/shell/panelconfigview.cpp
+@@ -9,6 +9,8 @@
+ #include "panelshadows_p.h"
+ #include "shellcorona.h"
+ 
++#include <config-plasma.h>
++
+ #include <LayerShellQt/Window>
+ 
+ #include <QAction>
+@@ -20,6 +22,7 @@
+ #include <QScreen>
+ 
+ #include <KWindowSystem>
++#include <KX11Extras>
+ #include <klocalizedstring.h>
+ #include <kwindoweffects.h>
+ #include <plasmaquick/popupplasmawindow.h>
+@@ -44,13 +47,14 @@
+     , m_panelView(panelView)
+     , m_mainConfigView(mainConfigView)
+ {
+-    m_layerWindow = LayerShellQt::Window::get(this);
+-    m_layerWindow->setLayer(LayerShellQt::Window::LayerTop);
+-    m_layerWindow->setKeyboardInteractivity(LayerShellQt::Window::KeyboardInteractivityOnDemand);
+-    m_layerWindow->setScope(QStringLiteral("dock"));
+-    m_layerWindow->setCloseOnDismissed(false);
+-    m_layerWindow->setScreen(m_panelView->screen());
+-
++    if (KWindowSystem::isPlatformWayland()) {
++        m_layerWindow = LayerShellQt::Window::get(this);
++        m_layerWindow->setLayer(LayerShellQt::Window::LayerTop);
++        m_layerWindow->setKeyboardInteractivity(LayerShellQt::Window::KeyboardInteractivityOnDemand);
++        m_layerWindow->setScope(QStringLiteral("dock"));
++        m_layerWindow->setCloseOnDismissed(false);
++        m_layerWindow->setScreen(m_panelView->screen());
++    }
+     setScreen(m_panelView->screen());
+ 
+     connect(this, &PanelRulerView::mainItemChanged, this, &PanelRulerView::syncPanelLocation);
+@@ -87,65 +91,101 @@
+         setBorders(Qt::TopEdge);
+     }
+ 
+-    switch (m_containment->location()) {
+-    case Plasma::Types::LeftEdge:
+-    case Plasma::Types::RightEdge:
+-        m_layerWindow->setDesiredSize(QSize(mainItem()->implicitWidth(), available.height()));
+-        break;
+-    case Plasma::Types::TopEdge:
+-    case Plasma::Types::BottomEdge:
+-    default:
+-        m_layerWindow->setDesiredSize(QSize(available.width(), mainItem()->implicitHeight()));
+-        break;
+-    }
++    if (KWindowSystem::isPlatformX11()) {
++#if HAVE_X11
++        KX11Extras::setType(winId(), NET::Dock);
++        KX11Extras::setState(winId(), NET::KeepAbove);
++
++        switch (m_containment->location()) {
++        case Plasma::Types::LeftEdge:
++        case Plasma::Types::RightEdge:
++            setWidth(mainItem()->implicitWidth());
++            setHeight(available.height());
++            break;
++        case Plasma::Types::TopEdge:
++        case Plasma::Types::BottomEdge:
++        default:
++            setWidth(available.width());
++            setHeight(mainItem()->implicitHeight());
++            break;
++        }
+ 
+-    m_layerWindow->setKeyboardInteractivity(LayerShellQt::Window::KeyboardInteractivityOnDemand);
+-    LayerShellQt::Window::Anchors anchors;
++        switch (m_containment->location()) {
++        case Plasma::Types::TopEdge:
++            setPosition(available.topLeft() + screen->geometry().topLeft());
++            break;
++        case Plasma::Types::LeftEdge:
++            setPosition(available.topLeft() + screen->geometry().topLeft());
++            break;
++        case Plasma::Types::RightEdge:
++            setPosition(available.topLeft() + screen->geometry().topRight() - QPoint(width(), 0));
++            break;
++        case Plasma::Types::BottomEdge:
++        default:
++            setPosition(available.bottomLeft() + screen->geometry().topLeft() - QPoint(0, height()));
++        }
++#endif
++    } else if (m_layerWindow) {
++        switch (m_containment->location()) {
++        case Plasma::Types::LeftEdge:
++        case Plasma::Types::RightEdge:
++            m_layerWindow->setDesiredSize(QSize(mainItem()->implicitWidth(), available.height()));
++            break;
++        case Plasma::Types::TopEdge:
++        case Plasma::Types::BottomEdge:
++        default:
++            m_layerWindow->setDesiredSize(QSize(available.width(), mainItem()->implicitHeight()));
++            break;
++        }
+ 
+-    switch (m_containment->location()) {
+-    case Plasma::Types::TopEdge:
+-        anchors.setFlag(LayerShellQt::Window::AnchorTop);
+-        break;
+-    case Plasma::Types::LeftEdge:
+-        anchors.setFlag(LayerShellQt::Window::AnchorLeft);
+-        break;
+-    case Plasma::Types::RightEdge:
+-        anchors.setFlag(LayerShellQt::Window::AnchorRight);
+-        break;
+-    case Plasma::Types::BottomEdge:
+-    default:
+-        anchors.setFlag(LayerShellQt::Window::AnchorBottom);
+-        break;
+-    }
++        m_layerWindow->setKeyboardInteractivity(LayerShellQt::Window::KeyboardInteractivityOnDemand);
++        LayerShellQt::Window::Anchors anchors;
+ 
+-    if (m_containment->formFactor() == Plasma::Types::Horizontal) {
+-        switch (m_panelView->alignment()) {
+-        case Qt::AlignLeft:
+-            anchors.setFlag(LayerShellQt::Window::AnchorLeft);
++        switch (m_containment->location()) {
++        case Plasma::Types::TopEdge:
++            anchors.setFlag(LayerShellQt::Window::AnchorTop);
+             break;
+-        case Qt::AlignCenter:
++        case Plasma::Types::LeftEdge:
++            anchors.setFlag(LayerShellQt::Window::AnchorLeft);
+             break;
+-        case Qt::AlignRight:
++        case Plasma::Types::RightEdge:
+             anchors.setFlag(LayerShellQt::Window::AnchorRight);
+             break;
+-        }
+-    } else {
+-        switch (m_panelView->alignment()) {
+-        case Qt::AlignLeft:
+-            anchors.setFlag(LayerShellQt::Window::AnchorTop);
+-            break;
+-        case Qt::AlignCenter:
+-            break;
+-        case Qt::AlignRight:
++        case Plasma::Types::BottomEdge:
++        default:
+             anchors.setFlag(LayerShellQt::Window::AnchorBottom);
+             break;
+         }
+-    }
+ 
+-    // m_layerWindow->setMargins(margins);
+-    m_layerWindow->setAnchors(anchors);
++        if (m_containment->formFactor() == Plasma::Types::Horizontal) {
++            switch (m_panelView->alignment()) {
++            case Qt::AlignLeft:
++                anchors.setFlag(LayerShellQt::Window::AnchorLeft);
++                break;
++            case Qt::AlignCenter:
++                break;
++            case Qt::AlignRight:
++                anchors.setFlag(LayerShellQt::Window::AnchorRight);
++                break;
++            }
++        } else {
++            switch (m_panelView->alignment()) {
++            case Qt::AlignLeft:
++                anchors.setFlag(LayerShellQt::Window::AnchorTop);
++                break;
++            case Qt::AlignCenter:
++                break;
++            case Qt::AlignRight:
++                anchors.setFlag(LayerShellQt::Window::AnchorBottom);
++                break;
++            }
++        }
++
++        // m_layerWindow->setMargins(margins);
++        m_layerWindow->setAnchors(anchors);
+ 
+-    requestUpdate();
++        requestUpdate();
++    }
+ }
+ 
+ void PanelRulerView::showEvent(QShowEvent *ev)
+--- a/shell/panelshadows.cpp
++++ b/shell/panelshadows.cpp
+@@ -238,6 +238,10 @@
+     QMargins padding;
+     QMargins extraPadding = m_extraPadding.value(window);
+ 
++    if (KWindowSystem::isPlatformX11()) {
++        extraPadding *= window->devicePixelRatio();
++    }
++
+     if (enabledBorders & KSvg::FrameSvg::TopBorder) {
+         const QSize marginHint = q->elementSize(QStringLiteral("shadow-hint-top-margin")).toSize();
+         if (marginHint.isValid()) {
+--- a/shell/panelview.cpp
++++ b/shell/panelview.cpp
+@@ -30,12 +30,19 @@
+ #include <QScreen>
+ 
+ #include <KLocalizedString>
++#include <KWindowSystem>
++#include <KX11Extras>
+ 
+ #include <Plasma/Containment>
+ #include <PlasmaQuick/AppletQuickItem>
+ 
+ #include <LayerShellQt/Window>
+ 
++#if HAVE_X11
++#include <NETWM>
++#include <qpa/qplatformwindow_p.h>
++#endif
++
+ using namespace std::chrono_literals;
+ using namespace Qt::StringLiterals;
+ 
+@@ -60,11 +67,13 @@
+     , m_lengthMode(FillAvailable)
+     , m_backgroundHints(Plasma::Types::StandardBackground)
+ {
+-    m_layerWindow = LayerShellQt::Window::get(this);
+-    m_layerWindow->setLayer(LayerShellQt::Window::LayerTop);
+-    m_layerWindow->setKeyboardInteractivity(LayerShellQt::Window::KeyboardInteractivityNone);
+-    m_layerWindow->setScope(QStringLiteral("dock"));
+-    m_layerWindow->setCloseOnDismissed(false);
++    if (KWindowSystem::isPlatformWayland()) {
++        m_layerWindow = LayerShellQt::Window::get(this);
++        m_layerWindow->setLayer(LayerShellQt::Window::LayerTop);
++        m_layerWindow->setKeyboardInteractivity(LayerShellQt::Window::KeyboardInteractivityNone);
++        m_layerWindow->setScope(QStringLiteral("dock"));
++        m_layerWindow->setCloseOnDismissed(false);
++    }
+ 
+     if (targetScreen) {
+         setPosition(targetScreen->geometry().center());
+@@ -673,7 +682,7 @@
+     updateLayerWindow();
+ 
+     // At least one QWindow setGeometry is needed to avoid a protocol error
+-    if (!size().isEmpty()) {
++    if (m_layerWindow && !size().isEmpty()) {
+         m_layerWindow->setDesiredSize(geom.size());
+ 
+         // Should not be needed on Wayland in general, but popups and things like that still need it.
+@@ -1051,7 +1060,15 @@
+ void PanelView::integrateScreen()
+ {
+     updateMask();
+-
++#if HAVE_X11
++    if (KWindowSystem::isPlatformX11()) {
++        KX11Extras::setOnAllDesktops(winId(), true);
++        KX11Extras::setType(winId(), NET::Dock);
++        if (auto xcbWindow = nativeInterface<QNativeInterface::Private::QXcbWindow>()) {
++            xcbWindow->setWindowType(QNativeInterface::Private::QXcbWindow::Dock);
++        }
++    }
++#endif
+     setVisibilityMode(m_visibilityMode);
+ }
+ 
+@@ -1124,7 +1141,9 @@
+ 
+     m_screenToFollow = screen;
+ 
+-    m_layerWindow->setScreen(screen);
++    if (m_layerWindow) {
++        m_layerWindow->setScreen(screen);
++    }
+ 
+     setScreen(screen);
+     adaptToScreen();
+@@ -1394,25 +1413,97 @@
+                                                  mask);
+     }
+ 
+-    const QRect bounding = mask.boundingRect();
+-    // Always go to screen edge, to preserve fitts law
+-    switch (containment()->location()) {
+-    case Plasma::Types::LeftEdge:
+-        screenPanelRect.setRight(bounding.right());
+-        break;
+-    case Plasma::Types::TopEdge:
+-        screenPanelRect.setBottom(bounding.bottom());
+-        break;
+-    case Plasma::Types::RightEdge:
+-        screenPanelRect.setLeft(bounding.left());
+-        break;
+-    case Plasma::Types::BottomEdge:
+-        screenPanelRect.setTop(bounding.top());
+-        break;
+-    default:
+-        break;
++    if (!KWindowSystem::isPlatformX11() || KX11Extras::compositingActive()) {
++        const QRect bounding = mask.boundingRect();
++        // Always go to screen edge, to preserve fitts law
++        switch (containment()->location()) {
++        case Plasma::Types::LeftEdge:
++            screenPanelRect.setRight(bounding.right());
++            break;
++        case Plasma::Types::TopEdge:
++            screenPanelRect.setBottom(bounding.bottom());
++            break;
++        case Plasma::Types::RightEdge:
++            screenPanelRect.setLeft(bounding.left());
++            break;
++        case Plasma::Types::BottomEdge:
++            screenPanelRect.setTop(bounding.top());
++            break;
++        default:
++            break;
++        }
++        setMask(screenPanelRect);
++    } else {
++        setMask(mask);
++    }
++}
++
++bool PanelView::canSetStrut() const
++{
++#if HAVE_X11
++    if (!KWindowSystem::isPlatformX11()) {
++        return true;
++    }
++    // read the wm name, need to do this every time which means a roundtrip unfortunately
++    // but WM might have changed
++    auto *x11App = qGuiApp->nativeInterface<QNativeInterface::QX11Application>();
++    if (!x11App) {
++        return false;
++    }
++    NETRootInfo rootInfo(x11App->connection(), NET::Supported | NET::SupportingWMCheck);
++    if (qstricmp(rootInfo.wmName(), "KWin") == 0) {
++        // KWin since 5.7 can handle this fine, so only exclude for other window managers
++        return true;
++    }
++
++    const QRect thisScreen = screen()->geometry();
++    const int numScreens = corona()->numScreens();
++    if (numScreens < 2) {
++        return true;
++    }
++
++    // Extended struts against a screen edge near to another screen are really harmful, so windows maximized under the panel is a lesser pain
++    // TODO: force "windows can cover" in those cases?
++    const auto screenIds = m_corona->screenIds();
++    for (int id : screenIds) {
++        if (id == containment()->screen()) {
++            continue;
++        }
++
++        const QRect otherScreen = corona()->screenGeometry(id);
++        if (!otherScreen.isValid()) {
++            continue;
++        }
++
++        switch (location()) {
++        case Plasma::Types::TopEdge:
++            if (otherScreen.bottom() <= thisScreen.top()) {
++                return false;
++            }
++            break;
++        case Plasma::Types::BottomEdge:
++            if (otherScreen.top() >= thisScreen.bottom()) {
++                return false;
++            }
++            break;
++        case Plasma::Types::RightEdge:
++            if (otherScreen.left() >= thisScreen.right()) {
++                return false;
++            }
++            break;
++        case Plasma::Types::LeftEdge:
++            if (otherScreen.right() <= thisScreen.left()) {
++                return false;
++            }
++            break;
++        default:
++            return false;
++        }
+     }
+-    setMask(screenPanelRect);
++    return true;
++#else
++    return true;
++#endif
+ }
+ 
+ void PanelView::updateExclusiveZone()
+@@ -1442,21 +1533,101 @@
+         return;
+     }
+ 
+-    switch (m_visibilityMode) {
+-    case NormalPanel:
+-        if (m_corona->shouldPanelReserveSpace(this)) {
+-            m_layerWindow->setExclusiveZone(thickness());
+-        } else {
++    if (KWindowSystem::isPlatformWayland() && m_layerWindow) {
++        switch (m_visibilityMode) {
++        case NormalPanel:
++            if (m_corona->shouldPanelReserveSpace(this)) {
++                m_layerWindow->setExclusiveZone(thickness());
++            } else {
++                m_layerWindow->setExclusiveZone(-1);
++            }
++            break;
++        case AutoHide:
++        case DodgeWindows:
++        case WindowsGoBelow:
+             m_layerWindow->setExclusiveZone(-1);
++            break;
+         }
+-        break;
+-    case AutoHide:
+-    case DodgeWindows:
+-    case WindowsGoBelow:
+-        m_layerWindow->setExclusiveZone(-1);
+-        break;
++        requestUpdate();
+     }
+-    requestUpdate();
++#if HAVE_X11
++    else if (KWindowSystem::isPlatformX11()) {
++        qreal top_width = 0, top_start = 0, top_end = 0;
++        qreal bottom_width = 0, bottom_start = 0, bottom_end = 0;
++        qreal right_width = 0, right_start = 0, right_end = 0;
++        qreal left_width = 0, left_start = 0, left_end = 0;
++
++        if (m_visibilityMode == NormalPanel) {
++            if (!canSetStrut()) {
++                KX11Extras::setExtendedStrut(winId(), 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
++                return;
++            }
++
++            // When setting struts, all arguments must belong to the logical coordinates.
++            const double devicePixelRatio = m_screenToFollow->devicePixelRatio();
++            const QRectF thisScreen{m_screenToFollow->geometry().topLeft().toPointF() / devicePixelRatio, m_screenToFollow->geometry().size()};
++            // extended struts are to the combined screen geoms, not the single screen
++            QRectF wholeScreen;
++            for (const auto screens = qGuiApp->screens(); auto screen : screens) {
++                const QRectF geometry = screen->geometry().toRectF();
++                wholeScreen |= QRectF(geometry.topLeft() / devicePixelRatio, geometry.size());
++            }
++
++            const qreal offset = 1 / devicePixelRatio; // To make sure strut is only in a screen
++
++            switch (location()) {
++            case Plasma::Types::TopEdge: {
++                const qreal topOffset = thisScreen.top();
++                top_width = thickness() + topOffset;
++                top_start = x() / devicePixelRatio;
++                top_end = top_start + width() - offset;
++                break;
++            }
++
++            case Plasma::Types::BottomEdge: {
++                const qreal bottomOffset = wholeScreen.bottom() - thisScreen.bottom();
++                bottom_width = thickness() + bottomOffset;
++                bottom_start = x() / devicePixelRatio;
++                bottom_end = bottom_start + width() - offset;
++                break;
++            }
++
++            case Plasma::Types::RightEdge: {
++                const qreal rightOffset = wholeScreen.right() - thisScreen.right();
++                right_width = thickness() + rightOffset;
++                right_start = y() / devicePixelRatio;
++                right_end = right_start + height() - offset;
++                break;
++            }
++
++            case Plasma::Types::LeftEdge: {
++                const qreal leftOffset = thisScreen.x();
++                left_width = thickness() + leftOffset;
++                left_start = y() / devicePixelRatio;
++                left_end = left_start + height() - offset;
++                break;
++            }
++
++            default:
++                break;
++            }
++        }
++
++        KX11Extras::setExtendedStrut(winId(),
++                                     left_width,
++                                     left_start,
++                                     left_end,
++                                     right_width,
++                                     right_start,
++                                     right_end,
++                                     top_width,
++                                     top_start,
++                                     top_end,
++                                     bottom_width,
++                                     bottom_start,
++                                     bottom_end);
++    }
++#endif
+ }
+ 
+ void PanelView::refreshContainment()
+@@ -1568,17 +1739,27 @@
+     if (status == Plasma::Types::NeedsAttentionStatus) {
+         showTemporarily();
+         setFlags(flags() | Qt::WindowDoesNotAcceptFocus);
+-
+-        m_layerWindow->setKeyboardInteractivity(LayerShellQt::Window::KeyboardInteractivityNone);
+-        requestUpdate();
++        if (KWindowSystem::isPlatformX11()) {
++            KX11Extras::setState(winId(), NET::SkipSwitcher | NET::KeepAbove);
++        }
++        if (m_layerWindow) {
++            m_layerWindow->setKeyboardInteractivity(LayerShellQt::Window::KeyboardInteractivityNone);
++            requestUpdate();
++        }
+ 
+     } else if (status == Plasma::Types::AcceptingInputStatus) {
+         m_corona->savePreviousWindow();
+         setFlags(flags() & ~Qt::WindowDoesNotAcceptFocus);
+-        showTemporarily();
++        if (KWindowSystem::isPlatformX11()) {
++            KX11Extras::forceActiveWindow(winId());
++        } else {
++            showTemporarily();
++        }
+ 
+-        m_layerWindow->setKeyboardInteractivity(LayerShellQt::Window::KeyboardInteractivityOnDemand);
+-        requestUpdate();
++        if (m_layerWindow) {
++            m_layerWindow->setKeyboardInteractivity(LayerShellQt::Window::KeyboardInteractivityOnDemand);
++            requestUpdate();
++        }
+ 
+         const auto nextItem = rootObject()->nextItemInFocusChain();
+         if (nextItem) {
+@@ -1595,8 +1776,13 @@
+ 
+         restoreAutoHide();
+         setFlags(flags() | Qt::WindowDoesNotAcceptFocus);
+-        m_layerWindow->setKeyboardInteractivity(LayerShellQt::Window::KeyboardInteractivityNone);
++        if (KWindowSystem::isPlatformX11()) {
++            KX11Extras::setState(winId(), NET::SkipSwitcher | NET::KeepAbove);
++        }
++        if (m_layerWindow) {
++            m_layerWindow->setKeyboardInteractivity(LayerShellQt::Window::KeyboardInteractivityNone);
+             requestUpdate();
++        }
+     }
+ }
+ 
+--- a/shell/panelview.h
++++ b/shell/panelview.h
+@@ -319,6 +319,7 @@
+     void positionAndResizePanel();
+     void integrateScreen();
+     void updateEditModeLabel();
++    bool canSetStrut() const;
+     bool containmentContainsPosition(const QPointF &point) const;
+     QPointF positionAdjustedForContainment(const QPointF &point) const;
+     bool edgeActivated() const;
+--- a/shell/shellcorona.cpp
++++ b/shell/shellcorona.cpp
+@@ -34,6 +34,7 @@
+ #include <KPackage/PackageLoader>
+ #include <KSycoca>
+ #include <KWindowSystem>
++#include <KX11Extras>
+ 
+ #include <Plasma/Plasma>
+ #include <Plasma/PluginLoader>
+@@ -1346,6 +1347,11 @@
+ 
+ void ShellCorona::savePreviousWindow()
+ {
++#if HAVE_X11
++    if (KWindowSystem::isPlatformX11() && m_previousWId == 0) {
++        m_previousWId = KX11Extras::activeWindow();
++    }
++#endif
+     if (m_waylandWindowManagement && !m_previousPlasmaWindow) {
+         m_previousPlasmaWindow = m_waylandWindowManagement->activeWindow();
+     }
+@@ -1357,6 +1363,11 @@
+         return;
+     }
+ 
++#if HAVE_X11
++    if (KWindowSystem::isPlatformX11() && m_previousWId) {
++        KX11Extras::forceActiveWindow(m_previousWId);
++    }
++#endif
+     if (m_previousPlasmaWindow) {
+         m_previousPlasmaWindow->requestActivate();
+     }
+@@ -1366,6 +1377,9 @@
+ 
+ void ShellCorona::clearPreviousWindow()
+ {
++#if HAVE_X11
++    m_previousWId = 0;
++#endif
+     m_previousPlasmaWindow = nullptr;
+ }
+ 
+@@ -2881,6 +2895,9 @@
+ 
+ void ShellCorona::setupWaylandIntegration()
+ {
++    if (!KWindowSystem::isPlatformWayland()) {
++        return;
++    }
+     using namespace KWayland::Client;
+     ConnectionThread *connection = ConnectionThread::fromApplication(this);
+     if (!connection) {
+--- a/shell/shellcorona.h
++++ b/shell/shellcorona.h
+@@ -9,8 +9,11 @@
+ 
+ #pragma once
+ 
++#include "config-X11.h"
+ #include "plasma/corona.h"
+ 
++#include <qwindowdefs.h>
++
+ #include <QDBusArgument>
+ #include <QDBusContext>
+ #include <QDBusVariant>
+@@ -317,6 +320,9 @@
+     std::unique_ptr<QMenu> m_addPanelsMenu;
+     KPackage::Package m_lookAndFeelPackage;
+ 
++#if HAVE_X11
++    WId m_previousWId = 0;
++#endif
+     bool m_blockRestorePreviousWindow = false;
+ 
+     QTimer m_waitingPanelsTimer;
+--- a/startkde/startplasma-x11.cpp
++++ b/startkde/startplasma-x11.cpp
+@@ -8,6 +8,8 @@
+ 
+ #include "kcheckrunning/kcheckrunning.h"
+ 
++#include <QDBusConnection>
++#include <QDBusMessage>
+ #include <QCoreApplication>
+ #include <QProcess>
+ #include <QTextStream>
+@@ -70,6 +72,16 @@
+     setupPlasmaEnvironment();
+     // Wayland's main() forces XDG_SESSION_TYPE=wayland. Do the same for X11 so
+     // plasma-session takes the X11 branch even if the variable was inherited.
++    // A previous Wayland login leaves WAYLAND_DISPLAY and QT_QPA_PLATFORM=wayland
++    // in the systemd user manager. Qt then tries the wayland plugin first
++    // (baloo_file_extractor logs "Failed to create wl_display") even though this
++    // session has no compositor. Env scripts can override the xcb set at
++    // startup, so re-assert it here and drop the Wayland socket variables
++    // before they are published. QT_QPA_PLATFORM is a session variable, so a
++    // stale value is not copied back over this.
++    qunsetenv("WAYLAND_DISPLAY");
++    qunsetenv("WAYLAND_SOCKET");
++    qputenv("QT_QPA_PLATFORM", "xcb");
+     qputenv("XDG_SESSION_TYPE", "x11");
+ 
+     std::unique_ptr<QProcess, KillBeforeDeleter> ksplash(setupKSplash());
+@@ -83,6 +95,18 @@
+         return 1;
+     }
+ 
++    // Wants= does not restart a unit that is already active. kde-baloo from a
++    // previous Wayland session keeps QT_QPA_PLATFORM=wayland and respawns
++    // baloo_file_extractor against a compositor socket that is not there.
++    {
++        auto restartBaloo = QDBusMessage::createMethodCall(QStringLiteral("org.freedesktop.systemd1"),
++                                                           QStringLiteral("/org/freedesktop/systemd1"),
++                                                           QStringLiteral("org.freedesktop.systemd1.Manager"),
++                                                           QStringLiteral("TryRestartUnit"));
++        restartBaloo << QStringLiteral("kde-baloo.service") << QStringLiteral("replace");
++        QDBusConnection::sessionBus().call(restartBaloo);
++    }
++
+     // We import systemd environment after we sync the dbus environment here.
+     // Otherwise it may leads to some unwanted order of applying environment
+     // variables (e.g. LANG and LC_*)
+--- a/startkde/startplasma.cpp
++++ b/startkde/startplasma.cpp
+@@ -132,6 +132,7 @@
+     // Check is variable is specific to session.
+     return name == "DISPLAY"_L1 || name == "XAUTHORITY"_L1 || //
+         name == "WAYLAND_DISPLAY"_L1 || name == "WAYLAND_SOCKET"_L1 || //
++        name == "QT_QPA_PLATFORM"_L1 || //
+         name.startsWith("XDG_"_L1);
+ }
+ 

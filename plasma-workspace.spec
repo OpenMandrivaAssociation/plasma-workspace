@@ -16,7 +16,7 @@
 
 Name: plasma-workspace
 Version: 6.8.0
-Release: %{?git:0.%{git}.}1
+Release: %{?git:0.%{git}.}2
 %if 0%{?git:1}
 Source0:	https://invent.kde.org/plasma/plasma-workspace/-/archive/%{gitbranch}/plasma-workspace-%{gitbranchd}.tar.bz2#/plasma-workspace-%{git}.tar.bz2
 %else
@@ -202,6 +202,7 @@ BuildOption: -DPLASMA_SYSTEMD_BOOT:BOOL=ON
 %patchlist
 plasma-workspace-6.8.0-keep-x11.patch
 plasma-workspace-set-QT_QPA_PLATFORM.patch
+plasma-workspace-6.8.0-x11-shell.patch
 plasma-workspace-default-OM-wallpaper.patch
 # FIXME this needs to be redone properly (OM theme)
 # plasma-workspace-5.8.0-use-openmandriva-icon-and-background.patch
