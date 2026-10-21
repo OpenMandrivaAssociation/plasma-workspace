@@ -1,0 +1,809 @@
+diff -ruN a/applets/systemtray/systemtray.cpp b/applets/systemtray/systemtray.cpp
+--- a/applets/systemtray/systemtray.cpp	2026-10-21 23:28:41.137829743 +0200
++++ b/applets/systemtray/systemtray.cpp	2026-10-21 23:33:08.981186564 +0200
+@@ -40,6 +40,51 @@
+ 
+ using namespace Qt::StringLiterals;
+ 
++static void showSystemTrayMenuX11(QMenu *menu, QQuickItem *trayItem, const QPoint &pos, Plasma::Types::Location location)
++{
++    int x = pos.x();
++    int y = pos.y();
++
++    // Icon screen coordinates, adjusted the way popupPosition used to.
++    QRect screenItemRect(trayItem->mapToScene(QPointF(0, 0)).toPoint(), QSize(trayItem->width(), trayItem->height()));
++
++    if (trayItem->window()) {
++        screenItemRect.moveTopLeft(trayItem->window()->mapToGlobal(screenItemRect.topLeft()));
++    }
++
++    menu->adjustSize();
++
++    switch (location) {
++    case Plasma::Types::LeftEdge:
++        x = screenItemRect.right();
++        y = screenItemRect.top();
++        break;
++    case Plasma::Types::RightEdge:
++        x = screenItemRect.left() - menu->width();
++        y = screenItemRect.top();
++        break;
++    case Plasma::Types::TopEdge:
++        x = screenItemRect.left();
++        y = screenItemRect.bottom();
++        break;
++    case Plasma::Types::BottomEdge:
++        x = screenItemRect.left();
++        y = screenItemRect.top() - menu->height();
++        break;
++    default:
++        x = screenItemRect.left();
++        if (trayItem->window() && screenItemRect.top() - menu->height() >= trayItem->window()->screen()->geometry().top()) {
++            y = screenItemRect.top() - menu->height();
++        } else {
++            y = screenItemRect.bottom();
++        }
++    }
++
++    menu->winId();
++    menu->windowHandle()->setTransientParent(trayItem->window());
++    menu->popup(QPoint(x, y));
++}
++
+ static void showSystemTrayMenuWayland(QMenu *menu, QQuickItem *trayItem, Plasma::Types::Location location)
+ {
+     QWindow *trayWindow = trayItem->window();
+@@ -318,7 +363,11 @@
+ 
+     KAcceleratorManager::manage(desktopMenu);
+ 
+-    showSystemTrayMenuWayland(desktopMenu, appletInterface, location());
++    if (KWindowSystem::isPlatformWayland()) {
++        showSystemTrayMenuWayland(desktopMenu, appletInterface, location());
++    } else {
++        showSystemTrayMenuX11(desktopMenu, appletInterface, pos.toPoint(), location());
++    }
+ }
+ 
+ QPointF SystemTray::popupPosition(QQuickItem *visualParent, int x, int y)
+@@ -333,6 +382,22 @@
+     if (window && window->screen()) {
+         pos = window->mapToGlobal(pos.toPoint());
+ 
++#if HAVE_X11
++        // Same device-pixel mapping the Wayland branch uses, for X11 clients.
++        if (KWindowSystem::isPlatformX11()) {
++            const auto devicePixelRatio = window->screen()->devicePixelRatio();
++            if (QGuiApplication::screens().size() == 1) {
++                return pos * devicePixelRatio;
++            }
++
++            const QRect geometry = window->screen()->geometry();
++            const QRect nativeGeometry = window->screen()->handle()->geometry();
++            const QPointF nativeGlobalPosOnCurrentScreen = (pos - geometry.topLeft()) * devicePixelRatio;
++
++            return nativeGeometry.topLeft() + nativeGlobalPosOnCurrentScreen;
++        }
++#endif
++
+         if (KWindowSystem::isPlatformWayland()) {
+             if (!m_xwaylandClientsScale) {
+                 return pos;
+@@ -523,6 +588,12 @@
+         },
+         Qt::SingleShotConnection);
+ 
++    // X11 has no xdg-activation token. Wayland still requests one below.
++    if (KWindowSystem::isPlatformX11()) {
++        source->activate(pos.x(), pos.y());
++        return;
++    }
++
+     QWindow *window = nullptr;
+ 
+     auto tokenFuture = KWaylandExtras::xdgActivationToken(window, {});
+@@ -541,6 +612,11 @@
+         return;
+     }
+ 
++    if (KWindowSystem::isPlatformX11()) {
++        source->secondaryActivate(pos.x(), pos.y());
++        return;
++    }
++
+     QWindow *window = nullptr;
+ 
+     auto tokenFuture = KWaylandExtras::xdgActivationToken(window, {});
+@@ -563,14 +639,27 @@
+         source,
+         &StatusNotifierItemSource::contextMenuReady,
+         this,
+-        [this, statusNotifierIcon = QPointer<QQuickItem>{statusNotifierIcon}](QMenu *menu) {
++        [this, statusNotifierIcon = QPointer<QQuickItem>{statusNotifierIcon}, pos](QMenu *menu) {
+             if (statusNotifierIcon && menu && !menu->isEmpty()) {
+                 KAcceleratorManager::manage(menu);
+-                showSystemTrayMenuWayland(menu, statusNotifierIcon, location());
++                if (KWindowSystem::isPlatformWayland()) {
++                    showSystemTrayMenuWayland(menu, statusNotifierIcon, location());
++                } else {
++                    showSystemTrayMenuX11(menu, statusNotifierIcon, pos, location());
++                    // Workaround for QTBUG-59044
++                    if (auto item = statusNotifierIcon->window()->mouseGrabberItem()) {
++                        item->ungrabMouse();
++                    }
++                }
+             }
+         },
+         Qt::SingleShotConnection);
+ 
++    if (KWindowSystem::isPlatformX11()) {
++        source->contextMenu(pos.x(), pos.y());
++        return;
++    }
++
+     QWindow *window = nullptr;
+ 
+     auto tokenFuture = KWaylandExtras::xdgActivationToken(window, {});
+diff -ruN a/kcms/cursortheme/CMakeLists.txt b/kcms/cursortheme/CMakeLists.txt
+--- a/kcms/cursortheme/CMakeLists.txt	2026-10-21 23:28:42.157842515 +0200
++++ b/kcms/cursortheme/CMakeLists.txt	2026-10-21 23:34:40.074329324 +0200
+@@ -4,6 +4,7 @@
+ 
+ target_sources(kcm_cursortheme PRIVATE
+     xcursor/thememodel.cpp
++    xcursor/themeapplicator.cpp
+     xcursor/cursortheme.cpp
+     xcursor/xcursortheme.cpp
+     xcursor/previewwidget.cpp
+@@ -41,6 +42,10 @@
+     KF6::KCMUtilsQuick
+ )
+ 
++if (HAVE_X11)
++   target_link_libraries(kcm_cursortheme PRIVATE X11::X11 X11::Xcursor X11::Xfixes Qt::GuiPrivate krdb)
++endif ()
++
+ target_compile_definitions(kcm_cursortheme PRIVATE CMAKE_INSTALL_FULL_LIBEXECDIR="${CMAKE_INSTALL_FULL_LIBEXECDIR}")
+ 
+ # plasma-apply-cursortheme utility
+@@ -50,6 +55,7 @@
+     plasma-apply-cursortheme.cpp
+ 
+     xcursor/cursortheme.cpp
++    xcursor/themeapplicator.cpp
+     xcursor/thememodel.cpp
+     xcursor/xcursortheme.cpp
+     ../kcms-common.cpp
+@@ -65,6 +71,10 @@
+     KF6::WindowSystem
+ )
+ 
++if (HAVE_X11)
++   target_link_libraries(plasma-apply-cursortheme X11::X11 X11::Xcursor X11::Xfixes krdb)
++endif ()
++
+ target_compile_definitions(plasma-apply-cursortheme PRIVATE CMAKE_INSTALL_FULL_LIBEXECDIR="${CMAKE_INSTALL_FULL_LIBEXECDIR}")
+ 
+ 
+diff -ruN a/kcms/cursortheme/kcmcursortheme.cpp b/kcms/cursortheme/kcmcursortheme.cpp
+--- a/kcms/cursortheme/kcmcursortheme.cpp	2026-10-21 23:28:42.161241674 +0200
++++ b/kcms/cursortheme/kcmcursortheme.cpp	2026-10-21 23:34:40.078329374 +0200
+@@ -15,8 +15,11 @@
+ #include "xcursor/cursortheme.h"
+ #include "xcursor/previewwidget.h"
+ #include "xcursor/sortproxymodel.h"
++#include "xcursor/themeapplicator.h"
+ #include "xcursor/thememodel.h"
+ 
++#include <KWindowSystem>
++
+ #include <KIO/CopyJob>
+ #include <KIO/DeleteJob>
+ #include <KIO/FileCopyJob>
+@@ -300,6 +303,16 @@
+ 
+     QProcess::startDetached(QStringLiteral(CMAKE_INSTALL_FULL_LIBEXECDIR "/plasma-setup-xwayland"));
+ 
++    // Replace the live X cursors. Wayland keeps the 6.8 save path above.
++    if (KWindowSystem::isPlatformX11()) {
++        int row = cursorThemeIndex(cursorThemeSettings()->cursorTheme());
++        QModelIndex selected = m_themeProxyModel->index(row, 0);
++        const CursorTheme *theme = selected.isValid() ? m_themeProxyModel->theme(selected) : nullptr;
++        if (!applyTheme(theme, cursorThemeSettings()->cursorSize())) {
++            Q_EMIT showInfoMessage(i18n("You have to restart the Plasma session for these changes to take effect."));
++        }
++    }
++
+     removeThemes();
+ 
+     notifyKcmChange(GlobalChangeType::CursorChanged);
+diff -ruN a/kcms/cursortheme/plasma-apply-cursortheme.cpp b/kcms/cursortheme/plasma-apply-cursortheme.cpp
+--- a/kcms/cursortheme/plasma-apply-cursortheme.cpp	2026-10-21 23:28:42.161811862 +0200
++++ b/kcms/cursortheme/plasma-apply-cursortheme.cpp	2026-10-21 23:35:00.222582141 +0200
+@@ -9,19 +9,45 @@
+ #include "../kcms-common_p.h"
+ 
+ #include "xcursor/cursortheme.h"
++#include "xcursor/themeapplicator.h"
+ #include "xcursor/thememodel.h"
+ 
+ #include <KLocalizedString>
++#include <KWindowSystem>
+ 
+ #include <QApplication>
+ #include <QCommandLineParser>
+ #include <QDebug>
+ #include <QFile>
+ #include <QProcess>
++#include <QTextStream>
+ #include <QTimer>
+ 
+ using namespace Qt::StringLiterals;
+ 
++namespace
++{
++/** Apply a theme, log warnings.
++ *
++ * On Wayland, applyTheme() returns false without touching X11. Callers that
++ * must keep the 6.8 Wayland path should not use a false result as failure.
++ */
++bool applyThemeAndSize(const CursorTheme *theme, const QString &sizeSpecifier, QTextStream &ts)
++{
++    auto chosenSize = theme->defaultCursorSize();
++    if (!sizeSpecifier.isEmpty()) {
++        bool ok = false;
++        int specificSize = sizeSpecifier.toInt(&ok);
++        if (ok && theme->availableSizes().contains(specificSize)) {
++            chosenSize = specificSize;
++        } else {
++            ts << i18n("The requested size '%1' is not available, using %2 instead.").arg(sizeSpecifier).arg(chosenSize) << Qt::endl;
++        }
++    }
++    return applyTheme(theme, chosenSize);
++}
++}
++
+ int main(int argc, char **argv)
+ {
+     // This is a CLI application, but we require at least a QGuiApplication for things
+@@ -71,7 +97,10 @@
+ 
+             if (theme) {
+                 settings->setCursorTheme(theme->name());
+-                if (settings->save()) {
++                // Wayland: save, then plasma-setup-xwayland, same as 6.8.
++                // X11: also retag the current cursors through XFixes.
++                const bool x11Applied = !KWindowSystem::isPlatformX11() || applyThemeAndSize(theme, parser->value(u"size"_s), ts);
++                if (settings->save() && x11Applied) {
+                     notifyKcmChange(GlobalChangeType::CursorChanged);
+                     QProcess::startDetached(QStringLiteral(CMAKE_INSTALL_FULL_LIBEXECDIR "/plasma-setup-xwayland"));
+                     ts << i18n("Successfully applied the mouse pointer theme %1 to your current Plasma session", theme->title()) << Qt::endl;
+diff -ruN a/kcms/cursortheme/xcursor/cursortheme.cpp b/kcms/cursortheme/xcursor/cursortheme.cpp
+--- a/kcms/cursortheme/xcursor/cursortheme.cpp	2026-10-21 23:28:42.162059355 +0200
++++ b/kcms/cursortheme/xcursor/cursortheme.cpp	2026-10-21 23:33:58.437806939 +0200
+@@ -7,11 +7,20 @@
+ #include <QApplication>
+ #include <QCursor>
+ #include <QFile>
++#include <QGuiApplication>
+ #include <QImage>
+ #include <QStyle>
+ 
++#include "config-X11.h"
+ #include "cursortheme.h"
+ 
++#include <KWindowSystem>
++
++#if HAVE_XFIXES
++#include <X11/Xlib.h>
++#include <X11/extensions/Xfixes.h>
++#endif
++
+ CursorTheme::CursorTheme(const QString &title, const QString &description)
+ {
+     setTitle(title);
+@@ -73,3 +82,43 @@
+ 
+     return pixmap;
+ }
++
++void CursorTheme::setCursorName(qulonglong cursor, const QString &name) const
++{
++#if HAVE_XFIXES
++    if (!haveXfixes()) {
++        return;
++    }
++    auto *x11App = qGuiApp->nativeInterface<QNativeInterface::QX11Application>();
++    if (!x11App || !x11App->display()) {
++        return;
++    }
++    XFixesSetCursorName(x11App->display(), cursor, QFile::encodeName(name).constData());
++#else
++    Q_UNUSED(cursor)
++    Q_UNUSED(name)
++#endif
++}
++
++bool CursorTheme::haveXfixes()
++{
++    bool result = false;
++
++#if HAVE_XFIXES
++    if (!KWindowSystem::isPlatformX11()) {
++        return result;
++    }
++    auto *x11App = qGuiApp->nativeInterface<QNativeInterface::QX11Application>();
++    if (!x11App || !x11App->display()) {
++        return result;
++    }
++    int event_base, error_base;
++    if (XFixesQueryExtension(x11App->display(), &event_base, &error_base)) {
++        int major, minor;
++        XFixesQueryVersion(x11App->display(), &major, &minor);
++        result = (major >= 2);
++    }
++#endif
++
++    return result;
++}
+diff -ruN a/kcms/cursortheme/xcursor/cursortheme.h b/kcms/cursortheme/xcursor/cursortheme.h
+--- a/kcms/cursortheme/xcursor/cursortheme.h	2026-10-21 23:28:42.162309078 +0200
++++ b/kcms/cursortheme/xcursor/cursortheme.h	2026-10-21 23:33:41.517840296 +0200
+@@ -106,6 +106,12 @@
+     /// If the theme doesn't have the cursor @p name, it should return an empty vector
+     virtual std::vector<CursorImage> loadImages(const QString &name, int size = 0) const = 0;
+ 
++    /// Loads the cursor @p name, with the nominal size @p size.
++    /// If the theme doesn't have the cursor @p name, it should return
++    /// the default cursor from the active theme instead.
++    /// On Wayland this returns 0. X11 uses it to retag the live cursor.
++    virtual qulonglong loadCursor(const QString &name, int size = 0) const = 0;
++
+     virtual int defaultCursorSize() const = 0;
+ 
+     /** Creates the icon returned by @ref icon(). Don't use this function
+@@ -119,6 +125,8 @@
+         be used as icon for this theme. */
+     virtual QPixmap createIcon(int size) const;
+ 
++    static bool haveXfixes();
++
+ protected:
+     void setTitle(const QString &title)
+     {
+@@ -154,6 +162,9 @@
+         m_hidden = val;
+     }
+ 
++    // Tags an X11 cursor with a name via XFixes. No-op unless XFixes is usable.
++    void setCursorName(qulonglong cursor, const QString &name) const;
++
+     QString m_title;
+     QString m_description;
+     QString m_path;
+diff -ruN a/kcms/cursortheme/xcursor/previewwidget.cpp b/kcms/cursortheme/xcursor/previewwidget.cpp
+--- a/kcms/cursortheme/xcursor/previewwidget.cpp	2026-10-21 23:28:42.225843366 +0200
++++ b/kcms/cursortheme/xcursor/previewwidget.cpp	2026-10-21 23:33:41.717597189 +0200
+@@ -14,6 +14,7 @@
+ 
+ #include "previewwidget.h"
+ 
++#include "config-X11.h"
+ #include "cursortheme.h"
+ 
+ namespace
+@@ -258,6 +259,11 @@
+ {
+     if (!list.isEmpty()) {
+         double deviceCoordinateWidth = width();
++#if HAVE_X11
++        if (KWindowSystem::isPlatformX11() && window()) {
++            deviceCoordinateWidth *= window()->devicePixelRatio();
++        }
++#endif
+ 
+         int nextX = m_padding;
+         int nextY = m_padding;
+@@ -306,6 +312,14 @@
+ 
+     painter->setRenderHint(QPainter::SmoothPixmapTransform, true);
+ 
++    // Cursor images are drawn in X11 pixels. Qt's device pixel ratio would
++    // scale them a second time. Wayland leaves the painter unscaled.
++#if HAVE_X11
++    if (KWindowSystem::isPlatformX11() && window()) {
++        const double devicePixelRatio = window()->devicePixelRatio();
++        painter->scale(1 / devicePixelRatio, 1 / devicePixelRatio);
++    }
++#endif
+     for (const auto *c : std::as_const(list)) {
+         const QImage image = !c->images().empty() ? c->images().front().image : QImage();
+         if (image.isNull()) {
+@@ -324,6 +338,11 @@
+         layoutItems();
+ 
+     double devicePixelRatio = 1.0;
++#if HAVE_X11
++    if (KWindowSystem::isPlatformX11() && window()) {
++        devicePixelRatio = window()->devicePixelRatio();
++    }
++#endif
+ 
+     auto it = std::ranges::find_if(list, [this, e, devicePixelRatio](const PreviewCursor *c) {
+         // Increase hit area.
+diff -ruN a/kcms/cursortheme/xcursor/themeapplicator.cpp b/kcms/cursortheme/xcursor/themeapplicator.cpp
+--- a/kcms/cursortheme/xcursor/themeapplicator.cpp	1970-01-01 01:00:00.000000000 +0100
++++ b/kcms/cursortheme/xcursor/themeapplicator.cpp	2026-10-21 23:35:00.290582994 +0200
+@@ -0,0 +1,103 @@
++/*
++    SPDX-FileCopyrightText: 2021 Dan Leinir Turthra Jensen <admin@leinir.dk>
++
++    SPDX-License-Identifier: LGPL-2.0-only
++*/
++
++#include "config-X11.h"
++
++#include "cursortheme.h"
++#include "themeapplicator.h"
++
++#include <KWindowSystem>
++
++#include <QFile>
++#include <QGuiApplication>
++
++#if HAVE_X11
++#include "krdb.h"
++
++#include <X11/Xcursor/Xcursor.h>
++#include <X11/Xlib.h>
++#if HAVE_XFIXES
++#include <X11/extensions/Xfixes.h>
++#endif
++#endif
++
++using namespace Qt::StringLiterals;
++
++bool applyTheme(const CursorTheme *theme, const int size)
++{
++    // Wayland applies the saved theme through plasma-setup-xwayland.
++    if (!theme || !KWindowSystem::isPlatformX11()) {
++        return false;
++    }
++
++#if HAVE_X11 && HAVE_XFIXES && XFIXES_MAJOR >= 2 && XCURSOR_LIB_VERSION >= 10105
++    auto *x11App = qGuiApp->nativeInterface<QNativeInterface::QX11Application>();
++    if (!x11App || !x11App->display()) {
++        return false;
++    }
++
++    // Publish Xcursor.theme / Xcursor.size for clients started later.
++    runRdb(0);
++
++    if (!CursorTheme::haveXfixes()) {
++        return true;
++    }
++
++    const QStringList names{
++        u"left_ptr"_s,
++        u"up_arrow"_s,
++        u"cross"_s,
++        u"wait"_s,
++        u"left_ptr_watch"_s,
++        u"ibeam"_s,
++        u"size_ver"_s,
++        u"size_hor"_s,
++        u"size_bdiag"_s,
++        u"size_fdiag"_s,
++        u"size_all"_s,
++        u"split_v"_s,
++        u"split_h"_s,
++        u"pointing_hand"_s,
++        u"openhand"_s,
++        u"closedhand"_s,
++        u"forbidden"_s,
++        u"whats_this"_s,
++        u"copy"_s,
++        u"move"_s,
++        u"link"_s,
++        u"X_cursor"_s,
++        u"right_ptr"_s,
++        u"hand1"_s,
++        u"hand2"_s,
++        u"watch"_s,
++        u"xterm"_s,
++        u"crosshair"_s,
++        u"center_ptr"_s,
++        u"sb_h_double_arrow"_s,
++        u"sb_v_double_arrow"_s,
++        u"fleur"_s,
++        u"top_left_corner"_s,
++        u"top_side"_s,
++        u"top_right_corner"_s,
++        u"right_side"_s,
++        u"bottom_right_corner"_s,
++        u"bottom_side"_s,
++        u"bottom_left_corner"_s,
++        u"left_side"_s,
++        u"question_arrow"_s,
++        u"pirate"_s,
++    };
++
++    for (const QString &name : names) {
++        XFixesChangeCursorByName(x11App->display(), theme->loadCursor(name, size), QFile::encodeName(name).constData());
++    }
++
++    return true;
++#else
++    Q_UNUSED(size)
++    return false;
++#endif
++}
+diff -ruN a/kcms/cursortheme/xcursor/themeapplicator.h b/kcms/cursortheme/xcursor/themeapplicator.h
+--- a/kcms/cursortheme/xcursor/themeapplicator.h	1970-01-01 01:00:00.000000000 +0100
++++ b/kcms/cursortheme/xcursor/themeapplicator.h	2026-10-21 23:34:40.026440785 +0200
+@@ -0,0 +1,17 @@
++/*
++    SPDX-FileCopyrightText: 2021 Dan Leinir Turthra Jensen <admin@leinir.dk>
++
++    SPDX-License-Identifier: LGPL-2.0-only
++*/
++
++#pragma once
++
++class CursorTheme;
++/** Applies a given theme with XFixes on X11.
++    On Wayland this returns false and changes nothing; the KCM still saves
++    the setting and plasma-setup-xwayland reloads Xwayland cursors.
++    @param theme The cursor theme to be applied. Passing null returns false.
++    @param size The size hint used to select the cursor size.
++    @returns false when theme is null, the session is not X11, or XFixes is
++        unavailable. */
++bool applyTheme(const CursorTheme *theme, const int size);
+diff -ruN a/kcms/cursortheme/xcursor/xcursortheme.cpp b/kcms/cursortheme/xcursor/xcursortheme.cpp
+--- a/kcms/cursortheme/xcursor/xcursortheme.cpp	2026-10-21 23:28:42.163599845 +0200
++++ b/kcms/cursortheme/xcursor/xcursortheme.cpp	2026-10-21 23:33:41.513594629 +0200
+@@ -10,12 +10,24 @@
+ 
+ #include <QCursor>
+ #include <QDir>
++#include <QGuiApplication>
+ #include <QImage>
+ #include <algorithm>
++#include <cstdlib>
+ 
++#include <KWindowSystem>
++
++#include "config-X11.h"
+ #include "xcursor.h"
+ #include "xcursortheme.h"
+ 
++#if HAVE_X11
++#include <X11/Xlib.h>
++// XcursorImagesLoadCursor lives in libXcursor. The bundled xcursor.h has no
++// declaration, and including the system header clashes with that copy.
++extern "C" Cursor XcursorImagesLoadCursor(Display *dpy, XcursorImages *images);
++#endif
++
+ using namespace Qt::StringLiterals;
+ 
+ // Static variable holding alternative names for some cursors
+@@ -127,7 +139,77 @@
+ 
+ int XCursorTheme::defaultCursorSize() const
+ {
++    // Wayland keeps the 6.8 default. X11 follows Xft.dpi, then the display size.
++    if (!KWindowSystem::isPlatformX11()) {
++        return 24;
++    }
++#if HAVE_X11
++    auto *x11App = qGuiApp->nativeInterface<QNativeInterface::QX11Application>();
++    Display *dpy = x11App ? x11App->display() : nullptr;
++    if (!dpy) {
++        return 24;
++    }
++    /* Borrowed from display.c of the Xcursor library. XcursorGetDefaultSize()
++       would return a previously chosen custom size, which is not the default. */
++    int size = 0;
++    int dpi = 0;
++    // The string "v" is owned and will be destroyed by Xlib
++    char *v = XGetDefault(dpy, "Xft", "dpi");
++    if (v) {
++        dpi = atoi(v);
++    }
++    if (dpi) {
++        size = dpi * 16 / 72;
++    }
++    if (size == 0) {
++        int dim;
++        if (DisplayHeight(dpy, DefaultScreen(dpy)) < DisplayWidth(dpy, DefaultScreen(dpy))) {
++            dim = DisplayHeight(dpy, DefaultScreen(dpy));
++        } else {
++            dim = DisplayWidth(dpy, DefaultScreen(dpy));
++        }
++        size = dim / 48;
++    }
++    return size;
++#else
+     return 24;
++#endif
++}
++
++qulonglong XCursorTheme::loadCursor(const QString &name, int size) const
++{
++    if (!KWindowSystem::isPlatformX11()) {
++        return 0;
++    }
++#if HAVE_X11
++    auto *x11App = qGuiApp->nativeInterface<QNativeInterface::QX11Application>();
++    if (!x11App || !x11App->display()) {
++        return 0;
++    }
++    if (size <= 0) {
++        size = defaultCursorSize();
++    }
++
++    XcursorImages *images = xcLoadImages(name, size);
++
++    if (!images) {
++        images = xcLoadImages(findAlternative(name), size);
++    }
++
++    if (!images) {
++        return 0;
++    }
++
++    Cursor handle = XcursorImagesLoadCursor(x11App->display(), images);
++    XcursorImagesDestroy(images);
++
++    setCursorName(handle, name);
++    return handle;
++#else
++    Q_UNUSED(name)
++    Q_UNUSED(size)
++    return 0;
++#endif
+ }
+ 
+ std::optional<CursorTheme::CursorImage> XCursorTheme::loadImage(const QString &name, int size) const
+diff -ruN a/kcms/cursortheme/xcursor/xcursortheme.h b/kcms/cursortheme/xcursor/xcursortheme.h
+--- a/kcms/cursortheme/xcursor/xcursortheme.h	2026-10-21 23:28:42.163852318 +0200
++++ b/kcms/cursortheme/xcursor/xcursortheme.h	2026-10-21 23:33:41.420382867 +0200
+@@ -38,6 +38,7 @@
+ 
+     std::optional<CursorImage> loadImage(const QString &name, int size = 0) const override;
+     std::vector<CursorImage> loadImages(const QString &name, int size = 0) const override;
++    qulonglong loadCursor(const QString &name, int size = 0) const override;
+ 
+     /** Returns the size that the XCursor library would use if no
+         cursor size is given. This depends mainly on Xft.dpi. */
+diff -ruN a/ksplash/ksplashqml/CMakeLists.txt b/ksplash/ksplashqml/CMakeLists.txt
+--- a/ksplash/ksplashqml/CMakeLists.txt	2026-10-21 23:28:41.505834351 +0200
++++ b/ksplash/ksplashqml/CMakeLists.txt	2026-10-21 23:33:08.541181045 +0200
+@@ -14,6 +14,7 @@
+     Plasma::PlasmaQuick
+     PW::KWorkspace
+     LayerShellQt::Interface
++    KF6::WindowSystem
+    )
+ 
+ ecm_qt_declare_logging_category(ksplashqml
+diff -ruN a/ksplash/ksplashqml/splashwindow.cpp b/ksplash/ksplashqml/splashwindow.cpp
+--- a/ksplash/ksplashqml/splashwindow.cpp	2026-10-21 23:28:41.309831896 +0200
++++ b/ksplash/ksplashqml/splashwindow.cpp	2026-10-21 23:33:08.597181747 +0200
+@@ -22,6 +22,7 @@
+ 
+ #include <KPackage/Package>
+ #include <KPackage/PackageLoader>
++#include <KWindowSystem>
+ 
+ using namespace Qt::StringLiterals;
+ 
+@@ -50,6 +51,12 @@
+         setFlags(Qt::FramelessWindowHint | Qt::WindowStaysOnTopHint);
+     }
+ 
++    // Override-redirect splash on X11. Wayland stays on the layer-shell window
++    // created above and must not go fullscreen (QTBUG 54883).
++    if (!m_testing && !m_window && KWindowSystem::isPlatformX11()) {
++        setFlags(Qt::BypassWindowManagerHint);
++    }
++
+     // be sure it will be eventually closed
+     // FIXME: should never be stuck
+     QTimer::singleShot(30000, this, &QWindow::close);
+diff -ruN a/logout-greeter/shutdowndlg.cpp b/logout-greeter/shutdowndlg.cpp
+--- a/logout-greeter/shutdowndlg.cpp	2026-10-21 23:28:41.513834451 +0200
++++ b/logout-greeter/shutdowndlg.cpp	2026-10-21 23:35:20.142832117 +0200
+@@ -32,10 +32,20 @@
+ #include <KUser>
+ #include <KWindowEffects>
+ #include <KWindowSystem>
++#include <KX11Extras>
+ #include <LayerShellQt/Window>
+ 
+ #include <Plasma/Plasma>
+ 
++#include <cstdio>
++#include <string_view>
++
++#include <netwm.h>
++
++#include <X11/Xatom.h>
++#include <X11/Xutil.h>
++#include <fixx11h.h>
++
+ #include <debug.h>
+ 
+ using namespace Qt::StringLiterals;
+@@ -82,6 +92,31 @@
+         }
+     }
+ 
++    // Qt doesn't set this on unmanaged windows.
++    // Wayland uses the layer shell above; these atoms are X11 only.
++    if (KWindowSystem::isPlatformX11()) {
++        constexpr auto role = std::string_view("logoutdialog");
++        constexpr std::size_t roleLength = role.length();
++
++        auto x11App = qGuiApp->nativeInterface<QNativeInterface::QX11Application>();
++        if (x11App && x11App->display()) {
++            XChangeProperty(x11App->display(),
++                            winId(),
++                            XInternAtom(x11App->display(), "WM_WINDOW_ROLE", False),
++                            XA_STRING,
++                            8,
++                            PropModeReplace,
++                            reinterpret_cast<const unsigned char *>(role.data()),
++                            roleLength);
++
++            XClassHint classHint;
++            classHint.res_name = const_cast<char *>("ksmserver-logout-greeter");
++            classHint.res_class = const_cast<char *>("ksmserver-logout-greeter");
++            XSetClassHint(x11App->display(), winId(), &classHint);
++        }
++        KX11Extras::setState(winId(), NET::SkipTaskbar | NET::SkipPager | NET::SkipSwitcher);
++    }
++
+     setResizeMode(QQuickView::SizeRootObjectToView);
+ 
+     // QQuickView *windowContainer = QQuickView::createWindowContainer(m_view, this);
+diff -ruN a/shell/screenpool.cpp b/shell/screenpool.cpp
+--- a/shell/screenpool.cpp	2026-10-21 23:28:41.709836905 +0200
++++ b/shell/screenpool.cpp	2026-10-21 23:33:41.420382867 +0200
+@@ -12,8 +12,11 @@
+ #include <KWindowSystem>
+ #include <QDebug>
+ #include <QGuiApplication>
++#include <QRegularExpression>
+ #include <QScreen>
+ 
++#include <config-X11.h>
++
+ #include <algorithm>
+ 
+ /*
+@@ -73,9 +76,22 @@
+ {
+     QList<QScreen *> screens = qApp->screens();
+ 
+-    // Ignore all fake screens
++    // Ignore all fake screens. Wayland fakes have an empty name.
++    // On X11, Qt also exposes the X display placeholder (":0.0") beside real
++    // XRandR outputs. A session whose only screen has that name keeps it.
+     screens.removeIf([](QScreen *screen) {
+-        return screen->name().isEmpty();
++        if (screen->name().isEmpty()) {
++            return true;
++        }
++#if HAVE_X11
++        if (qGuiApp->nativeInterface<QNativeInterface::QX11Application>() && qGuiApp->screens().size() > 1) {
++            static const QRegularExpression x11Placeholder(QStringLiteral("^:\\d+\\.0$"));
++            if (x11Placeholder.match(screen->name()).hasMatch()) {
++                return true;
++            }
++        }
++#endif
++        return false;
+     });
+ 
+     const QStringList outputOrder = m_outputOrderWatcher->outputOrder();
