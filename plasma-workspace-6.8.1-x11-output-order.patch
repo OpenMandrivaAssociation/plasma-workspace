@@ -1,0 +1,421 @@
+diff -ruN a/libkworkspace/outputorderwatcher.cpp b/libkworkspace/outputorderwatcher.cpp
+--- a/libkworkspace/outputorderwatcher.cpp	2026-10-21 17:55:43.805731393 +0200
++++ b/libkworkspace/outputorderwatcher.cpp	2026-10-21 17:55:44.281779070 +0200
+@@ -9,25 +9,55 @@
+ 
+ #include <version>
+ 
++#include <QAbstractNativeEventFilter>
+ #include <QGuiApplication>
++#include <QScreen>
++#include <QSet>
++#include <QTimer>
+ 
++#include <cstdlib>
++
++#include <KWindowSystem>
++
++#include "config-X11.h"
+ #include "qwayland-kde-output-order-v1.h"
+ #include <QtWaylandClient/QWaylandClientExtension>
+ #include <QtWaylandClient/QtWaylandClientVersion>
+ 
+-class OutputOrderWatcherPrivate : public QWaylandClientExtensionTemplate<OutputOrderWatcherPrivate, &QtWayland::kde_output_order_v1::destroy>,
+-                                  public QtWayland::kde_output_order_v1
++#include <algorithm>
++#include <memory>
++#include <utility>
++
++#if HAVE_X11
++#include <xcb/randr.h>
++#include <xcb/xcb.h>
++#include <xcb/xcb_event.h>
++#endif
++
++class OutputOrderWatcherPrivate
++{
++public:
++    virtual ~OutputOrderWatcherPrivate() = default;
++    virtual QStringList outputOrder() const = 0;
++};
++
++class WaylandOutputOrderWatcherPrivate : public QWaylandClientExtensionTemplate<WaylandOutputOrderWatcherPrivate, &QtWayland::kde_output_order_v1::destroy>,
++                                         public QtWayland::kde_output_order_v1,
++                                         public OutputOrderWatcherPrivate
+ {
+     Q_OBJECT
+ public:
+-    OutputOrderWatcherPrivate(OutputOrderWatcher *_q)
++    WaylandOutputOrderWatcherPrivate(OutputOrderWatcher *q)
+         : QWaylandClientExtensionTemplate(1)
+-        , q(_q)
++        , q(q)
+     {
+         initialize();
+     }
+ 
+-    QStringList m_outputOrder;
++    QStringList outputOrder() const override
++    {
++        return m_outputOrder;
++    }
+ 
+ protected:
+     void kde_output_order_v1_output(const QString &outputName) override
+@@ -52,24 +82,309 @@
+     }
+ 
+ private:
++    QStringList m_outputOrder;
+     QStringList m_pendingOutputOrder;
+     bool m_done = true;
+     OutputOrderWatcher *q;
+ };
+ 
+-OutputOrderWatcher::OutputOrderWatcher(QObject *parent)
+-    : QObject(parent)
+-    , d(new OutputOrderWatcherPrivate(this))
++#if HAVE_X11
++class X11OutputOrderWatcherPrivate : public QObject, public QAbstractNativeEventFilter, public OutputOrderWatcherPrivate
+ {
++    Q_OBJECT
++public:
++    explicit X11OutputOrderWatcherPrivate(OutputOrderWatcher *watcher);
++    ~X11OutputOrderWatcherPrivate() override;
++
++    QStringList outputOrder() const override
++    {
++        return m_outputOrder;
++    }
++
++protected:
++    bool nativeEventFilter(const QByteArray &eventType, void *message, qintptr *result) override;
++
++private:
++    void refresh();
++    void refreshFromScreens();
++    // _KDE_SCREEN_INDEX is missing or does not match QScreen. Keep a desktop
++    // mapped anyway; ScreenPool ignores an order whose names are not exactly
++    // the current screens.
++    void useFallback(const char *reason = nullptr);
++    void roundtrip() const;
++    xcb_window_t rootWindow() const;
++
++    OutputOrderWatcher *m_watcher;
++    QNativeInterface::QX11Application *m_x11Interface = nullptr;
++    QTimer *m_delayTimer = nullptr;
++    int m_xrandrExtensionOffset = 0;
++    xcb_atom_t m_kdeScreenAtom = XCB_ATOM_NONE;
++    bool m_orderProtocolPresent = false;
++    bool m_filterInstalled = false;
++    bool m_primaryConnected = false;
++    QStringList m_outputOrder;
++};
++
++struct XcbFreeDeleter {
++    void operator()(void *pointer) const
++    {
++        free(pointer);
++    }
++};
++
++template<typename T>
++using XcbReply = std::unique_ptr<T, XcbFreeDeleter>;
++
++X11OutputOrderWatcherPrivate::X11OutputOrderWatcherPrivate(OutputOrderWatcher *watcher)
++    : QObject()
++    , m_watcher(watcher)
++    , m_x11Interface(qGuiApp->nativeInterface<QNativeInterface::QX11Application>())
++{
++    // Queued so ScreenPool has connected to outputOrderChanged first. A
++    // synchronous emit from this constructor is lost.
++    m_delayTimer = new QTimer(this);
++    m_delayTimer->setSingleShot(true);
++    m_delayTimer->setInterval(0);
++    connect(m_delayTimer, &QTimer::timeout, this, [this]() {
++        refresh();
++    });
++    connect(qGuiApp, &QGuiApplication::screenAdded, this, [this]() {
++        m_delayTimer->start();
++    });
++    connect(qGuiApp, &QGuiApplication::screenRemoved, this, [this]() {
++        m_delayTimer->start();
++    });
++
++    if (!m_x11Interface) {
++        useFallback("X11 native interface is missing");
++        return;
++    }
++
++    m_orderProtocolPresent = true;
++    qGuiApp->installNativeEventFilter(this);
++    m_filterInstalled = true;
++
++    const xcb_query_extension_reply_t *reply = xcb_get_extension_data(m_x11Interface->connection(), &xcb_randr_id);
++    if (!reply || !reply->present) {
++        useFallback("XRandr extension is not initialized");
++        return;
++    }
++
++    m_xrandrExtensionOffset = reply->first_event;
++
++    constexpr const char *effectName = "_KDE_SCREEN_INDEX";
++    xcb_intern_atom_cookie_t atomCookie =
++        xcb_intern_atom_unchecked(m_x11Interface->connection(), false, std::char_traits<char>::length(effectName), effectName);
++    XcbReply<xcb_intern_atom_reply_t> atom(xcb_intern_atom_reply(m_x11Interface->connection(), atomCookie, nullptr));
++    if (!atom) {
++        useFallback();
++        return;
++    }
++
++    m_kdeScreenAtom = atom->atom;
++    m_delayTimer->start();
+ }
+ 
+-OutputOrderWatcher::~OutputOrderWatcher()
++X11OutputOrderWatcherPrivate::~X11OutputOrderWatcherPrivate()
+ {
++    if (m_filterInstalled && qGuiApp) {
++        qGuiApp->removeNativeEventFilter(this);
++    }
+ }
+ 
++xcb_window_t X11OutputOrderWatcherPrivate::rootWindow() const
++{
++    const xcb_setup_t *setup = xcb_get_setup(m_x11Interface->connection());
++    return xcb_setup_roots_iterator(setup).data->root;
++}
++
++void X11OutputOrderWatcherPrivate::useFallback(const char *reason)
++{
++    m_orderProtocolPresent = false;
++    if (reason) {
++        qWarning("OutputOrderWatcher may not work as expected. Reason: %s", reason);
++    }
++    if (!m_primaryConnected) {
++        connect(qGuiApp, &QGuiApplication::primaryScreenChanged, this, [this]() {
++            refresh();
++        });
++        m_primaryConnected = true;
++    }
++    m_delayTimer->start();
++}
++
++void X11OutputOrderWatcherPrivate::refreshFromScreens()
++{
++    const QString primaryName = qApp->primaryScreen() ? qApp->primaryScreen()->name() : QString();
++    QStringList pending;
++    const auto screens = qApp->screens();
++    for (QScreen *screen : screens) {
++        if (!screen->name().isEmpty()) {
++            pending.append(screen->name());
++        }
++    }
++    std::ranges::sort(pending, [&primaryName](const QString &left, const QString &right) {
++        if (left == right) {
++            return false;
++        }
++        if (left == primaryName) {
++            return true;
++        }
++        if (right == primaryName) {
++            return false;
++        }
++        return left < right;
++    });
++
++    if (m_outputOrder != pending) {
++        m_outputOrder = pending;
++        Q_EMIT m_watcher->outputOrderChanged(m_outputOrder);
++    }
++}
++
++void X11OutputOrderWatcherPrivate::refresh()
++{
++    if (!m_orderProtocolPresent || !m_x11Interface) {
++        refreshFromScreens();
++        return;
++    }
++
++    QList<std::pair<uint, QString>> orderMap;
++
++    XcbReply<xcb_randr_get_screen_resources_current_reply_t> reply(xcb_randr_get_screen_resources_current_reply(
++        m_x11Interface->connection(),
++        xcb_randr_get_screen_resources_current(m_x11Interface->connection(), rootWindow()),
++        nullptr));
++    if (!reply) {
++        useFallback("XRandr screen resources failed");
++        return;
++    }
++
++    const xcb_timestamp_t timestamp = reply->config_timestamp;
++    const int len = xcb_randr_get_screen_resources_current_outputs_length(reply.get());
++    xcb_randr_output_t *randrOutputs = xcb_randr_get_screen_resources_current_outputs(reply.get());
++
++    for (int i = 0; i < len; ++i) {
++        XcbReply<xcb_randr_get_output_info_reply_t> output(xcb_randr_get_output_info_reply(
++            m_x11Interface->connection(),
++            xcb_randr_get_output_info(m_x11Interface->connection(), randrOutputs[i], timestamp),
++            nullptr));
++
++        if (!output || output->connection == XCB_RANDR_CONNECTION_DISCONNECTED || output->crtc == 0) {
++            continue;
++        }
++
++        const auto orderCookie = xcb_randr_get_output_property(m_x11Interface->connection(),
++                                                                randrOutputs[i],
++                                                                m_kdeScreenAtom,
++                                                                XCB_ATOM_ANY,
++                                                                0,
++                                                                100,
++                                                                false,
++                                                                false);
++        XcbReply<xcb_randr_get_output_property_reply_t> orderReply(
++            xcb_randr_get_output_property_reply(m_x11Interface->connection(), orderCookie, nullptr));
++        // kscreen has not stamped _KDE_SCREEN_INDEX yet. QScreen order is enough
++        // for ScreenPool to create the desktop; a later property notify reorders.
++        if (!orderReply || !(orderReply->type == XCB_ATOM_INTEGER && orderReply->format == 32 && orderReply->num_items == 1)) {
++            useFallback();
++            return;
++        }
++
++        const uint32_t order = *xcb_randr_get_output_property_data(orderReply.get());
++        if (order > 0) {
++            orderMap.emplace_back(order,
++                                  QString::fromUtf8(reinterpret_cast<const char *>(xcb_randr_get_output_info_name(output.get())),
++                                                    xcb_randr_get_output_info_name_length(output.get())));
++        }
++    }
++
++    QSet<QString> orderedNames;
++    for (const auto &entry : orderMap) {
++        orderedNames.insert(entry.second);
++    }
++    QSet<QString> knownNames;
++    const auto screens = qGuiApp->screens();
++    for (const QScreen *screen : screens) {
++        if (!screen->name().isEmpty()) {
++            knownNames.insert(screen->name());
++        }
++    }
++    if (orderedNames != knownNames) {
++        useFallback();
++        return;
++    }
++
++    std::ranges::sort(orderMap);
++    QStringList pendingOutputs;
++    pendingOutputs.reserve(orderMap.size());
++    for (const auto &entry : orderMap) {
++        pendingOutputs.append(entry.second);
++    }
++    if (pendingOutputs != m_outputOrder) {
++        m_outputOrder = pendingOutputs;
++        Q_EMIT m_watcher->outputOrderChanged(m_outputOrder);
++    }
++}
++
++bool X11OutputOrderWatcherPrivate::nativeEventFilter(const QByteArray &eventType, void *message, qintptr *result)
++{
++    Q_UNUSED(result);
++    // Switching the only enabled screen recycles the same QScreen.
++    // https://bugs.kde.org/show_bug.cgi?id=373880
++    if (eventType.isEmpty() || eventType.at(0) != 'x') {
++        return false;
++    }
++
++    auto *event = static_cast<xcb_generic_event_t *>(message);
++    const auto responseType = XCB_EVENT_RESPONSE_TYPE(event);
++    if (responseType != m_xrandrExtensionOffset + XCB_RANDR_NOTIFY) {
++        return false;
++    }
++
++    auto *randrEvent = reinterpret_cast<xcb_randr_notify_event_t *>(event);
++    if (randrEvent->subCode == XCB_RANDR_NOTIFY_OUTPUT_PROPERTY) {
++        if (randrEvent->u.op.atom == m_kdeScreenAtom) {
++            m_orderProtocolPresent = true;
++            roundtrip();
++            m_delayTimer->start();
++        }
++    } else if (randrEvent->subCode == XCB_RANDR_NOTIFY_OUTPUT_CHANGE) {
++        if (randrEvent->u.oc.connection == XCB_RANDR_CONNECTION_DISCONNECTED) {
++            m_delayTimer->start();
++        }
++    }
++    return false;
++}
++
++void X11OutputOrderWatcherPrivate::roundtrip() const
++{
++    const auto cookie = xcb_get_input_focus(m_x11Interface->connection());
++    xcb_generic_error_t *error = nullptr;
++    XcbReply<xcb_get_input_focus_reply_t> sync(xcb_get_input_focus_reply(m_x11Interface->connection(), cookie, &error));
++    if (error) {
++        free(error);
++    }
++}
++#endif
++
++OutputOrderWatcher::OutputOrderWatcher(QObject *parent)
++    : QObject(parent)
++{
++#if HAVE_X11
++    if (KWindowSystem::isPlatformX11()) {
++        d = std::make_unique<X11OutputOrderWatcherPrivate>(this);
++        return;
++    }
++#endif
++    d = std::make_unique<WaylandOutputOrderWatcherPrivate>(this);
++}
++
++OutputOrderWatcher::~OutputOrderWatcher() = default;
++
+ QStringList OutputOrderWatcher::outputOrder() const
+ {
+-    return d->m_outputOrder;
++    return d->outputOrder();
+ }
+ 
+ #include "outputorderwatcher.moc"
+diff -ruN a/shell/main.cpp b/shell/main.cpp
+--- a/shell/main.cpp	2026-10-21 17:55:44.269737307 +0200
++++ b/shell/main.cpp	2026-10-21 17:55:44.284644658 +0200
+@@ -58,6 +58,30 @@
+ }
+ #endif
+ 
++
++// Qt selects the wayland platform plugin ahead of xcb when WAYLAND_DISPLAY is
++// set (including an empty value) or XDG_SESSION_TYPE=wayland. A Wayland greeter
++// or a previous session leaves that in the environment, and a plasmashell
++// started from a tty does not have startplasma-x11's QT_QPA_PLATFORM=xcb.
++// The wayland plugin then fails with "Failed to create wl_display".
++static void selectX11PlatformIfNeeded()
++{
++    const QByteArray sessionType = qgetenv("XDG_SESSION_TYPE");
++    if (sessionType == "wayland") {
++        return;
++    }
++    if (sessionType != "x11" && !qEnvironmentVariableIsSet("DISPLAY")) {
++        return;
++    }
++
++    qunsetenv("WAYLAND_DISPLAY");
++    qunsetenv("WAYLAND_SOCKET");
++    const QByteArray platform = qgetenv("QT_QPA_PLATFORM");
++    if (platform.isEmpty() || platform.startsWith("wayland")) {
++        qputenv("QT_QPA_PLATFORM", "xcb");
++    }
++}
++
+ int main(int argc, char *argv[])
+ {
+ #if __has_include(<malloc.h>) && defined(__GLIBC__)
+@@ -85,6 +109,7 @@
+     // this variable controls whether to reconnect or exit if the compositor dies, given plasmashell does a lot of
+     // bespoke wayland code disable for now. consider disabling when layer-shell lands
+     qunsetenv("QT_WAYLAND_RECONNECT");
++    selectX11PlatformIfNeeded();
+     // Qt documentation says:
+     // https://doc.qt.io/qt-6/qquickgraphicsconfiguration.html#the-automatic-pipeline-cache
+     //
