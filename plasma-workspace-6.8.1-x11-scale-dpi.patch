@@ -1,0 +1,70 @@
+diff -ruN a/kcms/krdb/krdb.cpp b/kcms/krdb/krdb.cpp
+--- a/kcms/krdb/krdb.cpp	2026-10-22 21:40:21.657610888 +0200
++++ b/kcms/krdb/krdb.cpp	2026-10-22 21:40:21.659458532 +0200
+@@ -36,6 +36,7 @@
+ #include <QDBusConnection>
+ #include <QDateTime>
+ #include <QDebug>
++#include <QLocale>
+ #include <QPixmap>
+ #include <QSaveFile>
+ #include <QTemporaryFile>
+@@ -325,9 +326,47 @@
+ 
+ // -----------------------------------------------------------------------------
+ 
+-int xftDpi()
++static int x11FontDpi()
+ {
+     KConfig cfg(QStringLiteral("kcmfonts"));
++    KConfigGroup fontsCfg(&cfg, u"General"_s);
++    // 0 means "do not force a DPI" and is written on purpose when the X11
++    // scale is 100%. Only a missing key is the 6.8 gap.
++    if (fontsCfg.hasKey(QStringLiteral("forceFontDPI"))) {
++        return fontsCfg.readEntry(QStringLiteral("forceFontDPI"), 96);
++    }
++
++    // startplasma-x11 still applies kdeglobals [KScreen] ScreenScaleFactors as
++    // QT_SCREEN_SCALE_FACTORS. Without a matching Xft.dpi, Qt is scaled and
++    // Xft clients (terminals, GTK) stay at 96 dpi.
++    KConfig globals(QStringLiteral("kdeglobals"));
++    KConfigGroup kscreen = globals.group(QStringLiteral("KScreen"));
++    qreal scale = 1.0;
++    const QString factors = kscreen.readEntry(QStringLiteral("ScreenScaleFactors"), QString());
++    const auto parts = factors.split(QLatin1Char(';'), Qt::SkipEmptyParts);
++    for (const QString &part : parts) {
++        const int eq = part.indexOf(QLatin1Char('='));
++        if (eq < 0) {
++            continue;
++        }
++        bool ok = false;
++        const qreal value = QLocale::c().toDouble(part.mid(eq + 1), &ok);
++        if (ok && value > 0.0) {
++            scale = value;
++            break;
++        }
++    }
++    if (qAbs(scale - 1.0) <= 0.001 && kscreen.hasKey(QStringLiteral("ScaleFactor"))) {
++        scale = kscreen.readEntry(QStringLiteral("ScaleFactor"), 1.0);
++    }
++    if (scale <= 0.0) {
++        scale = 1.0;
++    }
++    return qRound(scale * 96.0);
++}
++
++int xftDpi()
++{
+     int dpi = 0;
+ 
+     if (KWindowSystem::isPlatformWayland()) {
+@@ -336,8 +375,7 @@
+         qreal scale = xwaylandGroup.readEntry("Scale", 1.0);
+         dpi = scale * 96;
+     } else {
+-        KConfigGroup fontsCfg(&cfg, u"General"_s);
+-        dpi = fontsCfg.readEntry(QStringLiteral("forceFontDPI"), 96);
++        dpi = x11FontDpi();
+     }
+ 
+     return dpi;
