@@ -185,7 +185,7 @@
  #include <klocalizedstring.h>
  #include <kwindowsystem.h>
  #include <plasmaactivities/controller.h>
-@@ -43,13 +44,20 @@
+@@ -43,13 +44,15 @@
      setColor(Qt::black);
      setFlags(Qt::Window | Qt::FramelessWindowHint);
  
@@ -204,16 +204,27 @@
 +        m_layerWindow->setScope(QStringLiteral("desktop"));
 +        m_layerWindow->setCloseOnDismissed(false);
 +        m_layerWindow->setActivateOnShow(false);
-+    } else {
-+        // Layer-shell is a no-op on X11. kwin_x11 only treats this as the
-+        // desktop background when the window type is _NET_WM_WINDOW_TYPE_DESKTOP.
-+        KX11Extras::setType(winId(), NET::Desktop);
-+        KX11Extras::setState(winId(), NET::KeepBelow);
 +    }
  
      if (targetScreen) {
          setScreenToFollow(targetScreen);
-@@ -89,6 +97,10 @@
+@@ -57,6 +60,15 @@
+         setTitle(corona->kPackage().metadata().name());
+     }
+ 
++    if (KWindowSystem::isPlatformX11()) {
++        // winId() before setScreen() creates the X window on the primary
++        // at the default 160x160 geometry. setScreen() onto another output
++        // then goes through QScreen::virtualSiblings() and can SIGSEGV at
++        // address 0x8 while plasmashell is still starting.
++        KX11Extras::setType(winId(), NET::Desktop);
++        KX11Extras::setState(winId(), NET::KeepBelow);
++    }
++
+     rootContext()->setContextProperty(QStringLiteral("desktop"), this);
+     setSource(corona->kPackage().fileUrl("views", QStringLiteral("Desktop.qml")));
+     connect(this, &ContainmentView::containmentChanged, this, &DesktopView::slotContainmentChanged);
+@@ -89,12 +101,19 @@
  void DesktopView::showEvent(QShowEvent *e)
  {
      QQuickWindow::showEvent(e);
@@ -224,7 +235,16 @@
      adaptToScreen();
  }
  
-@@ -109,7 +121,9 @@
+ void DesktopView::setScreenToFollow(QScreen *screen)
+ {
+     Q_ASSERT(screen);
++    if (!screen) {
++        return;
++    }
+     if (screen == m_screenToFollow) {
+         return;
+     }
+@@ -109,7 +128,9 @@
          disconnect(m_screenToFollow.data(), &QScreen::geometryChanged, this, &DesktopView::screenGeometryChanged);
      }
      m_screenToFollow = screen;
