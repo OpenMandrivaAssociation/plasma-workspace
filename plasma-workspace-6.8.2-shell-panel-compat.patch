@@ -1,0 +1,91 @@
+diff -ruN a/shell/CMakeLists.txt b/shell/CMakeLists.txt
+--- a/shell/CMakeLists.txt	2026-10-31 20:18:55.112106933 +0100
++++ b/shell/CMakeLists.txt	2026-10-31 20:18:55.127483427 +0100
+@@ -172,6 +172,11 @@
+ install(FILES "${plasmashell_module_qmldir}"   DESTINATION ${KDE_INSTALL_QMLDIR}/${plasmashell_module_target_path})
+ install(FILES "${plasmashell_module_typeinfo}" DESTINATION ${KDE_INSTALL_QMLDIR}/${plasmashell_module_target_path})
+ 
++# Panel enums used to be registered from PanelView as
++# org.kde.plasma.shell.panel. 6.8 moved them onto
++# org.kde.plasma.shell.Panel, which only exists inside plasmashell.
++# plasmoidviewer still imports the old module.
++add_subdirectory(panelcompat)
+ add_subdirectory(packageplugins)
+ if(BUILD_TESTING)
+    add_subdirectory(autotests)
+diff -ruN a/shell/panelcompat/CMakeLists.txt b/shell/panelcompat/CMakeLists.txt
+--- a/shell/panelcompat/CMakeLists.txt	1970-01-01 01:00:00.000000000 +0100
++++ b/shell/panelcompat/CMakeLists.txt	2026-10-31 20:18:55.132352112 +0100
+@@ -0,0 +1,20 @@
++# Compatibility module for QML that still does
++#     import org.kde.plasma.shell.panel 0.1 as Panel
++# and then uses Panel.Global.<enum>. Plasma 6.8 registers those enums only
++# as the Panel type of org.kde.plasma.shell, and that module is backed by
++# the plasmashell executable, so other processes cannot load it.
++
++ecm_add_qml_module(plasmashellpanelplugin
++    URI "org.kde.plasma.shell.panel"
++    VERSION 0.1
++    GENERATE_PLUGIN_SOURCE
++)
++
++target_sources(plasmashellpanelplugin PRIVATE
++    panelglobal.cpp
++    panelglobal.h
++)
++
++target_link_libraries(plasmashellpanelplugin PRIVATE Qt::Qml)
++
++ecm_finalize_qml_module(plasmashellpanelplugin)
+diff -ruN a/shell/panelcompat/panelglobal.cpp b/shell/panelcompat/panelglobal.cpp
+--- a/shell/panelcompat/panelglobal.cpp	1970-01-01 01:00:00.000000000 +0100
++++ b/shell/panelcompat/panelglobal.cpp	2026-10-31 20:18:55.135991973 +0100
+@@ -0,0 +1,5 @@
++/*
++    SPDX-License-Identifier: GPL-2.0-or-later
++*/
++
++#include "panelglobal.h"
+diff -ruN a/shell/panelcompat/panelglobal.h b/shell/panelcompat/panelglobal.h
+--- a/shell/panelcompat/panelglobal.h	1970-01-01 01:00:00.000000000 +0100
++++ b/shell/panelcompat/panelglobal.h	2026-10-31 20:18:55.134240603 +0100
+@@ -0,0 +1,39 @@
++/*
++    SPDX-License-Identifier: GPL-2.0-or-later
++*/
++
++#pragma once
++
++#include <QObject>
++#include <QtQml/qqmlregistration.h>
++
++// Values must match PanelView in shell/panelview.h.
++class PanelGlobal : public QObject
++{
++    Q_OBJECT
++    QML_NAMED_ELEMENT(Global)
++    QML_UNCREATABLE("")
++
++public:
++    enum VisibilityMode {
++        NormalPanel = 0,
++        AutoHide,
++        DodgeWindows,
++        WindowsGoBelow,
++    };
++    Q_ENUM(VisibilityMode)
++
++    enum OpacityMode {
++        Adaptive = 0,
++        Opaque,
++        Translucent,
++    };
++    Q_ENUM(OpacityMode)
++
++    enum LengthMode {
++        FillAvailable = 0,
++        FitContent,
++        Custom,
++    };
++    Q_ENUM(LengthMode)
++};

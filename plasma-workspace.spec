@@ -16,7 +16,7 @@
 
 Name: plasma-workspace
 Version: 6.8.2
-Release: %{?git:0.%{git}.}1
+Release: %{?git:0.%{git}.}2
 %if 0%{?git:1}
 Source0:	https://invent.kde.org/plasma/plasma-workspace/-/archive/%{gitbranch}/plasma-workspace-%{gitbranchd}.tar.bz2#/plasma-workspace-%{git}.tar.bz2
 %else
@@ -207,6 +207,8 @@ plasma-workspace-6.8.1-x11-output-order.patch
 plasma-workspace-default-OM-wallpaper.patch
 plasma-workspace-6.8.1-x11-gaps.patch
 plasma-workspace-6.8.1-x11-scale-dpi.patch
+# 6.8 dropped org.kde.plasma.shell.panel. plasmoidviewer still imports it.
+plasma-workspace-6.8.2-shell-panel-compat.patch
 # FIXME this needs to be redone properly (OM theme)
 # plasma-workspace-5.8.0-use-openmandriva-icon-and-background.patch
 
