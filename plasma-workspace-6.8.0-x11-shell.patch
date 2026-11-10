@@ -915,7 +915,7 @@
  #include <QDBusArgument>
  #include <QDBusContext>
  #include <QDBusVariant>
-@@ -317,6 +320,9 @@
+@@ -317,7 +320,10 @@
      std::unique_ptr<QMenu> m_addPanelsMenu;
      KPackage::Package m_lookAndFeelPackage;
  
@@ -923,6 +923,7 @@
 +    WId m_previousWId = 0;
 +#endif
      bool m_blockRestorePreviousWindow = false;
+     bool m_editModeShowedDesktop = false;
  
      QTimer m_waitingPanelsTimer;
 --- a/startkde/startplasma-x11.cpp
