@@ -167,6 +167,7 @@ Requires: qml-org.kde.breeze.components = %{EVRD}
 Requires: qml-org.kde.plasma.private.sessions = %{EVRD}
 Requires: qml-org.kde.plasma.workspace = %{EVRD}
 Requires: qml-org.kde.plasma.private.clipboard = %{EVRD}
+Requires: qml-org.kde.kworkspace = %{EVRD}
 # for nightlight
 Requires: qml(QtPositioning)
 # D-Bus service required by kcm_users.so -- make sure you
@@ -316,6 +317,15 @@ Requires: %{libname} = %{EVRD}
 %description -n qml-org.kde.plasma.workspace
 The org.kde.plasma.workspace QML component contains QML
 components used by Plasma Workspace and the SDDM Breeze theme
+
+%package -n qml-org.kde.kworkspace
+Summary: The org.kde.kworkspace QML module
+Group: Graphical desktop/KDE
+Requires: %{libname} = %{EVRD}
+
+%description -n qml-org.kde.kworkspace
+QML bindings for libkworkspace. SessionManagement is exposed as
+org.kde.kworkspace.
 
 %install -a
 install -Dpm 644 %{SOURCE1} %{buildroot}%{_sysconfdir}/pam.d/kde
@@ -548,6 +558,9 @@ rm -rf %{buildroot}%{_builddir}
 
 %files -n qml-org.kde.plasma.private.sessions
 %{_qtdir}/qml/org/kde/plasma/private/sessions
+
+%files -n qml-org.kde.kworkspace
+%{_qtdir}/qml/org/kde/kworkspace
 
 %files x11
 %{_bindir}/startplasma-x11
