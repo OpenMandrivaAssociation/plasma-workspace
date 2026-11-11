@@ -1,0 +1,459 @@
+diff -ruN a/CMakeLists.txt b/CMakeLists.txt
+--- a/CMakeLists.txt	2026-11-11 18:46:15.744203948 +0100
++++ b/CMakeLists.txt	2026-11-11 18:46:15.745980465 +0100
+@@ -202,6 +202,9 @@
+ 
+     find_package(XCB MODULE REQUIRED COMPONENTS AUX XCB CURSOR RANDR IMAGE)
+     set_package_properties(XCB PROPERTIES TYPE REQUIRED)
++
++    # X11 ksmserver hosts the screen locker. Wayland kwin does that itself.
++    find_package(KScreenLocker ${PROJECT_DEP_VERSION} REQUIRED)
+ else()
+     set(HAVE_X11 0)
+     set(HAVE_XCURSOR 0)
+diff -ruN a/ksmserver/CMakeLists.txt b/ksmserver/CMakeLists.txt
+--- a/ksmserver/CMakeLists.txt	2026-11-11 18:46:15.752709534 +0100
++++ b/ksmserver/CMakeLists.txt	2026-11-11 18:46:15.754363238 +0100
+@@ -46,9 +46,13 @@
+     X11::X11
+     X11::SM
+     X11::ICE
+-    XCB::XCB
+ )
+ 
++if(HAVE_X11)
++    # The locker service and the Meta+L shortcut live in this process on X11.
++    target_link_libraries(ksmserver PW::KScreenLocker Qt::Gui)
++endif()
++
+ install(TARGETS ksmserver ${KDE_INSTALL_TARGETS_DEFAULT_ARGS})
+ 
+ install(FILES ${CMAKE_CURRENT_BINARY_DIR}/KSMServerDBusInterfaceConfig.cmake
+diff -ruN a/ksmserver/main.cpp b/ksmserver/main.cpp
+--- a/ksmserver/main.cpp	2026-11-11 18:46:15.761462996 +0100
++++ b/ksmserver/main.cpp	2026-11-11 18:46:15.763106949 +0100
+@@ -9,6 +9,7 @@
+ #include <cerrno>
+ #include <config-ksmserver.h>
+ #include <config-workspace.h>
++#include <config-X11.h>
+ #include <cstdlib>
+ #include <cstring>
+ #include <fcntl.h>
+@@ -29,13 +30,13 @@
+ #include <QCommandLineParser>
+ #include <QCoreApplication>
+ #include <QFile>
+-#include <QSocketNotifier>
++#include <QGuiApplication>
+ 
+ #include <KSelectionOwner>
+ 
+ #include <memory>
+ 
+-#include <xcb/xcb.h>
++#include <qguiapplication_platform.h>
+ 
+ void IoErrorHandler(IceConn iceConn)
+ {
+@@ -106,8 +107,39 @@
+ 
+     QCoreApplication::setAttribute(Qt::AA_DisableSessionManager);
+ 
++    // Wayland's kwin owns the locker. An unset session type is the X11 default,
++    // matching Plasma 6.7. DISPLAY is also set on Wayland because of Xwayland.
++    const bool x11Session = qEnvironmentVariable("XDG_SESSION_TYPE") != QLatin1String("wayland");
++
+     QCoreApplication::setQuitLockEnabled(false);
+-    auto a = new QCoreApplication(argc, argv);
++
++    QCoreApplication *a = nullptr;
++    bool x11DisplayOk = false;
++#if HAVE_X11
++    if (x11Session) {
++        // Force xcb only while the application object is constructed. The binary is
++        // shared with Wayland, and children must not inherit a platform we forced.
++        const QByteArray origQpaPlatform = qgetenv("QT_QPA_PLATFORM");
++        qputenv("QT_QPA_PLATFORM", QByteArrayLiteral("xcb"));
++        auto *gui = new QGuiApplication(argc, argv);
++        if (origQpaPlatform.isEmpty()) {
++            qunsetenv("QT_QPA_PLATFORM");
++        } else {
++            qputenv("QT_QPA_PLATFORM", origQpaPlatform);
++        }
++        gui->setQuitOnLastWindowClosed(false); // #169486
++        if (auto *x11App = gui->nativeInterface<QNativeInterface::QX11Application>()) {
++            if (Display *dpy = x11App->display()) {
++                fcntl(ConnectionNumber(dpy), F_SETFD, FD_CLOEXEC);
++                x11DisplayOk = true;
++            }
++        }
++        a = gui;
++    } else
++#endif
++    {
++        a = new QCoreApplication(argc, argv);
++    }
+ 
+     KAboutData about(QStringLiteral("ksmserver"), QString(), QStringLiteral(WORKSPACE_VERSION_STRING));
+     KAboutData::setApplicationData(about);
+@@ -125,6 +157,13 @@
+     QCommandLineOption nolocalOption(QStringLiteral("nolocal"), i18n("Also allow remote connections"));
+     parser.addOption(nolocalOption);
+ 
++    QCommandLineOption lockscreenOption(QStringLiteral("lockscreen"), i18n("Starts the session in locked mode"));
++    parser.addOption(lockscreenOption);
++
++    QCommandLineOption noLockscreenOption(QStringLiteral("no-lockscreen"),
++                                          i18n("Starts without lock screen support. Only needed if other component provides the lock screen."));
++    parser.addOption(noLockscreenOption);
++
+     parser.process(*a);
+ 
+     bool only_local = !parser.isSet(nolocalOption);
+@@ -143,38 +182,26 @@
+     if (only_local) {
+         flags |= KSMServer::InitFlag::OnlyLocal;
+     }
++    if (parser.isSet(lockscreenOption)) {
++        flags |= KSMServer::InitFlag::ImmediateLockScreen;
++    }
++    // kwin provides the locker on Wayland. Without an X display there is nothing to grab.
++    if (parser.isSet(noLockscreenOption) || !x11Session || !x11DisplayOk) {
++        flags |= KSMServer::InitFlag::NoLockScreen;
++    }
+ 
+-    auto server = new KSMServer(flags);
++    auto *server = new KSMServer(flags);
+ 
+     // startplasma-x11's kcheckrunning looks up the _KDE_RUNNING selection.
+-    // ksmserver is a QCoreApplication shared with the Wayland session, so it must
+-    // not force the xcb QPA. On X11, claim the selection on a private connection
+-    // and pump that connection's events into KSelectionOwner.
++    // Claim it on the application display. A private xcb connection is not
++    // the one KSelectionOwner's Xlib filters see once we are a QGuiApplication.
+     std::unique_ptr<KSelectionOwner> kdeRunning;
+-    xcb_connection_t *selectionConn = nullptr;
+-    std::unique_ptr<QSocketNotifier> selectionNotifier;
+-    if (qEnvironmentVariable("XDG_SESSION_TYPE") != QLatin1String("wayland")) {
+-        selectionConn = xcb_connect(nullptr, nullptr);
+-        const xcb_setup_t *setup = selectionConn ? xcb_get_setup(selectionConn) : nullptr;
+-        xcb_screen_t *screen = setup ? xcb_setup_roots_iterator(setup).data : nullptr;
+-        if (selectionConn && !xcb_connection_has_error(selectionConn) && screen) {
+-            kdeRunning = std::make_unique<KSelectionOwner>("_KDE_RUNNING", selectionConn, screen->root);
+-            kdeRunning->claim(false);
+-            xcb_flush(selectionConn);
+-            selectionNotifier = std::make_unique<QSocketNotifier>(xcb_get_file_descriptor(selectionConn), QSocketNotifier::Read);
+-            const auto drain = [selectionConn, owner = kdeRunning.get()] {
+-                while (xcb_generic_event_t *event = xcb_poll_for_event(selectionConn)) {
+-                    owner->filterEvent(event);
+-                    free(event);
+-                }
+-            };
+-            QObject::connect(selectionNotifier.get(), &QSocketNotifier::activated, server, drain);
+-            drain();
+-        } else if (selectionConn) {
+-            xcb_disconnect(selectionConn);
+-            selectionConn = nullptr;
+-        }
++#if HAVE_X11
++    if (x11DisplayOk) {
++        kdeRunning = std::make_unique<KSelectionOwner>("_KDE_RUNNING", 0);
++        kdeRunning->claim(false);
+     }
++#endif
+ 
+     IceSetIOErrorHandler(IoErrorHandler);
+ 
+@@ -200,11 +227,7 @@
+     KDBusService service(KDBusService::Unique);
+ 
+     int ret = a->exec();
+-    selectionNotifier.reset();
+-    kdeRunning.reset();
+-    if (selectionConn) {
+-        xcb_disconnect(selectionConn);
+-    }
++    kdeRunning.reset(); // release the selection before the X connection goes away
+     delete a;
+     return ret;
+ }
+diff -ruN a/ksmserver/server.cpp b/ksmserver/server.cpp
+--- a/ksmserver/server.cpp	2026-11-11 18:46:15.778586779 +0100
++++ b/ksmserver/server.cpp	2026-11-11 18:46:15.780381836 +0100
+@@ -23,6 +23,7 @@
+ 
+ #include <config-ksmserver.h>
+ #include <config-workspace.h>
++#include <config-X11.h>
+ #include <pwd.h>
+ #include <sys/param.h>
+ #include <sys/resource.h>
+@@ -75,6 +76,10 @@
+ 
+ #include "kwinsession_interface.h"
+ 
++#if HAVE_X11
++#include <KScreenLocker/KsldApp>
++#endif
++
+ #include <KUpdateLaunchEnvironmentJob>
+ 
+ extern "C" {
+@@ -510,6 +515,17 @@
+     , m_kwinInterface(new OrgKdeKWinSessionInterface(QStringLiteral("org.kde.KWin"), QStringLiteral("/Session"), QDBusConnection::sessionBus(), this))
+     , sockets{-1, -1}
+ {
++#if HAVE_X11
++    // Wayland sets NoLockScreen: kwin initializes KSldApp itself. Doing it here
++    // as well would register a second locker in the same session.
++    if (!flags.testFlag(InitFlag::NoLockScreen)) {
++        ScreenLocker::KSldApp::self()->initialize();
++        if (flags.testFlag(InitFlag::ImmediateLockScreen)) {
++            ScreenLocker::KSldApp::self()->lock(ScreenLocker::EstablishLock::Immediate);
++        }
++    }
++#endif
++
+     if (::socketpair(AF_UNIX, SOCK_STREAM | SOCK_CLOEXEC, 0, sockets) != 0) {
+         qFatal("Could not create socket pair, error %d (%s)", errno, strerror(errno));
+     }
+diff -ruN a/ksmserver/server.h b/ksmserver/server.h
+--- a/ksmserver/server.h	2026-11-11 18:46:15.769522252 +0100
++++ b/ksmserver/server.h	2026-11-11 18:46:15.771191486 +0100
+@@ -62,6 +62,8 @@
+     enum class InitFlag {
+         None = 0,
+         OnlyLocal = 1 << 0,
++        ImmediateLockScreen = 1 << 1,
++        NoLockScreen = 1 << 2,
+     };
+ 
+     Q_DECLARE_FLAGS(InitFlags, InitFlag)
+diff -ruN a/libkworkspace/sessionmanagement.cpp b/libkworkspace/sessionmanagement.cpp
+--- a/libkworkspace/sessionmanagement.cpp	2026-11-11 18:46:15.787985472 +0100
++++ b/libkworkspace/sessionmanagement.cpp	2026-11-11 18:46:15.790139227 +0100
+@@ -14,6 +14,7 @@
+ 
+ #include <QDBusPendingCallWatcher>
+ #include <QEventLoopLocker>
++#include <QTimer>
+ 
+ #include <iostream>
+ 
+@@ -281,26 +282,80 @@
+         return;
+     }
+ 
+-    // lock first
+-    OrgFreedesktopScreenSaverInterface screenSaverIface(QStringLiteral("org.freedesktop.ScreenSaver"),
+-                                                        QStringLiteral("/ScreenSaver"),
+-                                                        QDBusConnection::sessionBus());
+-    QDBusPendingReply<> pendingLock = screenSaverIface.Lock();
++    // Lock() is accepted before an X11 grab is held. Switching VT releases that
++    // grab and does not restore it, so wait until the locker says it is active.
++    auto *screenSaverIface = new OrgFreedesktopScreenSaverInterface(QStringLiteral("org.freedesktop.ScreenSaver"),
++                                                                    QStringLiteral("/ScreenSaver"),
++                                                                    QDBusConnection::sessionBus(),
++                                                                    this);
++    auto *gate = new QObject(screenSaverIface);
++    gate->setProperty("switched", false);
+ 
+-    // then tell the display manager to switch
+-    auto watcher = new QDBusPendingCallWatcher(pendingLock, this);
+-    connect(watcher, &QDBusPendingCallWatcher::finished, watcher, &QObject::deleteLater);
+-    connect(watcher, &QDBusPendingCallWatcher::finished, this, [](QDBusPendingCallWatcher *watcher) {
+-        if (watcher->isError()) {
+-            qCWarning(LIBKWORKSPACE_DEBUG) << "Failed to lock screen before switching user:" << watcher->error().message();
++    const auto switchToGreeter = [screenSaverIface, gate]() {
++        if (gate->property("switched").toBool()) {
+             return;
+         }
++        gate->setProperty("switched", true);
+         QDBusMessage switchToGreeterMessage = QDBusMessage::createMethodCall(QStringLiteral("org.freedesktop.DisplayManager"),
+                                                                              qEnvironmentVariable("XDG_SEAT_PATH"),
+                                                                              QStringLiteral("org.freedesktop.DisplayManager.Seat"),
+                                                                              u"SwitchToGreeter"_s);
+-
+         QDBusConnection::systemBus().asyncCall(switchToGreeterMessage);
++        screenSaverIface->deleteLater();
++    };
++
++    connect(screenSaverIface, &OrgFreedesktopScreenSaverInterface::ActiveChanged, this, [switchToGreeter](bool active) {
++        if (active) {
++            switchToGreeter();
++        }
++    });
++
++    const QDBusPendingReply<> pendingLock = screenSaverIface->Lock();
++    auto *watcher = new QDBusPendingCallWatcher(pendingLock, screenSaverIface);
++    connect(watcher, &QDBusPendingCallWatcher::finished, this, [watcher, screenSaverIface, gate, switchToGreeter]() {
++        watcher->deleteLater();
++        if (gate->property("switched").toBool()) {
++            return;
++        }
++        if (watcher->isError()) {
++            qCWarning(LIBKWORKSPACE_DEBUG) << "Failed to lock screen before switching user:" << watcher->error().message();
++            gate->setProperty("switched", true);
++            screenSaverIface->deleteLater();
++            return;
++        }
++
++        // Already locked: ActiveChanged will not be emitted again.
++        const QDBusPendingReply<bool> active = screenSaverIface->GetActive();
++        auto *activeWatcher = new QDBusPendingCallWatcher(active, screenSaverIface);
++        connect(activeWatcher, &QDBusPendingCallWatcher::finished, screenSaverIface, [activeWatcher, screenSaverIface, gate, switchToGreeter]() {
++            activeWatcher->deleteLater();
++            if (gate->property("switched").toBool()) {
++                return;
++            }
++            const QDBusPendingReply<bool> reply = *activeWatcher;
++            if (reply.isError()) {
++                qCWarning(LIBKWORKSPACE_DEBUG) << "Could not read lock state before switching user:" << reply.error().message();
++                gate->setProperty("switched", true);
++                screenSaverIface->deleteLater();
++                return;
++            }
++            if (reply.value()) {
++                switchToGreeter();
++                return;
++            }
++
++            auto *timeout = new QTimer(screenSaverIface);
++            timeout->setSingleShot(true);
++            connect(timeout, &QTimer::timeout, screenSaverIface, [screenSaverIface, gate]() {
++                if (gate->property("switched").toBool()) {
++                    return;
++                }
++                qCWarning(LIBKWORKSPACE_DEBUG) << "Screen locker did not become active; not switching user";
++                gate->setProperty("switched", true);
++                screenSaverIface->deleteLater();
++            });
++            timeout->start(15000);
++        });
+     });
+ }
+ 
+diff -ruN a/startkde/startplasma.cpp b/startkde/startplasma.cpp
+--- a/startkde/startplasma.cpp	2026-11-11 18:46:15.798067240 +0100
++++ b/startkde/startplasma.cpp	2026-11-11 18:46:15.799902768 +0100
+@@ -18,11 +18,13 @@
+ #include <QProcess>
+ #include <QStandardPaths>
+ #include <QTextStream>
++#include <QTimer>
+ 
+ #include <QDBusArgument>
+ #include <QDBusConnection>
+ #include <QDBusInterface>
+ #include <QDBusConnectionInterface>
++#include <QDBusObjectPath>
+ #include <QDBusServiceWatcher>
+ 
+ #include <KConfig>
+@@ -693,6 +695,71 @@
+     QDBusConnection::sessionBus().call(message);
+ }
+ 
++// systemd StopUnit returns as soon as the job is queued. If ksmserver's name
++// stays owned, or drkonqi is still up, the service watcher below never quits
++// and SDDM never gets the VT back. Once the X11 session has been up, leave
++// when graphical-session.target is no longer active.
++static void watchGraphicalSessionEnd(QEventLoop &loop, QObject *owner)
++{
++    auto *timer = new QTimer(owner);
++    timer->setInterval(500);
++    auto *state = new QObject(timer);
++    state->setProperty("unitPath", QString());
++    state->setProperty("wasActive", false);
++
++    QObject::connect(timer, &QTimer::timeout, &loop, [state, &loop]() {
++        const bool wasActive = state->property("wasActive").toBool();
++        QString unitPath = state->property("unitPath").toString();
++        if (unitPath.isEmpty()) {
++            auto getUnit = QDBusMessage::createMethodCall(QStringLiteral("org.freedesktop.systemd1"),
++                                                          QStringLiteral("/org/freedesktop/systemd1"),
++                                                          QStringLiteral("org.freedesktop.systemd1.Manager"),
++                                                          QStringLiteral("GetUnit"));
++            getUnit << QStringLiteral("graphical-session.target");
++            const QDBusReply<QDBusObjectPath> getUnitReply = QDBusConnection::sessionBus().call(getUnit);
++            if (!getUnitReply.isValid()) {
++                if (wasActive) {
++                    qCWarning(PLASMA_STARTUP) << "graphical-session.target disappeared; leaving the X11 session";
++                    loop.quit();
++                }
++                return;
++            }
++            unitPath = getUnitReply.value().path();
++            if (unitPath.isEmpty()) {
++                return;
++            }
++            state->setProperty("unitPath", unitPath);
++        }
++
++        auto getState = QDBusMessage::createMethodCall(QStringLiteral("org.freedesktop.systemd1"),
++                                                       unitPath,
++                                                       QStringLiteral("org.freedesktop.DBus.Properties"),
++                                                       QStringLiteral("Get"));
++        getState << QStringLiteral("org.freedesktop.systemd1.Unit") << QStringLiteral("ActiveState");
++        const QDBusMessage stateReply = QDBusConnection::sessionBus().call(getState);
++        if (stateReply.type() == QDBusMessage::ErrorMessage) {
++            if (wasActive) {
++                qCWarning(PLASMA_STARTUP) << "Could not read graphical-session.target; leaving the X11 session";
++                loop.quit();
++            }
++            return;
++        }
++        const auto arguments = stateReply.arguments();
++        if (arguments.isEmpty() || arguments.at(0).userType() != qMetaTypeId<QDBusVariant>()) {
++            return;
++        }
++        const QString activeState = qdbus_cast<QVariant>(arguments.at(0)).toString();
++        if (activeState == QLatin1String("active") || activeState == QLatin1String("activating") || activeState == QLatin1String("reloading")) {
++            state->setProperty("wasActive", true);
++        } else if (wasActive && (activeState == QLatin1String("inactive") || activeState == QLatin1String("failed"))) {
++            // deactivating is ignored: a restart passes through it, and the next poll sees the result.
++            qCWarning(PLASMA_STARTUP) << "graphical-session.target is" << activeState << "; leaving the X11 session";
++            loop.quit();
++        }
++    });
++    timer->start();
++}
++
+ bool startPlasmaSession(bool wayland)
+ {
+     resetSystemdFailedUnits();
+@@ -702,6 +769,8 @@
+ 
+     bool rc = true;
+     QEventLoop e;
++    // Declared after e, so it is destroyed first and cannot call e.quit() on a dead loop.
++    QObject x11SessionWatch;
+ 
+     QDBusServiceWatcher serviceWatcher;
+     serviceWatcher.setConnection(QDBusConnection::sessionBus());
+@@ -763,6 +832,9 @@
+             startKSplashViaSystemd();
+         }
+     }
++    if (rc && !wayland && useSystemdBoot()) {
++        watchGraphicalSessionEnd(e, &x11SessionWatch);
++    }
+     if (rc) {
+         QObject::connect(QCoreApplication::instance(), &QCoreApplication::aboutToQuit, &e, &QEventLoop::quit);
+         e.exec();
+@@ -792,7 +864,13 @@
+     bool wait_drkonqi = grp.readEntry("Enabled", true);
+     if (wait_drkonqi) {
+         // wait for remaining drkonqi instances with timeout (in seconds)
+-        const int wait_drkonqi_timeout = grp.readEntry("Timeout", 900) * 1000;
++        int wait_drkonqi_timeout = grp.readEntry("Timeout", 900);
++        // On X11 the compositor is already gone, so a drkonqi dialog cannot be used.
++        // The 900s default would keep startplasma, and therefore the X server, up.
++        if (qEnvironmentVariable("XDG_SESSION_TYPE") != QLatin1String("wayland")) {
++            wait_drkonqi_timeout = std::min(wait_drkonqi_timeout, 10);
++        }
++        wait_drkonqi_timeout *= 1000;
+         QElapsedTimer wait_drkonqi_counter;
+         wait_drkonqi_counter.start();
+         QStringList services = allServices(QLatin1String("org.kde.drkonqi-"));
